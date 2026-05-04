@@ -1,0 +1,214 @@
+/* ===== Continuing Register (Scoped) ===== */
+.cr-page { color: var(--text-main); display: grid; gap: 14px; }
+
+.cr-head{
+  display:flex; align-items:flex-start; justify-content:space-between;
+  gap:12px; padding:16px 18px;
+  background:var(--bg-panel); border:1px solid var(--border-soft);
+  border-radius:var(--radius-xl); box-shadow:var(--shadow-soft);
+}
+.cr-title{display:flex; gap:12px; align-items:flex-start}
+.cr-badge{
+  width:44px; height:44px; border-radius:14px;
+  display:grid; place-items:center;
+  background:var(--primary-soft); color:var(--primary);
+}
+.cr-head h2{margin:0; font-size:18px}
+.cr-head p{margin:4px 0 0; color:var(--text-muted); font-size:13px}
+.cr-head-actions{display:flex; gap:10px; align-items:center}
+
+.cr-bar{
+  padding:14px 16px;
+  background:var(--bg-panel);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-soft);
+  position: sticky; top: 10px; z-index: 5;
+}
+.cr-grid{
+  display:grid; gap:12px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+.cr-field{display:grid; gap:6px; font-size:13px}
+.cr-field span{color:var(--text-muted)}
+.cr-field select, .cr-field input{
+  width:100%;
+  padding:10px 10px;
+  border-radius:14px;
+  border:1px solid var(--border-soft);
+  background:var(--bg-panel-soft);
+  color:var(--text-main);
+  outline:none;
+}
+.cr-search{grid-column: span 2}
+
+.cr-options{
+  margin-top:12px;
+  display:flex; justify-content:space-between; gap:12px;
+  flex-wrap:wrap;
+}
+.cr-seg{
+  display:flex; gap:8px; padding:6px;
+  border:1px solid var(--border-soft);
+  border-radius:16px;
+  background:var(--bg-panel-soft);
+}
+.cr-seg-btn{
+  border:0; background:transparent; color:var(--text-main);
+  padding:8px 10px; border-radius:12px; cursor:pointer;
+}
+.cr-seg-btn.is-active{
+  background:var(--primary-soft);
+  color:var(--primary);
+}
+
+.cr-inline{display:flex; gap:12px; align-items:center; flex-wrap:wrap}
+.cr-check{display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none}
+.cr-inline-field{display:flex; gap:8px; align-items:center; color:var(--text-muted); font-size:13px}
+.cr-inline-field select{padding:8px 10px; border-radius:12px}
+
+.cr-help{
+  margin-top:12px;
+  display:flex; gap:8px; flex-wrap:wrap;
+}
+
+.cr-btn{
+  padding:10px 12px; border-radius:14px;
+  border:1px solid var(--border-soft);
+  background:var(--bg-panel-soft);
+  color:var(--text-main);
+  cursor:pointer;
+}
+.cr-btn-primary{
+  background: var(--primary);
+  border-color: var(--primary);
+  color:#fff;
+}
+.cr-btn-ghost{ background: transparent; }
+.cr-btn:disabled{opacity:.6; cursor:not-allowed}
+
+.cr-bulk{
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  padding:10px 14px;
+  background:var(--bg-panel);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-soft);
+}
+.cr-bulk-actions{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.cr-bulk select{
+  padding:9px 10px; border-radius:14px; border:1px solid var(--border-soft);
+  background:var(--bg-panel-soft); color:var(--text-main);
+}
+
+.cr-tableWrap{
+  background:var(--bg-panel);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-soft);
+  overflow:hidden;
+}
+.cr-table{width:100%; border-collapse:collapse}
+.cr-table th, .cr-table td{
+  padding:12px 12px; border-bottom:1px solid var(--border-soft); vertical-align:middle
+}
+.cr-table thead th{background:var(--bg-panel-soft); font-size:13px; color:var(--text-muted)}
+.cr-col-check{width:42px}
+.cr-empty{padding:22px; text-align:center; color:var(--text-muted)}
+.cr-pill{
+  display:inline-flex; gap:8px; align-items:center;
+  padding:6px 10px; border-radius:999px;
+  border:1px solid var(--border-soft);
+  background:var(--bg-panel-soft);
+  font-size:12px;
+}
+.cr-status-ok{color: var(--accent)}
+.cr-status-bad{color: var(--danger)}
+.cr-miniSel{
+  padding:8px 10px; border-radius:12px; border:1px solid var(--border-soft);
+  background:var(--bg-panel-soft); color:var(--text-main);
+}
+
+/* Drawer */
+.cr-drawer{
+  position:fixed; top:0; right:0; height:100vh; width:min(420px, 92vw);
+  background:var(--bg-panel);
+  border-left:1px solid var(--border-soft);
+  box-shadow: var(--shadow-soft);
+  z-index:50;
+  display:flex; flex-direction:column;
+}
+.cr-drawer-head{
+  padding:14px 16px;
+  display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+  border-bottom:1px solid var(--border-soft);
+}
+.cr-drawer-head h3{margin:0; font-size:16px}
+.cr-drawer-head p{margin:4px 0 0; color:var(--text-muted); font-size:13px}
+.cr-drawer-body{padding:14px 16px; overflow:auto; flex:1}
+.cr-drawer-foot{
+  padding:12px 16px; border-top:1px solid var(--border-soft);
+  display:flex; gap:10px; justify-content:flex-end;
+}
+.cr-x{border:0; background:transparent; color:var(--text-main); font-size:18px; cursor:pointer}
+
+/* Modal */
+.cr-modal{
+  position:fixed; inset:0; z-index:60;
+  background: rgba(0,0,0,.45);
+  display:grid; place-items:center;
+  padding:16px;
+}
+.cr-modal-card{
+  width:min(760px, 96vw);
+  max-height: 86vh;
+  background:var(--bg-panel);
+  border:1px solid var(--border-soft);
+  border-radius:var(--radius-xl);
+  box-shadow:var(--shadow-soft);
+  display:flex; flex-direction:column;
+}
+.cr-modal-head, .cr-modal-foot{
+  padding:14px 16px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  border-bottom:1px solid var(--border-soft);
+}
+.cr-modal-foot{border-bottom:0; border-top:1px solid var(--border-soft); justify-content:flex-end}
+.cr-modal-body{padding:14px 16px; overflow:auto}
+.sr-hidden{display:none !important}
+
+/* Scroll lock */
+body.is-scroll-locked{
+  position: fixed;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Responsive */
+@media (max-width: 980px){
+  .cr-grid{grid-template-columns: repeat(2, minmax(0, 1fr));}
+  .cr-search{grid-column: span 2}
+}
+/* تحسين التحديد */
+.cr-row-check, #cr-checkAll{
+  width:18px;
+  height:18px;
+  cursor:pointer;
+}
+.cr-table tbody tr{
+  cursor:pointer;
+}
+.cr-table tbody tr.is-disabled{
+  opacity:.75;
+}
+.cr-table tbody tr select,
+.cr-table tbody tr button,
+.cr-table tbody tr input{
+  cursor:auto;
+}
+
+/* شارات نتيجة السنة */
+.cr-res{font-weight:700}
+.cr-res-passed{ color: var(--accent); }
+.cr-res-failed{ color: var(--accent-amber); }
+.cr-res-pending{ color: var(--text-muted); }

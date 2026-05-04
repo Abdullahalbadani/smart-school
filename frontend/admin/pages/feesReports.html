@@ -1,0 +1,211 @@
+<section id="feesReportsPage" class="fr-page" dir="rtl">
+  <!-- Header -->
+  <header class="fr-header">
+    <div class="fr-headText">
+      <h2 class="fr-title">تقارير الرسوم</h2>
+      <p class="fr-sub">
+        تحصيل + متأخرات مع تفصيل حسب طرق الدفع والصفوف والشعب. تصدير CSV بضغطة واحدة.
+      </p>
+    </div>
+
+    <div class="fr-actions">
+      <button id="frBackToPay" class="fr-btn fr-btn-ghost" type="button">
+        <i class="ri-arrow-right-line"></i><span>العودة للسداد</span>
+      </button>
+      <button id="frReload" class="fr-btn fr-btn-ghost" type="button">
+        <i class="ri-refresh-line"></i><span>تحديث</span>
+      </button>
+      <button id="frExportCsv" class="fr-btn fr-btn-ghost" type="button">
+        <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Tabs -->
+  <div class="fr-tabs">
+    <button class="fr-tab is-active" data-type="collections" type="button">
+      <i class="ri-coins-line"></i><span>التحصيل</span>
+    </button>
+    <button class="fr-tab" data-type="outstanding" type="button">
+      <i class="ri-alert-line"></i><span>المتأخرات</span>
+    </button>
+
+    <!-- fallback hidden select (للتوافق) -->
+    <select id="frReportType" class="fr-hiddenSelect">
+      <option value="collections">التحصيل</option>
+      <option value="outstanding">المتأخرات</option>
+    </select>
+  </div>
+
+  <!-- Filters -->
+  <div class="fr-panel fr-filters">
+    <div class="fr-field">
+      <label for="frAcademicYear">السنة الدراسية</label>
+      <select id="frAcademicYear">
+        <option value="">اختر...</option>
+      </select>
+    </div>
+<div class="fr-field fr-only-collections fr-presets">
+  <label>فترات سريعة</label>
+  <div class="fr-presetBtns">
+    <button class="fr-btn fr-btn-ghost fr-preset" data-preset="today" type="button">
+      <i class="ri-sun-line"></i><span>اليوم</span>
+    </button>
+    <button class="fr-btn fr-btn-ghost fr-preset" data-preset="week" type="button">
+      <i class="ri-calendar-2-line"></i><span>هذا الأسبوع</span>
+    </button>
+    <button class="fr-btn fr-btn-ghost fr-preset" data-preset="month" type="button">
+      <i class="ri-calendar-check-line"></i><span>هذا الشهر</span>
+    </button>
+    <button class="fr-btn fr-btn-ghost fr-preset" data-preset="term" type="button">
+      <i class="ri-time-line"></i><span>هذا الترم</span>
+    </button>
+  </div>
+</div>
+    <div class="fr-field">
+      <label for="frGrade">الصف</label>
+      <select id="frGrade">
+        <option value="">الكل</option>
+      </select>
+    </div>
+
+    <div class="fr-field">
+      <label for="frClass">الشعبة</label>
+      <select id="frClass">
+        <option value="">الكل</option>
+      </select>
+    </div>
+
+    <div class="fr-field fr-only-collections">
+      <label for="frFrom">من تاريخ</label>
+      <input id="frFrom" type="date" />
+    </div>
+
+    <div class="fr-field fr-only-collections">
+      <label for="frTo">إلى تاريخ</label>
+      <input id="frTo" type="date" />
+    </div>
+
+    <div class="fr-field fr-only-collections">
+      <label for="frMethod">طريقة الدفع</label>
+      <select id="frMethod">
+        <option value="">الكل</option>
+        <option value="cash">نقدًا</option>
+        <option value="transfer">حوالة/تحويل</option>
+        <option value="wallet">محفظة</option>
+        <option value="card">بطاقة</option>
+        <option value="other">أخرى</option>
+      </select>
+    </div>
+
+    <div class="fr-field fr-field-actions">
+      <label>&nbsp;</label>
+      <button id="frRun" class="fr-btn fr-btn-primary" type="button">
+        <i class="ri-play-line"></i><span>عرض التقرير</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="fr-kpis">
+    <div class="fr-panel fr-kpi">
+      <div class="fr-kpiLabel">إجمالي التحصيل</div>
+      <div id="frKpiTotalCollected" class="fr-kpiValue">0</div>
+      <div id="frKpiHint1" class="fr-kpiHint">—</div>
+    </div>
+
+    <div class="fr-panel fr-kpi">
+      <div class="fr-kpiLabel">عدد العمليات</div>
+      <div id="frKpiPaymentsCount" class="fr-kpiValue">0</div>
+      <div id="frKpiHint2" class="fr-kpiHint">—</div>
+    </div>
+
+    <div class="fr-panel fr-kpi">
+      <div class="fr-kpiLabel">إجمالي المتأخرات</div>
+      <div id="frKpiOutstanding" class="fr-kpiValue">0</div>
+      <div id="frKpiHint3" class="fr-kpiHint">—</div>
+    </div>
+
+    <div class="fr-panel fr-kpi">
+      <div class="fr-kpiLabel">طلاب عليهم مبالغ</div>
+      <div id="frKpiStudentsOutstanding" class="fr-kpiValue">0</div>
+      <div id="frKpiHint4" class="fr-kpiHint">—</div>
+    </div>
+  </div>
+
+  <!-- Breakdowns -->
+  <div class="fr-panel fr-breakPanel">
+    <div class="fr-panelHead">
+      <h3 id="frBreakTitle">تفصيل التقرير</h3>
+      <span id="frState" class="fr-badge fr-badge-muted">جاهز</span>
+    </div>
+
+    <div class="fr-breakGrid">
+      <div class="fr-breakCard">
+        <div class="fr-breakHead">
+          <h4 id="frBreak1Title">حسب طريقة الدفع</h4>
+          <span class="fr-breakHint" id="frBreak1Hint">—</span>
+        </div>
+        <div class="fr-miniTableWrap">
+          <table class="fr-miniTable">
+            <thead id="frBreak1Head"></thead>
+            <tbody id="frBreak1Body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="fr-breakCard">
+        <div class="fr-breakHead">
+          <h4 id="frBreak2Title">Top الصفوف</h4>
+          <span class="fr-breakHint" id="frBreak2Hint">—</span>
+        </div>
+        <div class="fr-miniTableWrap">
+          <table class="fr-miniTable">
+            <thead id="frBreak2Head"></thead>
+            <tbody id="frBreak2Body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="fr-breakCard">
+        <div class="fr-breakHead">
+          <h4 id="frBreak3Title">Top الشعب</h4>
+          <span class="fr-breakHint" id="frBreak3Hint">—</span>
+        </div>
+        <div class="fr-miniTableWrap">
+          <table class="fr-miniTable">
+            <thead id="frBreak3Head"></thead>
+            <tbody id="frBreak3Body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Table -->
+  <div class="fr-panel fr-tablePanel">
+    <div class="fr-panelHead">
+      <h3 id="frTableTitle">نتائج التقرير</h3>
+      <span class="fr-badge fr-badge-muted" id="frRowsCount">0 صف</span>
+    </div>
+
+    <div class="fr-tableWrap">
+      <table class="fr-table" aria-label="نتائج تقرير الرسوم">
+        <thead id="frThead"></thead>
+        <tbody id="frTbody">
+          <tr class="fr-emptyRow">
+            <td>
+              <div class="fr-empty">
+                <i class="ri-information-line"></i>
+                <span>اختر الفلاتر ثم اضغط “عرض التقرير”.</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="frToast" class="fr-toast" role="status" aria-live="polite" hidden></div>
+</section>

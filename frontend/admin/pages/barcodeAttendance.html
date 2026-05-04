@@ -1,0 +1,107 @@
+<section class="ta-panel" id="section-teacher-attendance">
+  <div class="ta-head">
+    <div>
+      <h2 class="ta-title"><i class="ri-qr-scan-2-line"></i> تسجيل حضور المعلمين</h2>
+      <p class="ta-sub">
+        تحضير سريع بالحقل الواحد (USB/كاميرا/نص) + تحضير يدوي + قفل اليوم لمنع التلاعب.
+      </p>
+
+      <div class="ta-badges">
+        <span class="ta-chip"><i class="ri-calendar-line"></i> التاريخ: <strong id="ta-date-view">—</strong></span>
+        <span class="ta-chip"><i class="ri-lock-2-line"></i> الحالة: <strong id="ta-day-state">—</strong></span>
+        <a class="ta-chip" href="/frontend/admin/pages/teacher-permits/index.html" style="text-decoration:none;">
+          <i class="ri-shield-check-line"></i> أذونات معلّقة: <strong id="ta-pending-permits">0</strong>
+        </a>
+      </div>
+    </div>
+
+    <div class="ta-controls">
+      <div class="ta-field">
+        <label for="ta-date">التاريخ</label>
+        <input class="ta-input" type="date" id="ta-date" />
+      </div>
+
+      <button type="button" class="ta-btn ta-btn--primary" id="ta-open-day">
+        <i class="ri-add-circle-line"></i><span>فتح اليوم</span>
+      </button>
+
+      <button type="button" class="ta-btn ta-btn--dark" id="ta-lock-toggle">
+        <i class="ri-lock-unlock-line"></i><span>قفل / فتح</span>
+      </button>
+
+      <button type="button" class="ta-btn" id="ta-refresh">
+        <i class="ri-refresh-line"></i><span>تحديث</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- الحقل الواحد -->
+  <div class="ta-scanCard" aria-label="حقل المسح الواحد">
+    <div class="ta-scanRow">
+      <input class="ta-input" id="ta-scan-input" placeholder="امسح / الصق / اكتب كود المعلم ثم Enter" autocomplete="off" />
+      <button type="button" class="ta-btn ta-btn--primary" id="ta-scan-submit">
+        <i class="ri-check-line"></i><span>تسجيل</span>
+      </button>
+      <button type="button" class="ta-btn" id="ta-scan-focus">
+        <i class="ri-focus-3-line"></i><span>تركيز</span>
+      </button>
+      <button type="button" class="ta-btn" id="ta-scan-camera">
+        <i class="ri-camera-line"></i><span>كاميرا</span>
+      </button>
+      <input type="file" id="ta-image-file" accept="image/*" hidden />
+
+<button type="button" class="ta-btn" id="ta-scan-image">
+  <i class="ri-image-line"></i>
+  <span>رفع صورة</span>
+</button>
+
+    </div>
+
+    <div class="ta-last" id="ta-last-result" role="status" aria-live="polite">
+      — جاهز للمسح
+    </div>
+
+    <p class="ta-mini" style="margin:.6rem 0 0;">
+      ✅ يدعم قارئ الأكواد USB (يكتب ثم Enter) — ويدعم لصق النص — والكاميرا اختيارية.
+    </p>
+  </div>
+
+  <!-- أدوات + جدول -->
+  <div class="ta-tableTools">
+    <div class="ta-field ta-search">
+      <label for="ta-search">بحث</label>
+      <input class="ta-input" id="ta-search" placeholder="ابحث بالاسم..." autocomplete="off" />
+    </div>
+
+    <div class="ta-field" style="min-width:180px;">
+      <label for="ta-filter">فلتر</label>
+      <select class="ta-select" id="ta-filter">
+        <option value="">الكل</option>
+        <option value="present">الحاضرين</option>
+        <option value="absent">الغائبين</option>
+        <option value="unmarked">غير مسجل</option>
+      </select>
+    </div>
+  </div>
+
+  <table class="ta-table" id="ta-table">
+    <thead>
+      <tr>
+        <th>المعلم</th>
+        <th>حالة اليوم</th>
+        <th>الطريقة</th>
+        <th>وقت التسجيل</th>
+        <th>حصص اليوم</th>
+        <th>نفّذ/غاب/بعذر</th>
+        <th>إجراءات</th>
+      </tr>
+    </thead>
+    <tbody id="ta-teachers-body">
+      <!-- JS يملأها -->
+    </tbody>
+  </table>
+
+  <div class="ta-mini" id="ta-footer-note" style="margin-top:.8rem;">
+    عند قفل اليوم: تُمنع التعديلات إلا بصلاحية خاصة (يتم ضبطها بالباك إند).
+  </div>
+</section>

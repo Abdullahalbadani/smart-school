@@ -1,0 +1,945 @@
+/* css/schedules.css */
+/* يعتمد على متغيرات الأدمن الموجودة لديك:
+   --text-main --text-muted --bg-panel --bg-panel-soft --border-soft
+   --radius-xl --shadow-soft --primary --primary-soft
+*/
+
+/* =========================================================
+   (A) WEEKLY SCHEDULE  (ws-*)  — كما هو عندك
+========================================================= */
+.ws-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--text-main);
+}
+.ws-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+.ws-title {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.ws-badgeIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.ws-title h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.ws-title p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+.ws-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ws-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  color: var(--text-main);
+  cursor: pointer;
+}
+.ws-btn i {
+  font-size: 18px;
+}
+.ws-btn:hover {
+  filter: brightness(1.03);
+}
+.ws-btn-primary {
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+}
+.ws-btn-ghost {
+  background: transparent;
+}
+.ws-btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+.ws-filters {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr auto;
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+.ws-field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+.ws-field select,
+.ws-field input,
+.ws-field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  color: var(--text-main);
+  outline: none;
+}
+.ws-field-wide {
+  grid-column: span 2;
+}
+.ws-combo {
+  display: flex;
+  gap: 10px;
+}
+.ws-combo select {
+  min-width: 220px;
+}
+
+.ws-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  justify-content: center;
+}
+.ws-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  font-size: 12px;
+  color: var(--text-main);
+}
+.ws-chip-soft {
+  color: var(--text-muted);
+}
+
+.ws-body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 14px;
+}
+.ws-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+.ws-cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.ws-cardTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.ws-mini {
+  display: flex;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.ws-mini b {
+  color: var(--text-main);
+}
+.ws-cardFoot {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-soft);
+}
+.ws-hint {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.ws-gridWrap {
+  padding: 12px 12px 14px;
+  overflow: auto;
+}
+.ws-grid {
+  min-width: 860px;
+  display: grid;
+  gap: 8px;
+}
+.ws-gridHeader,
+.ws-gridRow {
+  display: grid;
+  grid-template-columns: 120px repeat(var(--ws-cols), 1fr);
+  gap: 8px;
+}
+.ws-colHead {
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+.ws-rowHead {
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  font-weight: 700;
+  font-size: 12px;
+}
+.ws-cell {
+  min-height: 56px;
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.02)
+  );
+  cursor: pointer;
+  position: relative;
+}
+.ws-cell:hover {
+  filter: brightness(1.05);
+}
+.ws-cell .ws-subject {
+  font-weight: 800;
+  font-size: 12px;
+}
+.ws-cell .ws-teacher {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.ws-cell .ws-pill {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+}
+.ws-cell.ws-empty {
+  opacity: 0.75;
+}
+.ws-cell.ws-conflict {
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15) inset;
+}
+
+.ws-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ws-conflicts {
+  padding: 12px 14px;
+  max-height: 360px;
+  overflow: auto;
+}
+.ws-empty {
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+}
+.ws-confItem {
+  padding: 10px 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.07);
+  margin-bottom: 10px;
+  font-size: 12px;
+}
+.ws-confItem b {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.ws-quick {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Drawer */
+.ws-drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s;
+  z-index: 9998;
+}
+.ws-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: -420px;
+  width: 420px;
+  max-width: 92vw;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-soft);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+  transition: 0.25s;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+.ws-drawerHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.ws-drawerHead h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.ws-drawerHead p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.ws-iconBtn {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  cursor: pointer;
+  color: var(--text-main);
+}
+.ws-drawerBody {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+.ws-drawerFoot {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.ws-open .ws-drawerBackdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ws-open .ws-drawer {
+  right: 0;
+}
+
+/* Toast */
+.ws-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 10000;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-soft);
+  padding: 10px 12px;
+  border-radius: 16px;
+  min-width: 220px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: 0.2s;
+  pointer-events: none;
+  font-size: 12px;
+}
+.ws-toast.ws-show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.ws-toast.ws-ok {
+  border-color: rgba(34, 197, 94, 0.4);
+}
+.ws-toast.ws-err {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+@media (max-width: 980px) {
+  .ws-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ws-field-wide {
+    grid-column: span 2;
+  }
+  .ws-status {
+    grid-column: span 2;
+    align-items: flex-start;
+  }
+  .ws-body {
+    grid-template-columns: 1fr;
+  }
+  .ws-side {
+    order: 2;
+  }
+}
+
+/* Helpers بقايا عندك */
+.tt-cell {
+  padding: 8px !important;
+  vertical-align: top;
+}
+.tt-lesson {
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+  padding: 10px;
+  background: rgba(37, 99, 235, 0.08);
+  display: grid;
+  gap: 4px;
+  min-height: 64px;
+}
+.tt-lesson__sub {
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+.tt-lesson__meta {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.tt-empty {
+  color: #9ca3af;
+  font-size: 0.72rem;
+  display: grid;
+  place-items: center;
+  min-height: 64px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 14px;
+}
+.ws-inp {
+  padding: 10px 12px;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  background: var(--bg-panel);
+  color: var(--text-main);
+  outline: none;
+}
+.ws-inp:focus {
+  border-color: var(--primary);
+}
+.ws-colTitle {
+  font-weight: 800;
+}
+.ws-colTime {
+  display: block;
+  opacity: 0.75;
+  margin-top: 4px;
+  font-size: 12px;
+}
+
+/* =========================================================
+   (B) EXAM SCHEDULE  (ex-*)  — بنفس ستايل weekly
+========================================================= */
+
+/* Page */
+.ex-page {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  color: var(--text-main);
+}
+
+/* Header مثل ws-head */
+.ex-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px 18px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+.ex-title {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.ex-badgeIcon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+.ex-title h2 {
+  margin: 0;
+  font-size: 18px;
+}
+.ex-title p {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* Buttons مثل ws-btn */
+.ex-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ex-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  color: var(--text-main);
+  cursor: pointer;
+}
+.ex-btn i {
+  font-size: 18px;
+}
+.ex-btn:hover {
+  filter: brightness(1.03);
+}
+.ex-btn-primary {
+  background: var(--primary);
+  border-color: transparent;
+  color: #fff;
+}
+.ex-btn-ghost {
+  background: transparent;
+}
+.ex-btn-danger {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.1);
+}
+.ex-btn-danger:hover {
+  filter: brightness(1.06);
+}
+
+/* Filters container مثل ws-filters */
+.ex-filters {
+  padding: 14px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Grid of fields */
+.ex-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.ex-field label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 6px;
+}
+.ex-inp {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  color: var(--text-main);
+  outline: none;
+}
+.ex-inp:focus {
+  border-color: var(--primary);
+}
+.ex-area {
+  resize: vertical;
+}
+.ex-help {
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Chips مثل ws-chip */
+.ex-chips {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.ex-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  font-size: 12px;
+  color: var(--text-main);
+}
+.ex-chip-info {
+  color: var(--text-muted);
+}
+
+/* Card مثل ws-card */
+.ex-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+  overflow: hidden;
+}
+.ex-cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.ex-cardTitle {
+  margin: 0;
+  font-weight: 800;
+  font-size: 14px;
+}
+.ex-cardSub {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.ex-cardActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Table wrapper */
+.ex-tableWrap {
+  padding: 12px 12px 14px;
+  overflow: auto;
+}
+
+/* Table like weekly grid cells */
+.ex-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: separate;
+  border-spacing: 8px;
+}
+.ex-table thead th {
+  padding: 10px 10px;
+  border-radius: 14px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+.ex-table tbody td {
+  padding: 10px;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.04),
+    rgba(255, 255, 255, 0.02)
+  );
+  vertical-align: top;
+}
+.ex-table tbody tr {
+  cursor: pointer;
+}
+.ex-table tbody tr:hover td {
+  filter: brightness(1.05);
+}
+
+/* Empty row */
+.ex-emptyRow {
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+.ex-empty {
+  padding: 18px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: center;
+  border-radius: 16px;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+}
+.ex-empty i {
+  font-size: 22px;
+  color: var(--primary);
+}
+.ex-empty b {
+  color: var(--text-main);
+}
+
+/* ===== Drawer (Edit exam) مثل ws drawer ===== */
+.ex-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: 0.2s;
+  z-index: 9998;
+}
+.ex-drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: -420px;
+  width: 420px;
+  max-width: 92vw;
+  background: var(--bg-panel);
+  border-left: 1px solid var(--border-soft);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+  transition: 0.25s;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+}
+.ex-drawerHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.ex-drawerHead h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.ex-drawerSub {
+  margin: 4px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+.ex-iconBtn {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  cursor: pointer;
+  color: var(--text-main);
+}
+.ex-drawerBody {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: auto;
+}
+.ex-drawerFoot {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.ex-spacer {
+  flex: 1;
+}
+
+/* Drawer form grid */
+.ex-grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.ex-applyWrap select {
+  width: 100%;
+}
+
+/* فتح/إغلاق drawer بواسطة aria أو class */
+.ex-backdrop[aria-hidden="false"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ex-drawer[aria-hidden="false"] {
+  right: 0;
+}
+.ex-open .ex-backdrop {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ex-open .ex-drawer {
+  right: 0;
+}
+
+/* Toast مثل ws */
+.ex-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 10000;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  box-shadow: var(--shadow-soft);
+  padding: 10px 12px;
+  border-radius: 16px;
+  min-width: 220px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: 0.2s;
+  pointer-events: none;
+  font-size: 12px;
+}
+.ex-toast.ex-show {
+  opacity: 1;
+  transform: translateY(0);
+}
+.ex-toast.ex-ok {
+  border-color: rgba(34, 197, 94, 0.4);
+}
+.ex-toast.ex-err {
+  border-color: rgba(239, 68, 68, 0.5);
+}
+
+/* ===== Manage modal مثل نفس روح weekly ===== */
+.ex-modal {
+  position: fixed;
+  inset: 50px 40px auto 40px;
+  max-height: calc(100vh - 100px);
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+  z-index: 10001;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(8px);
+  transition: 0.2s;
+}
+.ex-modalHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.ex-modalHead h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.ex-modalActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.ex-modalBody {
+  padding: 12px 12px 14px;
+  overflow: auto;
+}
+
+/* Show modal via aria */
+.ex-modal[aria-hidden="false"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+#exManageBackdrop[aria-hidden="false"] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .ex-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ex-grid2 {
+    grid-template-columns: 1fr;
+  }
+  .ex-modal {
+    inset: 40px 12px auto 12px;
+    max-height: calc(100vh - 80px);
+  }
+}
+/* Week bar */
+.ws-weekbar{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+.ws-toggle{display:flex; gap:10px; flex-wrap:wrap;}
+.ws-btn-active{
+  background: var(--primary);
+  border-color: transparent;
+  color:#fff;
+}
+.ws-weekpick{display:flex; gap:10px; align-items:center; flex-wrap:wrap;}
+
+/* Exam look */
+.ws-cell.ws-exam{
+  border-color: rgba(245, 158, 11, 0.7);
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.14) inset;
+}
+.ws-cell.ws-exam .ws-teacher{opacity:.9;}
+.ws-pill.ws-pill-exam{
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--text-main);
+}

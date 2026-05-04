@@ -1,0 +1,394 @@
+<!-- frontend/admin/pages/weeklySchedule.html -->
+<section id="weeklySchedulePage" class="ws-page">
+  <!-- Header -->
+  <div class="ws-head">
+    <div class="ws-title">
+      <div class="ws-badgeIcon">
+        <i class="ri-calendar-schedule-line"></i>
+      </div>
+      <div>
+        <h2>جدول الحصص الأسبوعية</h2>
+        <p>اختر الفلاتر ثم اضغط <b>Enter</b> أو زر (إنشاء/فتح الجدول).</p>
+      </div>
+    </div>
+
+    <div class="ws-actions">
+      <button class="ws-btn ws-btn-primary" id="wsCreateBtn" type="button">
+        <i class="ri-play-circle-line"></i><span>إنشاء/فتح الجدول</span>
+      </button>
+
+      <button class="ws-btn ws-btn-ghost" id="wsManageBtn" type="button">
+        <i class="ri-list-check-2"></i><span>إدارة الجداول</span>
+      </button>
+
+      <button class="ws-btn ws-btn-ghost" id="wsCopyBtn" type="button">
+        <i class="ri-file-copy-line"></i><span>نسخ من جدول</span>
+      </button>
+
+      <button class="ws-btn ws-btn-ghost" id="wsSaveDraftBtn" type="button">
+        <i class="ri-save-3-line"></i><span>حفظ مسودة</span>
+      </button>
+
+      <button class="ws-btn ws-btn-primary" id="wsPublishBtn" type="button">
+        <i class="ri-send-plane-2-line"></i><span>نشر</span>
+      </button>
+
+      <button class="ws-btn ws-btn-ghost" id="wsUnpublishBtn" type="button" style="display:none">
+        <i class="ri-arrow-go-back-line"></i><span>إلغاء النشر</span>
+      </button>
+
+      <button class="ws-btn ws-btn-ghost" id="wsDeleteCurrentBtn" type="button" title="حذف الجدول الحالي (مسودة فقط)">
+        <i class="ri-delete-bin-6-line"></i><span>حذف الحالي</span>
+      </button>
+    </div>
+    <!-- Week Mode Bar -->
+<div class="ws-weekbar">
+  <div class="ws-toggle">
+    <button class="ws-btn ws-btn-ghost ws-btn-active" id="wsModeTemplate" type="button">
+      <i class="ri-repeat-2-line"></i><span>القالب الأسبوعي</span>
+    </button>
+    <button class="ws-btn ws-btn-ghost" id="wsModeWeek" type="button">
+      <i class="ri-calendar-line"></i><span>هذا الأسبوع</span>
+    </button>
+  </div>
+
+  <div class="ws-weekpick">
+    <button class="ws-iconBtn" id="wsWeekPrev" type="button" title="الأسبوع السابق">
+      <i class="ri-arrow-right-s-line"></i>
+    </button>
+
+    <input id="wsWeekStart" class="ws-inp" type="date" />
+
+    <button class="ws-iconBtn" id="wsWeekNext" type="button" title="الأسبوع التالي">
+      <i class="ri-arrow-left-s-line"></i>
+    </button>
+
+    <span class="ws-chip ws-chip-soft" id="wsWeekLabel">—</span>
+  </div>
+</div>
+  </div>
+
+  <!-- Filters -->
+  <div class="ws-filters" id="wsFilters">
+    <div class="ws-field">
+      <label>السنة الدراسية</label>
+      <select id="wsYearSelect">
+        <option value="">اختر السنة...</option>
+      </select>
+    </div>
+
+    <div class="ws-field">
+      <label>الترم</label>
+      <select id="wsTermSelect">
+        <option value="1">ترم 1</option>
+        <option value="2">ترم 2</option>
+      </select>
+    </div>
+
+    <div class="ws-field">
+      <label>المرحلة</label>
+      <select id="wsStageSelect">
+        <option value="">اختر المرحلة...</option>
+      </select>
+    </div>
+
+    <div class="ws-field">
+      <label>الصف</label>
+      <select id="wsGradeSelect">
+        <option value="">اختر الصف...</option>
+      </select>
+    </div>
+
+    <div class="ws-field ws-field-wide">
+      <label>الشعبة</label>
+      <div class="ws-combo">
+        <select id="wsSectionSelect">
+          <option value="">اختر الشعبة...</option>
+        </select>
+        <input id="wsSectionSearch" type="text" placeholder="بحث سريع عن الشعبة..." />
+      </div>
+    </div>
+
+    <div class="ws-status">
+      <span class="ws-chip" id="wsStatusChip">الحالة: —</span>
+      <span class="ws-chip ws-chip-soft" id="wsInfoChip">
+        اختر الفلاتر ثم اضغط Enter لفتح الجدول
+      </span>
+    </div>
+  </div>
+
+  <!-- Body -->
+  <div class="ws-body">
+    <!-- Grid -->
+    <div class="ws-card ws-gridCard">
+      <div class="ws-cardHead">
+        <div class="ws-cardTitle">
+          <i class="ri-table-2"></i>
+          <span>شبكة الجدول</span>
+        </div>
+        <div class="ws-mini">
+          <span class="ws-miniItem"><b id="wsFilledCount">0</b> حصة مُعبأة</span>
+          <span class="ws-miniItem"><b id="wsConflictsCount">0</b> تعارض</span>
+        </div>
+      </div>
+
+      <div class="ws-gridWrap">
+        <div id="wsGrid" class="ws-grid"></div>
+      </div>
+
+      <div class="ws-cardFoot">
+        <span class="ws-hint">
+          💡 اضغط خلية لتحديد المادة والمعلم. إذا الجدول منشور لازم تعمل (إلغاء النشر) قبل التعديل.
+        </span>
+      </div>
+    </div>
+
+    <!-- Side Panel -->
+    <aside class="ws-side">
+      <div class="ws-card">
+        <div class="ws-cardHead">
+          <div class="ws-cardTitle">
+            <i class="ri-alert-line"></i>
+            <span>التعارضات والتنبيهات</span>
+          </div>
+        </div>
+        <div id="wsConflictsBox" class="ws-conflicts">
+          <div class="ws-empty">لا يوجد تعارضات حاليًا.</div>
+        </div>
+      </div>
+
+      <div class="ws-card">
+        <div class="ws-cardHead">
+          <div class="ws-cardTitle">
+            <i class="ri-settings-3-line"></i>
+            <span>إعدادات سريعة</span>
+          </div>
+        </div>
+        <div class="ws-quick">
+          <!-- ✅ زر إدارة الحصص -->
+          <button class="ws-btn ws-btn-ghost ws-btn-block" id="wsPeriodsBtn" type="button">
+            <i class="ri-time-line"></i><span>إدارة الحصص (الأوقات)</span>
+          </button>
+
+          <button class="ws-btn ws-btn-ghost ws-btn-block" id="wsReloadMetaBtn" type="button">
+            <i class="ri-refresh-line"></i><span>إعادة تحميل البيانات</span>
+          </button>
+
+          <button class="ws-btn ws-btn-ghost ws-btn-block" id="wsClearBtn" type="button">
+            <i class="ri-eraser-line"></i><span>تفريغ الجدول (مسودة فقط)</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Drawer: Edit Cell -->
+  <div class="ws-drawerBackdrop" id="wsDrawerBackdrop" aria-hidden="true"></div>
+  <div class="ws-drawer" id="wsDrawer" aria-hidden="true">
+    <div class="ws-drawerHead">
+      <div>
+        <h3>تعديل الحصة</h3>
+        <p id="wsDrawerSub">—</p>
+      </div>
+      <button class="ws-iconBtn" id="wsDrawerClose" type="button" title="إغلاق">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="ws-drawerBody">
+      <div class="ws-field">
+  <label>نوع الحصة</label>
+  <select id="wsEntryType">
+    <option value="lesson">درس</option>
+    <option value="exam">اختبار</option>
+    <option value="cancel">إلغاء</option>
+  </select>
+</div>
+
+<div id="wsExamFields" style="display:none">
+  <div class="ws-field">
+    <label>عنوان الاختبار</label>
+    <input id="wsExamTitle" type="text" placeholder="مثال: اختبار شهري - اجتماعيات" />
+  </div>
+
+ <div class="ws-field">
+  <label>نوع الاختبار</label>
+  <input type="hidden" id="wsExamKind" value="monthly" />
+  <div class="ws-chip ws-chip-soft" style="display:inline-flex; width:fit-content;">
+    اختبار شهري
+  </div>
+</div>
+
+<div class="ws-field">
+  <label>درجة الاختبار</label>
+  <input id="wsExamTotal" type="number" min="1" step="1" placeholder="مثال: 20" />
+  <small style="color:#888;">
+    إذا تركت الدرجة فارغة سيستخدم النظام درجة الاختبار الافتراضية من إعدادات المدرسة.
+  </small>
+</div>
+      <div class="ws-field">
+        <label>المادة</label>
+        <select id="wsSubjectSelect">
+          <option value="">اختر المادة...</option>
+        </select>
+      </div>
+
+      <div class="ws-field">
+        <label>المعلم</label>
+        <select id="wsTeacherSelect">
+          <option value="">اختر المعلم...</option>
+        </select>
+      </div>
+
+      <div class="ws-field">
+        <label>القاعة (اختياري)</label>
+        <input id="wsRoomInput" type="text" placeholder="مثال: قاعة 3" />
+      </div>
+
+      <div class="ws-field">
+        <label>ملاحظة (اختياري)</label>
+        <textarea id="wsNotesInput" rows="3" placeholder="ملاحظة قصيرة..."></textarea>
+      </div>
+    </div>
+
+    <div class="ws-drawerFoot">
+      <button class="ws-btn ws-btn-ghost" id="wsCellClearBtn" type="button">
+        <i class="ri-eraser-line"></i><span>مسح</span>
+      </button>
+
+      <button class="ws-btn ws-btn-primary" id="wsCellSaveBtn" type="button">
+        <i class="ri-check-line"></i><span>حفظ</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal إدارة الجداول -->
+  <div class="ws-modalBackdrop" id="wsManageBackdrop" aria-hidden="true"></div>
+  <div class="ws-modal" id="wsManageModal" aria-hidden="true">
+    <div class="ws-modalHead">
+      <h3>إدارة الجداول</h3>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="ws-btn ws-btn-ghost" id="wsManageRefresh" type="button">
+          <i class="ri-refresh-line"></i><span>تحديث</span>
+        </button>
+        <button class="ws-iconBtn" id="wsManageClose" type="button"><i class="ri-close-line"></i></button>
+      </div>
+    </div>
+
+    <div class="ws-modalBody">
+      <div class="ws-mini" style="margin-bottom:10px;">
+        <span class="ws-miniItem">يعرض جداول السنة/الترم حسب الفلاتر</span>
+        <span class="ws-miniItem" style="opacity:.8">📌 افتح/احذف من هنا</span>
+      </div>
+
+      <div style="overflow:auto; max-height:60vh;">
+        <table class="ws-table" style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>السنة</th>
+              <th>ترم</th>
+              <th>المرحلة</th>
+              <th>الصف</th>
+              <th>الشعبة</th>
+              <th>الحالة</th>
+              <th>الحصص</th>
+              <th>إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="wsManageTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Modal: إدارة الحصص (Periods) -->
+  <div class="ws-modalBackdrop" id="wsPeriodsBackdrop" aria-hidden="true"></div>
+  <div class="ws-modal" id="wsPeriodsModal" aria-hidden="true">
+    <div class="ws-modalHead">
+      <h3>إدارة الحصص (الأوقات)</h3>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <button class="ws-btn ws-btn-ghost" id="wsPeriodsRefresh" type="button">
+          <i class="ri-refresh-line"></i><span>تحديث</span>
+        </button>
+        <button class="ws-iconBtn" id="wsPeriodsClose" type="button">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="ws-modalBody">
+      <div class="ws-mini" style="margin-bottom:10px;">
+        <span class="ws-miniItem">هذه الأوقات تُستخدم تلقائياً لكل الجداول الأسبوعية</span>
+        <span class="ws-miniItem" style="opacity:.8">📌 بعد الحفظ سيتم تحديث شبكة الجدول</span>
+      </div>
+
+      <!-- Add Form -->
+      <div class="ws-card" style="margin-bottom:12px;">
+        <div class="ws-cardHead">
+          <div class="ws-cardTitle">
+            <i class="ri-add-circle-line"></i>
+            <span>إضافة حصة</span>
+          </div>
+          <div>
+            <button class="ws-btn ws-btn-primary" id="wsPeriodsAddBtn" type="button">
+              <i class="ri-add-line"></i><span>إضافة</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="ws-cardBody" style="padding:12px;">
+          <div style="display:grid; grid-template-columns:repeat(4, minmax(140px,1fr)); gap:10px;">
+            <div class="ws-field">
+              <label>اسم الحصة</label>
+              <input id="wsPName" type="text" placeholder="مثال: الحصة الأولى" />
+            </div>
+            <div class="ws-field">
+              <label>البداية</label>
+              <input id="wsPStart" type="time" />
+            </div>
+            <div class="ws-field">
+              <label>النهاية</label>
+              <input id="wsPEnd" type="time" />
+            </div>
+            <div class="ws-field">
+              <label>الترتيب (sort_order)</label>
+              <input id="wsPSort" type="number" min="1" step="1" placeholder="مثال: 1" />
+            </div>
+          </div>
+          <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button class="ws-btn ws-btn-primary" id="wsPeriodsSaveNew" type="button">
+              <i class="ri-check-line"></i><span>حفظ الحصة</span>
+            </button>
+            <button class="ws-btn ws-btn-ghost" id="wsPeriodsClearNew" type="button">
+              <i class="ri-eraser-line"></i><span>مسح</span>
+            </button>
+          </div>
+          <div class="ws-hint" style="margin-top:8px;">
+            ⚠️ الترتيب (sort_order) لازم يكون فريد — إذا كررت نفس الرقم سيظهر خطأ duplicate.
+          </div>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div style="overflow:auto; max-height:60vh;">
+        <table class="ws-table" style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="width:70px;">ID</th>
+              <th>اسم الحصة</th>
+              <th>البداية</th>
+              <th>النهاية</th>
+              <th style="width:120px;">الترتيب</th>
+              <th style="width:220px;">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="wsPeriodsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="ws-toast" id="wsToast" aria-hidden="true"></div>
+</section>

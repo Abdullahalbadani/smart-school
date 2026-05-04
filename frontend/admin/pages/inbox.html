@@ -1,0 +1,104 @@
+<section id="adminInboxPage" class="inbox-page" dir="rtl">
+  <header class="inbox-header">
+    <div>
+      <h2 class="inbox-title">صندوق الوارد</h2>
+      <p class="inbox-subtitle">استعراض الإشعارات الواردة من النظام والمستخدمين</p>
+    </div>
+
+    <div class="inbox-actions">
+      <button type="button" id="inboxRefreshBtn" class="inbox-btn inbox-btn-secondary">
+        تحديث
+      </button>
+      <button type="button" id="inboxMarkAllReadBtn" class="inbox-btn inbox-btn-primary">
+        تعليم الكل كمقروء
+      </button>
+    </div>
+  </header>
+
+  <div class="inbox-toolbar">
+    <div class="inbox-search-wrap">
+      <input
+        id="inboxSearchInput"
+        class="inbox-search"
+        type="search"
+        placeholder="ابحث في العنوان أو المحتوى..."
+        autocomplete="off"
+      />
+    </div>
+
+    <div class="inbox-tabs" id="inboxTabs">
+      <button type="button" class="inbox-tab is-active" data-filter="all">الكل</button>
+      <button type="button" class="inbox-tab" data-filter="unread">غير المقروء</button>
+      <button type="button" class="inbox-tab" data-filter="read">المقروء</button>
+      <button type="button" class="inbox-tab" data-filter="system">النظام</button>
+      <button type="button" class="inbox-tab" data-filter="manual">يدوي</button>
+      <button class="inbox-tab" data-filter="finance">المالية</button>
+    </div>
+  </div>
+
+  <div class="inbox-stats">
+    <div class="inbox-stat-card">
+      <span class="label">الإجمالي</span>
+      <strong id="inboxTotalCount">0</strong>
+    </div>
+    <div class="inbox-stat-card unread">
+      <span class="label">غير المقروء</span>
+      <strong id="inboxUnreadCount">0</strong>
+    </div>
+    <div class="inbox-stat-card">
+      <span class="label">المقروء</span>
+      <strong id="inboxReadCount">0</strong>
+    </div>
+  </div>
+
+  <div class="inbox-layout">
+    <!-- قائمة الإشعارات -->
+    <aside class="inbox-list-panel">
+      <div id="inboxList" class="inbox-list"></div>
+
+      <div id="inboxEmptyState" class="inbox-empty hidden">
+        <div class="inbox-empty-icon">🔔</div>
+        <div class="inbox-empty-title">لا توجد إشعارات</div>
+        <div class="inbox-empty-text">جرّب تغيير الفلتر أو البحث.</div>
+      </div>
+    </aside>
+
+    <!-- تفاصيل الإشعار -->
+    <section class="inbox-detail-panel">
+      <div id="inboxDetailPlaceholder" class="inbox-detail-placeholder">
+        اختر إشعارًا من القائمة لعرض التفاصيل
+      </div>
+
+      <article id="inboxDetailCard" class="inbox-detail-card hidden">
+        <header class="detail-header">
+          <div class="detail-badges">
+            <span id="detailCategoryBadge" class="detail-badge category">عام</span>
+            <span id="detailPriorityBadge" class="detail-badge priority normal">عادي</span>
+            <span id="detailSourceBadge" class="detail-badge source">system</span>
+          </div>
+
+          <div class="detail-actions">
+            <button type="button" id="detailMarkReadBtn" class="inbox-btn inbox-btn-secondary">
+              تعليم كمقروء
+            </button>
+          </div>
+        </header>
+
+        <h3 id="detailTitle" class="detail-title">عنوان الإشعار</h3>
+
+        <div class="detail-meta">
+          <span id="detailSender">المرسل: النظام</span>
+          <span id="detailTime">الوقت: --</span>
+          <span id="detailReadAt">القراءة: غير مقروء</span>
+        </div>
+
+        <div id="detailBody" class="detail-body"></div>
+
+        <div id="detailRelated" class="detail-related hidden">
+          <div class="detail-related-title">مرجع مرتبط</div>
+          <div id="detailRelatedContent" class="detail-related-content"></div>
+        </div>
+      </article>
+    </section>
+  </div>
+</section>

@@ -1,0 +1,52 @@
+<section id="adminNotificationsLogPage" class="page-section" dir="rtl">
+  <div class="page-head">
+    <div>
+      <h2>سجل الإشعارات المرسلة</h2>
+      <p>متابعة الإشعارات اليدوية التي تم إرسالها وعدد المقروء/غير المقروء.</p>
+    </div>
+  </div>
+
+  <div class="card-box">
+    <div class="toolbar-row">
+      <input id="sentLogSearchInput" type="text" placeholder="ابحث في العنوان أو المحتوى..." />
+      <select id="sentLogPriorityFilter">
+        <option value="">كل الأولويات</option>
+        <option value="normal">عادي</option>
+        <option value="important">مهم</option>
+        <option value="urgent">عاجل</option>
+      </select>
+      <input id="sentLogCategoryFilter" type="text" placeholder="فئة (اختياري)" />
+      <button id="sentLogRefreshBtn" type="button" class="btn btn-outline">تحديث</button>
+    </div>
+  </div>
+
+  <div class="log-layout">
+    <div class="card-box">
+      <div id="sentLogList" class="sent-log-list"></div>
+      <div id="sentLogEmpty" class="empty-box hidden">لا توجد إشعارات مرسلة.</div>
+    </div>
+
+    <div class="card-box">
+      <div id="sentLogDetailsPlaceholder">اختر إشعارًا من القائمة لعرض التفاصيل</div>
+
+      <div id="sentLogDetailsCard" class="hidden">
+        <h3 id="sentDetailTitle">—</h3>
+        <div id="sentDetailMeta" class="meta-lines"></div>
+        <div id="sentDetailBody" class="body-box"></div>
+
+        <hr />
+
+        <div class="stats-row">
+          <div>الإجمالي: <strong id="sentDetailTotal">0</strong></div>
+          <div>المقروء: <strong id="sentDetailRead">0</strong></div>
+          <div>غير المقروء: <strong id="sentDetailUnread">0</strong></div>
+        </div>
+
+        <div class="recipients-wrap">
+          <h4>المستلمون</h4>
+          <div id="sentDetailRecipientsList" class="recipients-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

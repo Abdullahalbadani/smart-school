@@ -1,0 +1,148 @@
+<section class="cr-page" id="cr-page" data-page="continuing-register">
+  <!-- رأس الصفحة -->
+  <div class="cr-head">
+    <div class="cr-title">
+      <div class="cr-badge">📌</div>
+      <div>
+        <h2>تسجيل المستمرين</h2>
+        <p>ترحيل الطلاب للسنة الجديدة مع تحكم كامل بالصف والشعبة والمعاينة قبل التنفيذ.</p>
+      </div>
+    </div>
+
+    <div class="cr-head-actions">
+      <button class="cr-btn cr-btn-ghost" id="cr-btn-preview" type="button">معاينة</button>
+      <button class="cr-btn cr-btn-primary" id="cr-btn-run" type="button">تنفيذ الترحيل</button>
+    </div>
+  </div>
+
+  <!-- شريط الإعدادات -->
+  <div class="cr-bar">
+    <div class="cr-grid">
+      <label class="cr-field">
+        <span>السنة المصدر</span>
+        <select id="cr-fromYear"></select>
+      </label>
+
+      <label class="cr-field">
+        <span>السنة الهدف</span>
+        <select id="cr-toYear"></select>
+      </label>
+
+      <label class="cr-field">
+        <span>المرحلة/الصف</span>
+        <select id="cr-grade"></select>
+      </label>
+
+      <label class="cr-field">
+        <span>الشعبة</span>
+        <select id="cr-section"></select>
+      </label>
+
+      <label class="cr-field cr-search">
+        <span>بحث</span>
+        <input id="cr-q" type="search" placeholder="ابحث بالاسم أو الرقم..." />
+      </label>
+    </div>
+
+    <div class="cr-options">
+      <div class="cr-seg" role="tablist" aria-label="وضع الترحيل">
+        <button class="cr-seg-btn is-active" data-mode="AUTO">ترقية تلقائية</button>
+        <button class="cr-seg-btn" data-mode="KEEP">نفس الصف</button>
+        <button class="cr-seg-btn" data-mode="MANUAL">يدوي</button>
+      </div>
+
+      <div class="cr-inline">
+        <label class="cr-check">
+          <input type="checkbox" id="cr-keepSection" checked />
+          <span>حافظ على نفس الشعبة إن وجدت</span>
+        </label>
+
+        <div class="cr-inline-field">
+          <span>شعبة افتراضية</span>
+          <select id="cr-defaultSection"></select>
+        </div>
+
+        <button class="cr-btn" id="cr-btn-refresh" type="button">تحديث القائمة</button>
+      </div>
+    </div>
+
+    <div class="cr-help">
+      <span class="cr-pill">✅ passed = يترقّى</span>
+      <span class="cr-pill">⚠️ failed = يعيد نفس الصف</span>
+      <span class="cr-pill">⏳ pending = غير مؤهل</span>
+      <span class="cr-pill">🚫 graduated/transferred/withdrawn = غير مؤهل</span>
+    </div>
+  </div>
+
+  <!-- شريط أدوات جماعي -->
+  <div class="cr-bulk sr-hidden" id="cr-bulk">
+    <div class="cr-bulk-left">
+      <strong id="cr-selectedCount">0</strong>
+      <span>طالب محدد</span>
+    </div>
+
+    <div class="cr-bulk-actions">
+      <select id="cr-bulk-grade"></select>
+      <select id="cr-bulk-section"></select>
+
+      <button class="cr-btn" id="cr-bulk-apply" type="button">تطبيق للمحدد</button>
+      <button class="cr-btn cr-btn-ghost" id="cr-bulk-clear" type="button">إلغاء التحديد</button>
+    </div>
+  </div>
+
+  <!-- جدول الطلاب -->
+  <div class="cr-tableWrap">
+    <table class="cr-table">
+      <thead>
+        <tr>
+          <th class="cr-col-check"><input type="checkbox" id="cr-checkAll" /></th>
+          <th>الطالب</th>
+          <th>الحالي</th>
+          <th>الوجهة (الصف/الشعبة)</th>
+          <th>الحالة</th>
+          <th>إجراءات</th>
+        </tr>
+      </thead>
+      <tbody id="cr-tbody">
+        <tr>
+          <td colspan="6" class="cr-empty">اختر السنة المصدر والسنة الهدف ثم اضغط "تحديث القائمة".</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Drawer تفاصيل الطالب -->
+  <aside class="cr-drawer sr-hidden" id="cr-drawer" aria-hidden="true">
+    <div class="cr-drawer-head">
+      <div>
+        <h3 id="cr-drawer-name">—</h3>
+        <p id="cr-drawer-sub">—</p>
+      </div>
+      <button class="cr-x" id="cr-drawer-close" type="button">✕</button>
+    </div>
+
+    <div class="cr-drawer-body" id="cr-drawer-body"></div>
+
+    <div class="cr-drawer-foot">
+      <button class="cr-btn cr-btn-ghost" id="cr-drawer-cancel" type="button">إغلاق</button>
+      <button class="cr-btn cr-btn-primary" id="cr-drawer-save" type="button">حفظ التعديلات</button>
+    </div>
+  </aside>
+
+  <!-- Modal المعاينة -->
+  <div class="cr-modal sr-hidden" id="cr-modal" aria-hidden="true">
+    <div class="cr-modal-card">
+      <div class="cr-modal-head">
+        <h3>معاينة الترحيل</h3>
+        <button class="cr-x" id="cr-modal-close" type="button">✕</button>
+      </div>
+
+      <div class="cr-modal-body" id="cr-previewBody"></div>
+
+      <div class="cr-modal-foot">
+        <button class="cr-btn cr-btn-ghost" id="cr-modal-cancel" type="button">إغلاق</button>
+        <button class="cr-btn cr-btn-primary" id="cr-modal-confirm" type="button">تنفيذ الآن</button>
+      </div>
+    </div>
+  </div>
+</section>

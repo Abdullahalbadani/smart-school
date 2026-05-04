@@ -1,0 +1,133 @@
+<nav class="rbac-tabs">
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-modules"
+     onclick="RBAC_tabs.open(this, 'rbac-modules')">
+    الوحدات
+  </a>
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-permissions"
+     onclick="RBAC_tabs.open(this, 'rbac-permissions')">
+    الصلاحيات
+  </a>
+  <a href="#"
+     class="tab-link active"
+     data-tab="rbac-roles"
+     onclick="RBAC_tabs.open(this, 'rbac-roles')">
+    الأدوار
+  </a>
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-users"
+     onclick="RBAC_tabs.open(this, 'rbac-users')">
+    المستخدمون
+  </a>
+</nav>
+
+<section class="rbac-page rbac-page-roles">
+  <div class="rbac-card">
+    <div class="rbac-card-header">
+      <div>
+        <h2>إدارة الأدوار</h2>
+        <p>إنشاء الأدوار وربطها بمجموعة من الصلاحيات المناسبة.</p>
+      </div>
+    </div>
+
+    <div class="rbac-card-body">
+
+      <!-- أعلى الصفحة: نموذج + جدول -->
+      <div class="rbac-two-column" style="margin-bottom:1.5rem;">
+        <!-- نموذج الدور -->
+        <div class="column-side">
+          <h3 style="margin-bottom:0.5rem;">إضافة / تعديل دور</h3>
+          <form id="rbac-role-form" class="form-card">
+            <input type="hidden" id="role-id" />
+
+            <label>
+              <span>اسم الدور</span>
+              <input type="text" id="role-name" required />
+            </label>
+
+            <label>
+              <span>الوصف</span>
+              <textarea id="role-description" rows="3"></textarea>
+            </label>
+
+            <button type="submit" class="primary-btn">
+              حفظ الدور
+            </button>
+          </form>
+        </div>
+
+        <!-- جدول الأدوار -->
+        <div class="column-main">
+          <div class="rbac-toolbar">
+            <div class="rbac-search-input">
+              <input
+                type="text"
+                placeholder="بحث باسم الدور أو الوصف..."
+                oninput="RBAC_filters.filter(this, 'rbac-roles-tbody')" />
+            </div>
+
+            <div class="rbac-meta">
+              <span class="badge-soft" id="roles-count-badge" data-label="دور">
+                0 دور
+              </span>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>اسم الدور</th>
+                  <th>الوصف</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="rbac-roles-tbody">
+                <!-- من JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <hr style="margin:0 0 1.25rem;" />
+
+      <!-- أسفل الصفحة: صلاحيات الدور -->
+      <div>
+        <h3 style="margin-bottom:0.75rem;">صلاحيات الدور</h3>
+
+        <div class="rbac-toolbar" style="margin-bottom:0.75rem;">
+          <label style="min-width:240px;">
+            <span style="display:block;font-size:0.8rem;margin-bottom:0.25rem;">
+              اختيار الدور
+            </span>
+            <select id="role-select-perms" style="min-width:220px;">
+              <option value="">اختر الدور...</option>
+            </select>
+          </label>
+
+          <button type="button" class="btn-primary"
+                  onclick="RBAC.grantAllPermissions && RBAC.grantAllPermissions()">
+            منح كل الصلاحيات لهذا الدور
+          </button>
+        </div>
+
+        <div id="role-permissions-list"
+             style="display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:0.35rem; max-height:320px; overflow:auto; border-radius:14px; border:1px solid rgba(148,163,184,0.3); padding:0.6rem;">
+          <!-- من JS: checkboxes -->
+        </div>
+
+        <div style="margin-top:0.9rem; text-align:left;">
+          <button id="save-role-permissions" type="button" class="primary-btn">
+            حفظ صلاحيات الدور
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

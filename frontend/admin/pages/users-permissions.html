@@ -1,0 +1,156 @@
+<!-- لوحة إدارة المستخدمين والصلاحيات والوحدات -->
+<div class="users-permissions">
+
+  <!-- رأس اللوحة -->
+  <div class="up-header">
+    <div>
+      <h2>إدارة المستخدمين والصلاحيات</h2>
+      <p>تحكم كامل بالمستخدمين، الأدوار، الصلاحيات، والوحدات.</p>
+    </div>
+    <div class="up-header-right">
+      <span class="up-tag">🛡️ أمان النظام</span>
+      <span class="up-tag up-tag-soft">v1.0</span>
+    </div>
+  </div>
+
+  <!-- التبويبات -->
+  <div class="up-tabs">
+    <button class="up-tab active" data-tab="users">المستخدمون</button>
+    <button class="up-tab" data-tab="roles">الأدوار</button>
+    <button class="up-tab" data-tab="permissions">الصلاحيات</button>
+    <button class="up-tab" data-tab="modules">(Modules) الوحدات</button>
+  </div>
+
+  <!-- تبويب: المستخدمون -->
+  <section class="up-tab-content" id="tab-users">
+    <div class="up-section-header">
+      <h3>المستخدمون</h3>
+      <div class="up-actions">
+        <input
+          type="search"
+          id="up-user-search"
+          class="up-input"
+          placeholder="ابحث بالاسم أو البريد..."
+        />
+        <button class="primary-btn" id="up-add-user-btn">
+          <i class="ri-user-add-line"></i>
+          مستخدم جديد
+        </button>
+      </div>
+    </div>
+
+    <div class="up-card">
+      <table class="up-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>الاسم</th>
+            <th>البريد</th>
+            <th>الهاتف</th>
+            <th>الدور</th>
+            <th>الحالة</th>
+            <th style="width: 80px;">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="up-users-tbody">
+          <!-- يتم تعبئته من users-permissions.js -->
+        </tbody>
+      </table>
+      <div class="up-table-empty hidden" id="up-users-empty">
+        لا يوجد مستخدمون بعد، جرّب إضافة مستخدم جديد.
+      </div>
+    </div>
+  </section>
+
+  <!-- تبويب: الأدوار -->
+  <section class="up-tab-content hidden" id="tab-roles">
+    <div class="up-section-header">
+      <h3>الأدوار</h3>
+      <button class="primary-btn" id="up-add-role-btn">
+        <i class="ri-shield-user-line"></i>
+        دور جديد
+      </button>
+    </div>
+
+    <div class="up-card">
+      <table class="up-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>اسم الدور</th>
+            <th>الوصف</th>
+            <th style="width: 80px;">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="up-roles-tbody">
+          <!-- JS -->
+        </tbody>
+      </table>
+      <div class="up-table-empty hidden" id="up-roles-empty">
+        لم يتم إنشاء أي دور حتى الآن.
+      </div>
+    </div>
+  </section>
+
+  <!-- تبويب: الصلاحيات -->
+  <section class="up-tab-content hidden" id="tab-permissions">
+    <div class="up-section-header">
+      <h3>الصلاحيات</h3>
+      <button class="primary-btn" id="up-add-permission-btn">
+        <i class="ri-lock-unlock-line"></i>
+        صلاحية جديدة
+      </button>
+    </div>
+
+    <div class="up-card">
+      <table class="up-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>الوحدة</th>
+            <th>اسم الصلاحية</th>
+            <th>الكود</th>
+            <th style="width: 80px;">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="up-permissions-tbody">
+          <!-- JS -->
+        </tbody>
+      </table>
+      <div class="up-table-empty hidden" id="up-permissions-empty">
+        لم يتم تعريف أي صلاحيات بعد.
+      </div>
+    </div>
+  </section>
+
+  <!-- تبويب: الوحدات (Modules) -->
+  <section class="up-tab-content hidden" id="tab-modules">
+    <div class="up-section-header">
+      <h3>الوحدات (Modules)</h3>
+      <button class="primary-btn" id="up-add-module-btn">
+        <i class="ri-layout-4-line"></i>
+        وحدة جديدة
+      </button>
+    </div>
+
+    <div class="up-card">
+      <table class="up-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>اسم الوحدة</th>
+            <th>الكود</th>
+            <th style="width: 80px;">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="up-modules-tbody">
+          <!-- JS -->
+        </tbody>
+      </table>
+      <div class="up-table-empty hidden" id="up-modules-empty">
+        لا توجد وحدات حتى الآن.
+      </div>
+    </div>
+  </section>
+
+</div>

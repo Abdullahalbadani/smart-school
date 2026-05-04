@@ -1,0 +1,298 @@
+<!-- frontend/admin/pages/examSchedule.html -->
+<section id="examSchedulePage" class="ex-page">
+  <!-- Header -->
+  <div class="ex-head">
+    <div class="ex-title">
+      <div class="ex-badgeIcon"><i class="ri-calendar-check-line"></i></div>
+      <div>
+        <h2>جدول الاختبارات</h2>
+        <p>
+          اختر الفلاتر ثم اضغط <b>إنشاء/فتح الجدول</b>. يمكنك عمل جدول للصف كامل (كل الشعب) أو لشعبة محددة.
+          يوجد نسخ من جدول، وإدارة الجداول السابقة.
+        </p>
+      </div>
+    </div>
+
+    <div class="ex-actions">
+      <button class="ex-btn ex-btn-primary" id="exCreateBtn" type="button">
+        <i class="ri-play-circle-line"></i><span>إنشاء/فتح الجدول</span>
+      </button>
+
+      <button class="ex-btn ex-btn-ghost" id="exSaveDraftBtn" type="button">
+        <i class="ri-save-3-line"></i><span>حفظ مسودة</span>
+      </button>
+
+      <button class="ex-btn ex-btn-ghost" id="exPublishBtn" type="button" style="display:none;">
+        <i class="ri-upload-2-line"></i><span>نشر</span>
+      </button>
+
+      <button class="ex-btn ex-btn-ghost" id="exUnpublishBtn" type="button" style="display:none;">
+        <i class="ri-arrow-go-back-line"></i><span>إلغاء النشر</span>
+      </button>
+
+      <button class="ex-btn ex-btn-ghost" id="exClearBtn" type="button">
+        <i class="ri-eraser-line"></i><span>تفريغ</span>
+      </button>
+
+      <button class="ex-btn ex-btn-ghost" id="exCopyBtn" type="button">
+        <i class="ri-file-copy-2-line"></i><span>نسخ من جدول</span>
+      </button>
+
+      <button class="ex-btn ex-btn-ghost" id="exManageBtn" type="button">
+        <i class="ri-folder-open-line"></i><span>إدارة</span>
+      </button>
+
+      <button class="ex-btn ex-btn-danger" id="exDeleteCurrentBtn" type="button">
+        <i class="ri-delete-bin-6-line"></i><span>حذف الجدول</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="ex-filters">
+    <div class="ex-grid">
+      <div class="ex-field">
+        <label>السنة الدراسية</label>
+        <select id="exYearSelect" class="ex-inp">
+          <option value="">اختر السنة...</option>
+        </select>
+      </div>
+
+      <div class="ex-field">
+        <label>نوع الاختبار</label>
+        <select id="exTypeSelect" class="ex-inp">
+          <option value="">اختر النوع...</option>
+          <option value="midyear">نصف العام</option>
+          <option value="final">آخر العام</option>
+        </select>
+      </div>
+
+      <div class="ex-field">
+        <label>بداية أسبوع الاختبارات</label>
+        <input id="exWeekStartInp" class="ex-inp" type="date" />
+        <div class="ex-help">اختر بداية الأسبوع مرة واحدة، ثم اختر يوم كل اختبار من الصندوق.</div>
+      </div>
+
+      <div class="ex-field">
+        <label>المرحلة</label>
+        <select id="exStageSelect" class="ex-inp">
+          <option value="">اختر المرحلة...</option>
+        </select>
+      </div>
+
+      <div class="ex-field">
+        <label>الصف</label>
+        <select id="exGradeSelect" class="ex-inp">
+          <option value="">اختر الصف...</option>
+        </select>
+      </div>
+
+      <div class="ex-field">
+        <label>النطاق</label>
+        <select id="exScopeSelect" class="ex-inp">
+          <option value="">اختر...</option>
+          <option value="grade">الصف كامل (كل الشعب)</option>
+          <option value="section">شعبة محددة</option>
+        </select>
+      </div>
+
+      <div class="ex-field">
+        <label>الشعبة</label>
+        <select id="exSectionSelect" class="ex-inp" disabled>
+          <option value="">اختر الشعبة...</option>
+        </select>
+        <div class="ex-help">إذا اخترت (الصف كامل) سيتم تعطيل الشعبة.</div>
+      </div>
+
+      <div class="ex-field">
+        <label>بحث الشعبة</label>
+        <input id="exSectionSearch" class="ex-inp" placeholder="اكتب اسم الشعبة..." />
+      </div>
+    </div>
+
+    <div class="ex-chips">
+      <div class="ex-chip" id="exStatusChip">الحالة: —</div>
+      <div class="ex-chip" id="exCountChip">عدد الاختبارات: 0</div>
+      <div class="ex-chip ex-chip-info" id="exInfoChip">
+        اختر الفلاتر ثم اضغط (إنشاء/فتح الجدول) أو اضغط Enter.
+      </div>
+    </div>
+  </div>
+
+  <!-- Table / List -->
+  <div class="ex-card">
+    <div class="ex-cardHead">
+      <div>
+        <h3 class="ex-cardTitle">قائمة الاختبارات</h3>
+        <p class="ex-cardSub">أضف كل الاختبارات أولًا، ثم اضغط نشر مرة واحدة بعد الانتهاء.</p>
+      </div>
+      <div class="ex-cardActions">
+        <button class="ex-btn ex-btn-primary" id="exAddExamBtn" type="button">
+          <i class="ri-add-line"></i><span>إضافة اختبار</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="ex-tableWrap">
+      <table class="ex-table">
+        <thead>
+          <tr>
+            <th style="min-width:110px;">التاريخ</th>
+            <th style="min-width:110px;">اليوم</th>
+            <th style="min-width:100px;">من</th>
+            <th style="min-width:100px;">إلى</th>
+            <th style="min-width:170px;">المادة</th>
+            <th style="min-width:140px;">قاعة</th>
+            <th style="min-width:220px;">ملاحظات</th>
+            <th class="ex-colApply" style="min-width:170px;">ينطبق على</th>
+            <th style="width:1%;">إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="exTbody">
+          <tr>
+            <td colspan="9" class="ex-emptyRow">
+              <div class="ex-empty">
+                <i class="ri-calendar-event-line"></i>
+                <div>
+                  <b>لا يوجد جدول مفتوح</b>
+                  <div>اختر الفلاتر ثم افتح جدولًا.</div>
+                </div>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="exToast" class="ex-toast" aria-live="polite"></div>
+  </div>
+
+  <!-- Drawer (Edit exam) -->
+  <div id="exDrawerBackdrop" class="ex-backdrop" aria-hidden="true"></div>
+  <aside id="exDrawer" class="ex-drawer" aria-hidden="true">
+    <div class="ex-drawerHead">
+      <div>
+        <h3>تعديل اختبار</h3>
+        <p id="exDrawerSub" class="ex-drawerSub">—</p>
+      </div>
+      <button class="ex-iconBtn" id="exDrawerClose" type="button">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="ex-drawerBody">
+      <div class="ex-grid2">
+        <div class="ex-field">
+          <label>اليوم</label>
+          <select id="exWeekDateSelect" class="ex-inp">
+            <option value="">اختر اليوم...</option>
+          </select>
+        </div>
+
+        <div class="ex-field">
+          <label>التاريخ الفعلي</label>
+          <input id="exDateInp" class="ex-inp" type="date" readonly />
+        </div>
+
+        <div class="ex-field">
+          <label>من</label>
+          <input id="exStartInp" class="ex-inp" type="time" />
+        </div>
+
+        <div class="ex-field">
+          <label>إلى</label>
+          <input id="exEndInp" class="ex-inp" type="time" />
+        </div>
+
+        <div class="ex-field">
+          <label>المادة</label>
+          <select id="exSubjectSelect" class="ex-inp">
+            <option value="">اختر المادة...</option>
+          </select>
+        </div>
+
+        <div class="ex-field">
+          <label>القاعة</label>
+          <input id="exRoomInp" class="ex-inp" placeholder="مثال: قاعة 3" />
+        </div>
+
+        <div class="ex-field" style="grid-column: 1 / -1;">
+          <label>ملاحظات</label>
+          <textarea id="exNotesInp" class="ex-inp ex-area" rows="3" placeholder="أي ملاحظة..."></textarea>
+        </div>
+
+        <div class="ex-field ex-applyWrap" style="grid-column: 1 / -1;">
+          <label>ينطبق على</label>
+          <select id="exApplyToSelect" class="ex-inp">
+            <option value="all">كل الشعب</option>
+          </select>
+          <div class="ex-help">
+            إذا كان جدولك “للصف كامل” تستطيع تحديد “كل الشعب” أو شعبة معينة لكل اختبار.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="ex-drawerFoot">
+      <button class="ex-btn ex-btn-ghost" id="exDrawerDelete" type="button">
+        <i class="ri-delete-bin-6-line"></i><span>حذف الاختبار</span>
+      </button>
+      <div class="ex-spacer"></div>
+      <button class="ex-btn ex-btn-ghost" id="exDrawerCancel" type="button">
+        <i class="ri-close-line"></i><span>إلغاء</span>
+      </button>
+      <button class="ex-btn ex-btn-ghost" id="exDrawerSaveAdd" type="button">
+        <i class="ri-add-circle-line"></i><span>حفظ وإضافة اختبار آخر</span>
+      </button>
+      <button class="ex-btn ex-btn-primary" id="exDrawerSave" type="button">
+        <i class="ri-check-line"></i><span>حفظ</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Manage modal -->
+  <div id="exManageBackdrop" class="ex-backdrop" aria-hidden="true"></div>
+  <div id="exManageModal" class="ex-modal" aria-hidden="true">
+    <div class="ex-modalHead">
+      <h3>إدارة جداول الاختبارات</h3>
+      <div class="ex-modalActions">
+        <button class="ex-btn ex-btn-ghost" id="exManageRefresh" type="button">
+          <i class="ri-refresh-line"></i><span>تحديث</span>
+        </button>
+        <button class="ex-iconBtn" id="exManageClose" type="button">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="ex-modalBody">
+      <div class="ex-tableWrap">
+        <table class="ex-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>السنة</th>
+              <th>النوع</th>
+              <th>الشهر</th>
+              <th>المرحلة</th>
+              <th>الصف</th>
+              <th>النطاق</th>
+              <th>الشعبة</th>
+              <th>الحالة</th>
+              <th>عدد</th>
+              <th style="width:1%;">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="exManageTbody">
+            <tr>
+              <td colspan="11" class="ex-emptyRow">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="ex-help" style="margin-top:10px;">
+        يمكنك فتح أي جدول من هنا أو حذفه (يجب أن يكون مسودة).
+      </div>
+    </div>
+  </div>
+</section>

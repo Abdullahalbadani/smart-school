@@ -1,0 +1,371 @@
+<section id="feesPayPage" class="fp-page" dir="rtl">
+  <!-- Header -->
+  <header class="fp-header">
+    <div class="fp-headText">
+      <h2 class="fp-title">سداد الرسوم</h2>
+      <p class="fp-sub">
+        ابحث عن الطالب، أنشئ عقد الرسوم (المبلغ السنوي + عدد الأقساط)، ثم سجّل
+        الدفعة واطبع الإيصال.
+      </p>
+    </div>
+
+    <div class="fp-actions">
+      <button id="fpReload" class="fp-btn fp-btn-ghost" type="button">
+        <i class="ri-refresh-line"></i><span>تحديث</span>
+      </button>
+      <button id="fpOpenReports" class="fp-btn fp-btn-ghost" type="button">
+        <i class="ri-bar-chart-line"></i><span>التقارير</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Filters / Search -->
+  <div class="fp-panel fp-filters">
+    <div class="fp-field">
+      <label for="fpAcademicYear">السنة الدراسية</label>
+      <select id="fpAcademicYear">
+        <option value="">اختر...</option>
+      </select>
+    </div>
+
+    <div class="fp-field">
+      <label for="fpGrade">الصف</label>
+      <select id="fpGrade">
+        <option value="">الكل</option>
+      </select>
+    </div>
+
+    <div class="fp-field">
+      <label for="fpClass">الشعبة</label>
+      <select id="fpClass">
+        <option value="">الكل</option>
+      </select>
+    </div>
+
+    <div class="fp-field fp-field-search">
+      <label for="fpStudentQuery">بحث طالب</label>
+
+      <div class="fp-search">
+        <i class="ri-search-line"></i>
+        <input
+          id="fpStudentQuery"
+          type="text"
+          placeholder="اسم الطالب / رقم الطالب / رقم ولي الأمر"
+          autocomplete="off"
+        />
+        <button
+          id="fpClearStudent"
+          class="fp-iconBtn"
+          type="button"
+          aria-label="مسح"
+        >
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <!-- نتائج البحث (JS سيملؤها) -->
+      <div id="fpStudentResults" class="fp-results" hidden></div>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div class="fp-grid">
+    <!-- Student / Contract Panel -->
+    <aside class="fp-panel fp-student">
+      <div class="fp-panelHead">
+        <h3>بيانات الطالب</h3>
+        <span id="fpStudentBadge" class="fp-badge fp-badge-muted"
+          >لم يتم اختيار طالب</span
+        >
+      </div>
+
+      <div class="fp-studentCard" id="fpStudentCard" aria-live="polite">
+        <div class="fp-studentRow">
+          <div>
+            <div class="fp-label">الاسم</div>
+            <div id="fpStudentName" class="fp-value">—</div>
+          </div>
+          <div>
+            <div class="fp-label">رقم الطالب</div>
+            <div id="fpStudentId" class="fp-value">—</div>
+          </div>
+        </div>
+
+        <div class="fp-studentRow">
+          <div>
+            <div class="fp-label">الصف/الشعبة</div>
+            <div id="fpStudentClass" class="fp-value">—</div>
+          </div>
+          <div>
+            <div class="fp-label">ولي الأمر</div>
+            <div id="fpGuardian" class="fp-value">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary -->
+   <div class="fp-summary">
+  <div class="fp-kpi">
+    <div class="fp-kpiLabel">الإجمالي السنوي</div>
+    <div id="fpTotalAnnual" class="fp-kpiValue">0</div>
+  </div>
+
+  <div class="fp-kpi" style="border-color: #f59e0b;">
+    <div class="fp-kpiLabel" style="color: #f59e0b;">إجمالي الخصم</div>
+    <div id="fpTotalDiscount" class="fp-kpiValue" style="color: #f59e0b;">0</div>
+  </div>
+
+  <div class="fp-kpi">
+    <div class="fp-kpiLabel">المدفوع</div>
+    <div id="fpPaidTotal" class="fp-kpiValue">0</div>
+  </div>
+
+  <div class="fp-kpi">
+    <div class="fp-kpiLabel">المتبقي</div>
+    <div id="fpRemaining" class="fp-kpiValue">0</div>
+  </div>
+</div>
+
+      <!-- Contract -->
+      <div class="fp-divider fp-contract">
+        <div class="fp-contractRow">
+          <div class="fp-contractInfo">
+            <div class="fp-label">عقد الرسوم</div>
+            <div id="fpContractStatus" class="fp-value">—</div>
+          </div>
+
+          <button
+            id="fpCreateContractBtn"
+            class="fp-btn fp-btn-primary"
+            type="button"
+            disabled
+          >
+            <i class="ri-file-add-line"></i><span>إنشاء عقد</span>
+          </button>
+        </div>
+
+        <!-- Contract form (يظهر عند الضغط "إنشاء عقد") -->
+      <div id="fpContractForm" class="fp-contractForm" hidden>
+  
+  <div class="fp-field">
+    <label for="fpAnnualAmount">المبلغ السنوي (الأساسي)</label>
+    <input id="fpAnnualAmount" type="number" min="0" step="1" placeholder="مثال: 200000" />
+  </div>
+
+  <div class="fp-field">
+    <label for="fpDiscountAmount">مبلغ الخصم / المنحة (إن وجد)</label>
+    <input type="number" id="fpDiscountAmount" placeholder="مثال: 15000" value="0">
+  </div>
+
+  <div class="fp-field">
+    <label for="fpDiscountReason">سبب الخصم</label>
+    <input type="text" id="fpDiscountReason" placeholder="مثال: أخ ثاني، منحة أوائل...">
+  </div>
+
+  <div class="fp-field">
+    <label for="fpInstallmentsCount">عدد الأقساط</label>
+    <input id="fpInstallmentsCount" type="number" min="1" max="36" step="1" placeholder="مثال: 10" />
+  </div>
+
+  <div class="fp-field">
+    <label for="fpFirstDueDate">تاريخ أول قسط</label>
+    <input id="fpFirstDueDate" type="date" />
+  </div>
+
+  <div class="fp-contractActions">
+    <button id="fpGenerateInstallments" class="fp-btn fp-btn-primary" type="button">
+      <i class="ri-magic-line"></i><span>توليد الأقساط</span>
+    </button>
+
+    <button id="fpCancelContract" class="fp-btn fp-btn-ghost" type="button">
+      <i class="ri-close-circle-line"></i><span>إلغاء</span>
+    </button>
+  </div>
+
+  <p class="fp-hint">
+    سيتم إنشاء فواتير الأقساط تلقائيًا بناءً على (الصافي) بعد الخصم.
+  </p>
+</div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="fp-main">
+      <!-- Installments -->
+      <section class="fp-panel fp-installments">
+        <div class="fp-panelHead">
+          <h3>الأقساط</h3>
+          <div class="fp-mini">
+            <span class="fp-miniLabel">القسط القادم:</span>
+            <span id="fpNextInstallment" class="fp-miniValue">—</span>
+          </div>
+        </div>
+
+        <div class="fp-tableWrap">
+          <table class="fp-table" aria-label="جدول الأقساط">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>الاستحقاق</th>
+                <th>قيمة القسط</th>
+                <th>المدفوع</th>
+                <th>المتبقي</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+
+            <tbody id="fpInstallmentsBody">
+              <tr class="fp-emptyRow">
+                <td colspan="6">
+                  <div class="fp-empty">
+                    <i class="ri-information-line"></i>
+                    <span>اختر طالبًا لعرض الأقساط.</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Payment -->
+      <section class="fp-panel fp-payment">
+        <div class="fp-panelHead">
+          <h3>تسجيل دفعة</h3>
+          <span id="fpPaymentState" class="fp-badge fp-badge-muted">جاهز</span>
+        </div>
+
+        <form id="fpPaymentForm" class="fp-form" autocomplete="off">
+          <div class="fp-formGrid">
+            <div class="fp-field">
+              <label for="fpPayAmount">المبلغ</label>
+              <input
+                id="fpPayAmount"
+                type="number"
+                min="0"
+                step="1"
+                placeholder="أدخل مبلغ الدفعة"
+                required
+              />
+            </div>
+
+            <div class="fp-field">
+              <label for="fpPayMethod">طريقة الدفع</label>
+              <select id="fpPayMethod" required>
+                <option value="">اختر...</option>
+                <option value="cash">يدوي (نقدًا)</option>
+                <option value="transfer">حوالة/تحويل</option>
+                <option value="wallet">محفظة (جيبي/كريمي..)</option>
+                <option value="card">بطاقة</option>
+                <option value="other">أخرى</option>
+              </select>
+            </div>
+
+            <div class="fp-field">
+              <label for="fpProvider">الجهة/المزوّد</label>
+              <input
+                id="fpProvider"
+                type="text"
+                placeholder="مثال: جيبي / كريمي / بنك..."
+              />
+            </div>
+
+            <div class="fp-field">
+              <label for="fpReference">رقم المرجع</label>
+              <input
+                id="fpReference"
+                type="text"
+                placeholder="رقم العملية/الحوالة إن وجد"
+              />
+            </div>
+
+            <div class="fp-field fp-field-full">
+              <label for="fpNote">ملاحظات</label>
+              <input id="fpNote" type="text" placeholder="اختياري" />
+            </div>
+
+            <div class="fp-field fp-field-full">
+              <label for="fpAttachment">مرفق (اختياري)</label>
+              <input
+                id="fpAttachment"
+                type="file"
+                accept="image/*,application/pdf"
+              />
+              <p class="fp-hint">ارفع صورة حوالة/إيصال محفظة إن أحببت.</p>
+            </div>
+          </div>
+
+          <div class="fp-formActions">
+            <button
+              id="fpSubmitPayment"
+              class="fp-btn fp-btn-primary"
+              type="submit"
+              disabled
+            >
+              <i class="ri-check-line"></i><span>تأكيد الدفعة</span>
+            </button>
+
+            <button
+              id="fpResetPayment"
+              class="fp-btn fp-btn-ghost"
+              type="button"
+            >
+              <i class="ri-eraser-line"></i><span>تفريغ</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Payments History -->
+      <section class="fp-panel fp-history">
+        <div class="fp-panelHead">
+          <h3>سجل المدفوعات</h3>
+          <button
+            id="fpPrintStatement"
+            class="fp-btn fp-btn-ghost"
+            type="button"
+          >
+            <i class="ri-printer-line"></i><span>طباعة كشف</span>
+          </button>
+        </div>
+
+        <div class="fp-tableWrap">
+          <table class="fp-table" aria-label="سجل المدفوعات">
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>المبلغ</th>
+                <th>الطريقة</th>
+                <th>الجهة</th>
+                <th>المرجع</th>
+                <th>السند</th>
+                <th>الإيصال</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+
+            <tbody id="fpPaymentsBody">
+              <tr class="fp-emptyRow">
+                <td colspan="7">
+                  <div class="fp-empty">
+                    <i class="ri-information-line"></i>
+                    <span>لا توجد مدفوعات بعد.</span>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div
+    id="fpToast"
+    class="fp-toast"
+    role="status"
+    aria-live="polite"
+    hidden
+  ></div>
+</section>

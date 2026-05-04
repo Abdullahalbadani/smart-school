@@ -1,0 +1,4203 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Smart School - بوابة المعلّم</title>
+
+    <!-- خط الواجهة -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <!-- أيقونات Remix Icon -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css"
+    />
+    <link rel="stylesheet" href="css/teacher.css" />
+
+    <!-- حارس الدخول -->
+    <script src="/frontend/login/js/auth-guard.js" defer></script>
+
+    <!-- ✅ تحسينات قوية (بدون الاعتماد على teacher.css) -->
+    <style>
+      /* عدّاد الحصة داخل مودال إدارة الحصص */
+      #ls-timer {
+        margin-top: 0.35rem;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      #ls-timer .dot {
+        width: 0.6rem;
+        height: 0.6rem;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.14);
+      }
+      /* شارة قفل/تحذير داخل ملخص الحضور */
+      .att-lock-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.2rem 0.45rem;
+        border-radius: 999px;
+        background: rgba(2, 132, 199, 0.12);
+        color: #075985;
+        font-weight: 700;
+        margin-inline-start: 0.35rem;
+        font-size: 0.85em;
+      }
+      .att-lock-badge i {
+        font-size: 1.05em;
+      }
+      /* شريط تعليمات سريع أعلى الحضور */
+      .att-hint {
+        margin-top: 0.55rem;
+        padding: 0.6rem 0.7rem;
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.05);
+        border: 1px dashed rgba(15, 23, 42, 0.18);
+        font-weight: 600;
+      }
+      [data-theme="dark"] .att-hint {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.16);
+      }
+      /* تحسين بسيط لزر إنهاء الحصة */
+      #ls-end:disabled,
+      #ls-start:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+
+  <body data-role="teacher">
+    <div class="shell-teacher">
+      <!-- NAVBAR -->
+      <header class="topbar">
+        <div class="topbar-inner">
+          <div class="brand">
+            <div class="brand-logo"><span>S</span></div>
+            <div class="brand-text">
+              <h1>Smart School</h1>
+              <small>بوابة المعلّم</small>
+            </div>
+          </div>
+
+          <div class="command-center">
+            <span class="command-key">⌘K</span>
+            <input
+              type="text"
+              id="command-input"
+              placeholder="ابحث أو اكتب أمرًا: تسجيل حضور، إدخال درجات، طباعة تقرير..."
+            />
+            <div class="command-results" id="command-results" hidden></div>
+          </div>
+
+          <div class="top-actions">
+            <div class="live-clock">
+              <span id="clock-time">--:--</span>
+              <span id="clock-date">--/--/----</span>
+            </div>
+
+            <button
+              class="icon-btn"
+              id="theme-toggle"
+              title="الوضع الليلي / النهاري"
+            >
+              <i id="theme-icon" class="ri-sun-line"></i>
+            </button>
+
+            <button class="icon-btn" id="notifications-btn" title="الإشعارات">
+              <i class="ri-notification-3-line"></i>
+              <span id="nt-bell-badge" class="badge-dot" hidden>0</span>
+            </button>
+
+            <!-- حساب المعلّم -->
+            <div class="account-wrapper">
+              <button
+                class="user-pill"
+                id="account-menu-toggle"
+                title="حساب المعلّم"
+              >
+                <div class="avatar-circle">
+                  <img id="teacher-avatar-img" alt="avatar" />
+                  <span id="teacher-avatar-letter">م</span>
+                </div>
+                <div class="user-info">
+                  <strong id="teacher-name-pill">أ. محمد المعلم</strong>
+                </div>
+
+                <span class="user-arrow"
+                  ><i class="ri-arrow-down-s-line"></i
+                ></span>
+              </button>
+
+              <div class="account-dropdown" id="account-dropdown">
+                <button class="account-item" id="open-profile-modal">
+                  <i class="ri-user-3-line"></i>
+                  <span>الملف الشخصي</span>
+                </button>
+                <button class="account-item" id="open-change-avatar-modal">
+                  <i class="ri-image-edit-line"></i>
+                  <span>تغيير الصورة</span>
+                </button>
+                <button class="account-item" id="open-change-email-modal">
+                  <i class="ri-mail-line"></i>
+                  <span>تغيير البريد</span>
+                </button>
+                <button class="account-item" id="open-change-password-modal">
+                  <i class="ri-key-2-line"></i>
+                  <span>تغيير كلمة المرور</span>
+                </button>
+                <div class="account-divider"></div>
+                <button
+                  class="account-item account-item--logout"
+                  id="logout-btn"
+                >
+                  <i class="ri-logout-box-r-line"></i>
+                  <span>تسجيل الخروج</span>
+                </button>
+              </div>
+
+              <input
+                type="file"
+                id="avatar-input"
+                accept="image/*"
+                style="display: none"
+              />
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <!-- ملخص اليوم -->
+        <section class="hero-strip hero-strip--with-hints">
+          <div class="hero-left">
+            <p class="hero-title" id="hero-greeting">
+              مرحبًا، هذا ملخص يومك التدريسي.
+            </p>
+            <p class="hero-sub">
+              من هنا تتابع الحضور، الدرجات، الإشعارات، الجدول، وقوائم الطلاب
+              لشعبك الحالية.
+            </p>
+          </div>
+
+          <div class="hero-right">
+            <div class="hero-pill-row">
+              <span class="hero-pill">
+                <i class="ri-time-line"></i>
+                حصص اليوم: <strong id="today-lessons">—</strong>
+              </span>
+
+              <span class="hero-pill">
+                <i class="ri-team-line"></i>
+                شُعبك الحالية: <strong id="current-sections">—</strong>
+              </span>
+
+              <span class="hero-pill hero-pill--muted">
+                <i class="ri-tools-line"></i>
+                نشاطات تحتاج تصحيح: <strong>قيد التنفيذ</strong>
+              </span>
+            </div>
+
+            <div class="hero-hints">
+              <!-- الحصة القادمة -->
+              <div
+                class="hero-hint-card hero-hint-card--glow"
+                id="next-lesson-card"
+              >
+                <div class="hero-hint-icon is-float">
+                  <i class="ri-alarm-line"></i>
+                </div>
+
+                <div class="hero-hint-body">
+                  <div class="hero-hint-title">الحصة القادمة</div>
+                  <div class="hero-hint-main" id="next-lesson-main">—</div>
+                  <div class="hero-hint-sub" id="next-lesson-sub">—</div>
+                </div>
+
+                <div class="hero-hint-badge is-pulse" id="next-lesson-badge">
+                  —
+                </div>
+              </div>
+
+              <!-- الطقس (مزاج لطيف) -->
+              <div class="hero-hint-card" id="weather-card">
+                <div class="hero-hint-icon is-float2">
+                  <i class="ri-sun-cloudy-line"></i>
+                </div>
+
+                <div class="hero-hint-body">
+                  <div class="hero-hint-title">الطقس</div>
+                  <div class="hero-hint-main" id="weather-main">
+                    طقس جميل اليوم
+                  </div>
+                  <div class="hero-hint-sub" id="weather-sub">
+                    يوم مناسب للإنجاز ✨
+                  </div>
+                </div>
+
+                <div class="hero-hint-badge is-shimmer" id="weather-badge">
+                  مزاج جيد
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <div
+          id="substitute-alerts-container"
+          style="max-width: 1000px; margin: 0 auto; padding: 0 15px"
+        ></div>
+        <!-- الكروت الرئيسية -->
+        <section class="cards-grid">
+          <!-- الحضور -->
+          <article class="card" data-modal="modal-attendance">
+            <div class="card-icon"><i class="ri-calendar-check-line"></i></div>
+            <div>
+              <h3>
+                <i class="ri-calendar-check-line"></i
+                ><span>الحضور والغياب</span>
+              </h3>
+              <p>
+                تسجيل حاضر / غائب / متأخر لكل حصة في الشعبة التي تختارها داخل
+                المودال، مع كشف غيابات للطلاب.
+              </p>
+              <small>تذكير: لم يتم تسجيل حضور الحصة الثالثة اليوم.</small>
+            </div>
+            <span class="card-tag">حضور</span>
+          </article>
+
+          <!-- الدرجات -->
+          <article class="card" data-modal="modal-grades">
+            <div class="card-icon"><i class="ri-bar-chart-2-line"></i></div>
+            <div>
+              <h3>
+                <i class="ri-bar-chart-2-line"></i><span>الدرجات والتقييم</span>
+              </h3>
+              <p>
+                إدخال الدرجات للواجبات والاختبارات والنهائي لكل صف / شعبة
+                تختارها في المودال.
+              </p>
+              <small>آخر تحديث: اختبار شهري للصف 2 / ب.</small>
+            </div>
+            <span class="card-tag card-tag-warn">درجات</span>
+          </article>
+
+          <!-- الإشعارات -->
+          <article class="card" data-modal="modal-notifications">
+            <div class="card-icon"><i class="ri-notification-3-line"></i></div>
+            <div>
+              <h3>
+                <i class="ri-notification-3-line"></i
+                ><span>الإشعارات والمراسلات</span>
+              </h3>
+              <p>إرسال إشعار للفصل / طالب / ولي أمر + استعراض الوارد.</p>
+              <small>3 رسائل غير مقروءة (ولي أمر + طالبان).</small>
+            </div>
+            <span class="card-tag">مراسلات</span>
+          </article>
+
+          <!-- الاختبارات والأنشطة -->
+          <article class="card" data-modal="modal-assessments">
+            <div class="card-icon"><i class="ri-file-list-3-line"></i></div>
+            <div>
+              <h3>
+                <i class="ri-file-list-3-line"></i
+                ><span>الاختبارات والأنشطة</span>
+              </h3>
+              <p>إنشاء اختبار أو نشاط وربطه بالشعبة والمادة (تجريبي).</p>
+              <small>أقرب اختبار: رياضيات — الأحد القادم.</small>
+            </div>
+            <span class="card-tag card-tag-warn">تقييم</span>
+          </article>
+
+          <!-- الجدول -->
+          <article class="card" data-modal="modal-timetable">
+            <div class="card-icon">
+              <i class="ri-calendar-schedule-line"></i>
+            </div>
+            <div>
+              <h3>
+                <i class="ri-calendar-schedule-line"></i
+                ><span>الجدول الأسبوعي</span>
+              </h3>
+              <p>
+                عرض واضح لحصصك خلال الأسبوع (اليوم / الحصة / الوقت / الصف /
+                الشعبة).
+              </p>
+              <small id="next-class-small"
+                >مثال: سيتم عرض أول حصة من جدولك هنا.</small
+              >
+            </div>
+            <span class="card-tag">الجدول</span>
+          </article>
+
+          <!-- الطلاب -->
+          <article class="card" data-modal="modal-students">
+            <div class="card-icon"><i class="ri-group-line"></i></div>
+            <div>
+              <h3><i class="ri-group-line"></i><span>قوائم الطلاب</span></h3>
+              <p>
+                قائمة الطلاب في الشعبة التي تختارها داخل المودال مع وسائل
+                التواصل.
+              </p>
+              <small>عدد الطلاب في الشعبة المختارة: 25 طالبًا (تجريبي).</small>
+            </div>
+            <span class="card-tag">طلاب</span>
+          </article>
+
+          <!-- إدارة الحصص -->
+          <article class="card" data-modal="modal-lessons">
+            <div class="card-icon"><i class="ri-book-open-line"></i></div>
+            <div>
+              <h3><i class="ri-book-open-line"></i><span>إدارة الحصص</span></h3>
+              <p>
+                اختيار الصف والشعبة، بدء الحصة، كتابة ملاحظة، تسجيل وقت البداية
+                والنهاية.
+              </p>
+              <small id="lesson-status-small">لم تبدأ أي حصة بعد.</small>
+            </div>
+            <span class="card-tag">الحصة</span>
+          </article>
+
+          <!-- التقارير -->
+          <article class="card" data-modal="modal-reports">
+            <div class="card-icon"><i class="ri-file-chart-line"></i></div>
+            <div>
+              <h3>
+                <i class="ri-file-chart-line"></i><span>التقارير (PDF)</span>
+              </h3>
+              <p>تصدير تقرير درجات أو حضور لفصل محدد.</p>
+              <small>جاهز للطباعة وتسليمه للإدارة أو ولي الأمر.</small>
+            </div>
+            <span class="card-tag">تقارير</span>
+          </article>
+
+          <!-- الملف الشخصي -->
+          <article class="card" data-modal="profile-modal">
+            <div class="card-icon"><i class="ri-id-card-line"></i></div>
+            <div>
+              <h3><i class="ri-id-card-line"></i><span>ملفي الوظيفي</span></h3>
+              <p>بياناتك الوظيفية وموادك وشعبك.</p>
+              <small>تأكد من تحديث رقم الجوال والبريد الإلكتروني.</small>
+            </div>
+            <span class="card-tag">الحساب</span>
+          </article>
+          <!-- أذوناتي (إذن المعلم) -->
+          <article class="card" data-modal="modal-teacher-permits">
+            <div class="card-icon"><i class="ri-shield-user-line"></i></div>
+            <div>
+              <h3>
+                <i class="ri-shield-user-line"></i
+                ><span>أذوناتي (إذن المعلم)</span>
+              </h3>
+              <p>
+                اطلب إذن لليوم كامل أو حصص محددة، وتابع قرار الإدارة
+                (مقبول/مرفوض/معلّق).
+              </p>
+              <small id="tp-mini-status">آخر حالة: —</small>
+            </div>
+            <span class="card-tag card-tag-warn">إذن</span>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <!-- OVERLAY مشترك -->
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <!-- ========== مودال الحضور ========== -->
+    <!-- ===================== MODAL: Attendance (الحضور والغياب + كشف الغياب + تقرير) ===================== -->
+
+    <div
+      class="modal"
+      id="modal-attendance"
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-attendance-title"
+      aria-describedby="modal-attendance-desc"
+      tabindex="-1"
+    >
+      <div class="modal-dialog" role="document">
+        <div class="modal-header">
+          <h3 id="modal-attendance-title">
+            <i class="ri-calendar-check-line"></i>
+            <span>الحضور والغياب + الأذونات + كشف الغياب</span>
+          </h3>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal
+            aria-label="إغلاق"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- ✅ تنبيه عام -->
+          <p class="hero-sub" id="modal-attendance-desc">
+            <strong>مهم:</strong> لا يمكن التحضير إلا بعد
+            <strong>بدء الحصة</strong> من (إدارة الحصص). بعدها سيتم فتح الحضور
+            تلقائيًا وربطه بالجلسة الحالية.
+            <span
+              class="att-lock-badge"
+              id="att-lock-badge"
+              style="display: none"
+            >
+              <i class="ri-lock-2-line"></i>
+              <span>مقفول لمنع التلاعب</span>
+            </span>
+          </p>
+
+          <div class="att-hint" id="att-hint">
+            ابدأ الحصة من (إدارة الحصص) أولاً، ثم افتح الحضور.
+          </div>
+
+          <!-- ✅ Loading + Error -->
+          <div
+            class="muted-box"
+            id="att-loading"
+            style="display: none; margin-top: 0.6rem"
+            aria-live="polite"
+          >
+            <i class="ri-loader-4-line"></i> جارِ التحميل...
+          </div>
+
+          <div
+            class="muted-box"
+            id="att-error"
+            style="
+              display: none;
+              margin-top: 0.6rem;
+              border: 1px solid rgba(239, 68, 68, 0.35);
+            "
+            role="alert"
+            aria-live="assertive"
+          >
+            <strong>خطأ:</strong> <span id="att-error-text">—</span>
+          </div>
+
+          <!-- ✅ ربط الجلسة الحالية بالحضور (يمتلئ من JS) -->
+          <input type="hidden" id="att-session-id-hidden" value="" />
+
+          <!-- ===================== Tabs ===================== -->
+          <div
+            class="att-tabs"
+            role="tablist"
+            aria-label="تبويبات الحضور"
+            style="
+              display: flex;
+              gap: 0.5rem;
+              flex-wrap: wrap;
+              align-items: center;
+            "
+          >
+            <button
+              type="button"
+              class="att-tab is-active"
+              id="att-tab-take"
+              role="tab"
+              aria-controls="att-view-take"
+              aria-selected="true"
+            >
+              <i class="ri-check-double-line"></i><span>تسجيل الحضور</span>
+            </button>
+
+            <button
+              type="button"
+              class="att-tab"
+              id="att-tab-perms"
+              role="tab"
+              aria-controls="att-view-perms"
+              aria-selected="false"
+            >
+              <i class="ri-shield-check-line"></i><span>الأذونات</span>
+              <span
+                class="chip"
+                id="perm-badge"
+                style="margin-inline-start: 0.35rem; display: none"
+                >0</span
+              >
+            </button>
+
+            <button
+              type="button"
+              class="att-tab"
+              id="att-tab-history"
+              role="tab"
+              aria-controls="att-view-history"
+              aria-selected="false"
+            >
+              <i class="ri-archive-line"></i><span>كشف الغياب</span>
+            </button>
+
+            <button
+              type="button"
+              class="att-tab"
+              id="att-tab-report"
+              role="tab"
+              aria-controls="att-view-report"
+              aria-selected="false"
+            >
+              <i class="ri-bar-chart-2-line"></i><span>تقرير الغياب</span>
+            </button>
+
+            <button
+              type="button"
+              class="att-tab"
+              id="att-tab-scan"
+              role="tab"
+              aria-controls="att-view-scan"
+              aria-selected="false"
+            >
+              <i class="ri-qr-scan-2-line"></i><span>المسح QR</span>
+              <span
+                class="chip"
+                id="att-scan-badge"
+                style="margin-inline-start: 0.35rem; display: none"
+                >0</span
+              >
+            </button>
+
+            <!-- ✅ Actions عامة -->
+            <div
+              class="att-actions"
+              style="
+                margin-inline-start: auto;
+                display: flex;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+              "
+            >
+              <button
+                type="button"
+                class="primary-btn"
+                id="att-refresh-all"
+                style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+              >
+                <i class="ri-refresh-line"></i><span>تحديث</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- =========================================================
+           VIEW 1: TAKE ATTENDANCE
+      ========================================================== -->
+          <div
+            id="att-view-take"
+            role="tabpanel"
+            aria-labelledby="att-tab-take"
+            style="margin-top: 0.75rem"
+          >
+            <!-- ✅ ملخص الجلسة -->
+            <div
+              class="muted-box"
+              id="att-session-summary"
+              style="display: none"
+            >
+              <strong>جلسة:</strong> <span id="att-session-id-view">—</span>
+              <span style="margin-inline: 8px">|</span>
+
+              <strong>النطاق:</strong> <span id="att-scope-view">—</span>
+              <span style="margin-inline: 8px">|</span>
+
+              <strong>التاريخ:</strong> <span id="att-date-view">—</span>
+              <span style="margin-inline: 8px">|</span>
+
+              <strong>الحصة:</strong> <span id="att-lesson-view">—</span>
+              <span style="margin-inline: 8px">|</span>
+
+              <strong>وقت الحصة:</strong> <span id="att-sched-start">—</span> →
+              <span id="att-sched-end">—</span>
+              <span style="margin-inline: 8px">|</span>
+
+              <strong>الحالة:</strong> <span id="att-session-status">—</span>
+            </div>
+
+            <!-- ✅ لا يوجد جلسة -->
+            <div class="empty-state" id="att-need-start">
+              لا يمكنك التحضير قبل بدء الحصة.
+              <div
+                style="
+                  margin-top: 0.6rem;
+                  display: flex;
+                  gap: 0.5rem;
+                  justify-content: center;
+                  flex-wrap: wrap;
+                "
+              >
+                <button type="button" class="primary-btn" id="att-go-lessons">
+                  <i class="ri-play-circle-line"></i
+                  ><span>اذهب لبدء الحصة</span>
+                </button>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="att-refresh-session"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-refresh-line"></i><span>تحديث الجلسة</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ✅ منطقة الحضور -->
+            <div id="att-live-area" style="display: none">
+              <div class="att-toolbar">
+                <div
+                  class="att-actions"
+                  style="display: flex; gap: 0.5rem; flex-wrap: wrap"
+                >
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="att-all-present"
+                  >
+                    <i class="ri-user-follow-line"></i><span>الكل حاضر</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="att-all-absent"
+                    style="
+                      background: linear-gradient(120deg, #b91c1c, #ef4444);
+                    "
+                  >
+                    <i class="ri-user-unfollow-line"></i><span>الكل غائب</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="att-save-soft"
+                    style="
+                      background: linear-gradient(120deg, #0ea5e9, #2563eb);
+                    "
+                  >
+                    <i class="ri-save-2-line"></i><span>حفظ فقط</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="att-save"
+                    style="
+                      background: linear-gradient(120deg, #16a34a, #22c55e);
+                    "
+                  >
+                    <i class="ri-lock-2-line"></i><span>اعتماد (قفل)</span>
+                  </button>
+                </div>
+
+                <div
+                  class="att-tools"
+                  style="
+                    display: flex;
+                    gap: 0.7rem;
+                    align-items: center;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <label
+                    class="att-only"
+                    style="display: flex; gap: 0.4rem; align-items: center"
+                  >
+                    <input type="checkbox" id="att-only-issues" />
+                    <span>اعرض الغياب/التأخر/مستأذن فقط</span>
+                  </label>
+
+                  <div
+                    class="att-search"
+                    style="display: flex; gap: 0.4rem; align-items: center"
+                  >
+                    <i class="ri-search-line"></i>
+                    <input
+                      type="text"
+                      id="att-search"
+                      placeholder="بحث داخل الطلاب..."
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- ✅ موجود مسبقًا (اتركه كما هو) -->
+              <div class="muted-box" id="att-counts">—</div>
+
+              <!-- ✅ عدادات “جاهزة للـJS” بدون كسر الموجود -->
+              <div
+                class="muted-box"
+                id="att-live-counters"
+                style="margin-top: 0.5rem"
+              >
+                <strong>الإجمالي:</strong> <span id="att-total-count">0</span>
+                <span style="margin-inline: 10px">|</span>
+                <strong>تم التحضير:</strong>
+                <span id="att-marked-count">0</span>
+                <span style="margin-inline: 10px">|</span>
+                <strong>المتبقي:</strong>
+                <span id="att-remaining-count">0</span>
+              </div>
+
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>الطالب</th>
+                    <th>الحالة</th>
+                    <th>تفاصيل</th>
+                    <th>ملاحظة</th>
+                    <th>تصحيح</th>
+                  </tr>
+                </thead>
+                <tbody id="att-table-body"></tbody>
+              </table>
+
+              <div class="empty-state" id="att-empty" style="display: none">
+                لا توجد قائمة طلاب لهذه الجلسة.
+              </div>
+            </div>
+          </div>
+
+          <!-- =========================================================
+           VIEW 2: PERMISSIONS
+      ========================================================== -->
+          <div
+            id="att-view-perms"
+            role="tabpanel"
+            aria-labelledby="att-tab-perms"
+            style="display: none; margin-top: 0.75rem"
+          >
+            <div class="muted-box">
+              <strong>الأذونات:</strong> هنا يعرض المعلم طلبات وليّ الأمر + قرار
+              الإدارة (مقبول/مرفوض/معلّق). المعلم
+              <strong>لا يقبل ولا يرفض</strong> — فقط متابعة الحالة وتأثيرها على
+              الحضور.
+            </div>
+
+            <form
+              class="form-card"
+              id="perm-form"
+              autocomplete="off"
+              style="margin-top: 0.6rem"
+            >
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(4, minmax(0, 1fr));
+                  gap: 0.6rem;
+                "
+              >
+                <label>
+                  <span>الحالة</span>
+                  <select id="perm-status">
+                    <option value="">الكل</option>
+                    <option value="pending">معلّق</option>
+                    <option value="approved">مقبول</option>
+                    <option value="rejected">مرفوض</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>النوع</span>
+                  <select id="perm-type">
+                    <option value="">الكل</option>
+                    <option value="absence">غياب</option>
+                    <option value="late">تأخر</option>
+                    <option value="leave">استئذان/خروج</option>
+                  </select>
+                </label>
+
+                <label>
+                  <span>من تاريخ</span>
+                  <input type="date" id="perm-from" />
+                </label>
+
+                <label>
+                  <span>إلى تاريخ</span>
+                  <input type="date" id="perm-to" />
+                </label>
+              </div>
+
+              <label style="margin-top: 0.6rem">
+                <span>بحث (اسم/كود الطالب)</span>
+                <input
+                  type="text"
+                  id="perm-search"
+                  placeholder="مثال: أحمد أو ST-001"
+                />
+              </label>
+
+              <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
+                <button type="button" class="primary-btn" id="perm-show">
+                  <i class="ri-shield-check-line"></i><span>عرض الأذونات</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="perm-export-csv"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="perm-print"
+                  style="background: linear-gradient(120deg, #111827, #374151)"
+                >
+                  <i class="ri-printer-line"></i><span>طباعة</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="muted-box" id="perm-summary" style="margin-top: 0.6rem">
+              —
+            </div>
+
+            <div
+              id="perm-list"
+              style="margin-top: 0.6rem; display: grid; gap: 0.6rem"
+            ></div>
+
+            <div class="empty-state" id="perm-empty" style="display: none">
+              لا توجد أذونات مطابقة للفلاتر الحالية.
+            </div>
+          </div>
+
+          <!-- =========================================================
+           VIEW 3: HISTORY
+      ========================================================== -->
+          <div
+            id="att-view-history"
+            role="tabpanel"
+            aria-labelledby="att-tab-history"
+            style="display: none; margin-top: 0.75rem"
+          >
+            <div class="muted-box">
+              <strong>كشف غياب الطالب:</strong>
+              اكتب اسم الطالب أو كوده ثم اختر (من/إلى/الحالة) إذا رغبت.
+            </div>
+
+            <form
+              class="form-card"
+              id="att-history-form"
+              style="margin-top: 0.6rem"
+              autocomplete="off"
+            >
+              <label>
+                <span>بحث عن طالب (بالاسم أو الكود)</span>
+                <input
+                  type="text"
+                  id="att-history-search"
+                  placeholder="مثال: أحمد أو ST-001"
+                />
+              </label>
+
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: repeat(3, minmax(0, 1fr));
+                  gap: 0.6rem;
+                "
+              >
+                <label>
+                  <span>من تاريخ</span>
+                  <input type="date" id="att-history-from" />
+                </label>
+
+                <label>
+                  <span>إلى تاريخ</span>
+                  <input type="date" id="att-history-to" />
+                </label>
+
+                <label>
+                  <span>الحالة</span>
+                  <select id="att-history-status">
+                    <option value="">الكل</option>
+                    <option value="absent">غائب</option>
+                    <option value="late">متأخر</option>
+                    <option value="excused">مستأذن</option>
+                    <option value="present">حاضر</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
+                <button type="button" class="primary-btn" id="att-history-show">
+                  <i class="ri-archive-line"></i><span>عرض كشف الغياب</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="att-history-export-csv"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="att-history-print"
+                  style="background: linear-gradient(120deg, #111827, #374151)"
+                >
+                  <i class="ri-printer-line"></i><span>طباعة</span>
+                </button>
+              </div>
+            </form>
+
+            <div
+              class="muted-box"
+              id="att-history-summary"
+              style="margin-top: 0.6rem"
+            >
+              —
+            </div>
+
+            <table class="data-table" id="att-history-table">
+              <thead>
+                <tr>
+                  <th>الطالب</th>
+                  <th>التاريخ</th>
+                  <th>الحصة</th>
+                  <th>المادة</th>
+                  <th>الحالة</th>
+                  <th>التفاصيل</th>
+                  <th>ملاحظة</th>
+                </tr>
+              </thead>
+              <tbody id="att-history-body"></tbody>
+            </table>
+
+            <div
+              class="empty-state"
+              id="att-history-empty"
+              style="display: none"
+            >
+              لم يتم تسجيل أي غيابات بعد.
+            </div>
+          </div>
+
+          <!-- =========================================================
+           VIEW 4: REPORT
+      ========================================================== -->
+          <div
+            id="att-view-report"
+            role="tabpanel"
+            aria-labelledby="att-tab-report"
+            style="display: none; margin-top: 0.75rem"
+          >
+            <div class="muted-box">
+              <strong>تقرير الغياب:</strong> تقرير مجمّع لكل طالب + تصدير.
+            </div>
+
+            <form
+              class="form-card"
+              id="att-report-form"
+              style="margin-top: 0.6rem"
+              autocomplete="off"
+            >
+              <label>
+                <span>المرحلة</span>
+                <select id="rep-stage">
+                  <option value="">الكل</option>
+                </select>
+              </label>
+
+              <label>
+                <span>الصف</span>
+                <select id="rep-grade" disabled>
+                  <option value="">الكل</option>
+                </select>
+              </label>
+
+              <label>
+                <span>الشعبة</span>
+                <select id="rep-section" disabled>
+                  <option value="">الكل</option>
+                </select>
+              </label>
+
+              <label>
+                <span>المادة</span>
+                <select id="rep-subject" disabled>
+                  <option value="">الكل</option>
+                </select>
+              </label>
+
+              <label>
+                <span>من تاريخ</span>
+                <input type="date" id="rep-from" />
+              </label>
+
+              <label>
+                <span>إلى تاريخ</span>
+                <input type="date" id="rep-to" />
+              </label>
+
+              <label>
+                <span>الحالة</span>
+                <select id="rep-status">
+                  <option value="">الكل</option>
+                  <option value="absent">غائب</option>
+                  <option value="late">متأخر</option>
+                  <option value="excused">مستأذن</option>
+                  <option value="present">حاضر</option>
+                </select>
+              </label>
+
+              <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
+                <button type="button" class="primary-btn" id="rep-show">
+                  <i class="ri-filter-3-line"></i><span>عرض التقرير</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="rep-export-csv"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="rep-print"
+                  style="background: linear-gradient(120deg, #111827, #374151)"
+                >
+                  <i class="ri-printer-line"></i><span>طباعة</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="muted-box" id="rep-summary">—</div>
+
+            <table class="data-table" id="rep-table">
+              <thead>
+                <tr>
+                  <th>الطالب</th>
+                  <th>الكود</th>
+                  <th>حاضر</th>
+                  <th>غائب</th>
+                  <th>متأخر</th>
+                  <th>مستأذن</th>
+                  <th>النسبة</th>
+                </tr>
+              </thead>
+              <tbody id="rep-body"></tbody>
+            </table>
+
+            <div class="empty-state" id="rep-empty" style="display: none">
+              لا توجد نتائج ضمن الفلاتر المحددة.
+            </div>
+          </div>
+
+          <!-- =========================================================
+           VIEW 5: SCAN QR
+      ========================================================== -->
+          <div
+            id="att-view-scan"
+            role="tabpanel"
+            aria-labelledby="att-tab-scan"
+            style="display: none; margin-top: 0.75rem"
+          >
+            <div class="muted-box">
+              <strong>المسح لتسجيل الحضور:</strong>
+              هذا التبويب يسجّل حضور الطالب مباشرة داخل
+              <strong>الجلسة الحالية</strong>. إذا لم تبدأ الحصة من (إدارة
+              الحصص) لن يعمل المسح.
+            </div>
+
+            <div
+              class="muted-box"
+              id="att-scan-session-box"
+              style="margin-top: 0.6rem; display: none"
+            >
+              <strong>Session:</strong> <span id="att-scan-session-id">—</span>
+              <span style="margin-inline: 8px">|</span>
+              <strong>الحالة:</strong>
+              <span id="att-scan-session-status">—</span>
+            </div>
+
+            <div
+              class="empty-state"
+              id="att-scan-need-session"
+              style="display: none"
+            >
+              لا توجد جلسة حضور مفتوحة الآن. ابدأ الحصة أولاً ثم ارجع هنا.
+              <div
+                style="
+                  margin-top: 0.6rem;
+                  display: flex;
+                  gap: 0.5rem;
+                  justify-content: center;
+                  flex-wrap: wrap;
+                "
+              >
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="att-scan-refresh-session"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-refresh-line"></i><span>تحديث الجلسة</span>
+                </button>
+              </div>
+            </div>
+
+            <div id="att-scan-live" style="display: none; margin-top: 0.6rem">
+              <!-- ✅ منطقة إشعارات (ARIA Live) -->
+              <div
+                class="muted-box"
+                id="att-scan-announce"
+                role="status"
+                aria-live="polite"
+                style="display: none"
+              >
+                —
+              </div>
+
+              <!-- ✅ توافق مخفي (حتى لا يحصل أي خطأ لو سكربتك القديم ينادي هذه العناصر) -->
+              <div style="display: none">
+                <div class="muted-box" id="att-usb-scan-box">
+                  <input type="text" id="att-usb-scan-input" />
+                  <button type="button" id="att-usb-focus"></button>
+                  <input type="checkbox" id="att-usb-auto-enter" checked />
+                  <input type="checkbox" id="att-scan-sound" checked />
+                  <input type="checkbox" id="att-scan-prevent-dup" checked />
+                </div>
+              </div>
+
+              <!-- ✅ عدادات مباشرة للمسح -->
+              <div
+                class="muted-box"
+                id="att-scan-stats"
+                style="margin-top: 0.6rem"
+              >
+                <strong>الإجمالي:</strong> <span id="att-scan-total">0</span>
+                <span style="margin-inline: 10px">|</span>
+                <strong>تم التحضير:</strong> <span id="att-scan-marked">0</span>
+                <span style="margin-inline: 10px">|</span>
+                <strong>المتبقي:</strong> <span id="att-scan-remaining">0</span>
+                <span style="margin-inline: 10px">|</span>
+                <strong>مكرر:</strong> <span id="att-scan-dup">0</span>
+                <span style="margin-inline: 10px">|</span>
+                <strong>فشل:</strong> <span id="att-scan-fail">0</span>
+              </div>
+
+              <div
+                class="muted-box"
+                id="att-scan-msg"
+                style="margin-top: 0.6rem"
+              >
+                استخدم الحقل التالي للمسح/اللصق — وسيتم التسجيل تلقائيًا عند
+                <strong>Enter</strong>.
+              </div>
+
+              <div
+                class="att-actions"
+                style="gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem"
+              >
+                <button type="button" class="primary-btn" id="att-scan-start">
+                  <i class="ri-camera-line"></i><span>تشغيل الكاميرا</span>
+                </button>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="att-scan-stop"
+                  style="
+                    background: linear-gradient(120deg, #111827, #374151);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-stop-circle-line"></i><span>إيقاف</span>
+                </button>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="att-scan-clear"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-delete-bin-6-line"></i><span>مسح النتائج</span>
+                </button>
+              </div>
+
+              <video
+                id="att-scan-video"
+                style="
+                  width: 100%;
+                  max-height: 320px;
+                  margin-top: 12px;
+                  border-radius: 14px;
+                  display: none;
+                "
+                playsinline
+              ></video>
+
+              <!-- ✅ مدخل واحد فقط (المعتمد) + زر تركيز -->
+              <div class="muted" style="margin-top: 10px">
+                امسح البطاقة هنا (USB) أو ألصق النص — ثم اضغط Enter للتسجيل.
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  gap: 0.5rem;
+                  flex-wrap: wrap;
+                  align-items: center;
+                  margin-top: 6px;
+                "
+              >
+                <textarea
+                  id="att-scan-token"
+                  style="width: 100%; min-height: 90px; flex: 1; margin-top: 0"
+                  placeholder="SS:..."
+                ></textarea>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="att-scan-focus"
+                  style="
+                    background: linear-gradient(120deg, #0ea5e9, #2563eb);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-focus-3-line"></i><span>تركيز</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                class="primary-btn"
+                id="att-scan-submit"
+                style="margin-top: 10px"
+              >
+                <i class="ri-check-line"></i><span>تسجيل حضور من النص</span>
+              </button>
+
+              <div
+                class="muted-box"
+                id="att-scan-last"
+                style="margin-top: 0.8rem; display: none"
+              >
+                <strong>آخر عملية:</strong>
+                <span id="att-scan-last-text">—</span>
+              </div>
+
+              <table class="data-table" style="margin-top: 0.8rem">
+                <thead>
+                  <tr>
+                    <th>الوقت</th>
+                    <th>الطالب</th>
+                    <th>النتيجة</th>
+                  </tr>
+                </thead>
+                <tbody id="att-scan-log"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="modal-att-correct" dir="rtl">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-edit-2-line"></i>
+            <span id="att-correct-title">تصحيح</span>
+          </h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <input type="hidden" id="att-correct-student-id" value="" />
+
+          <div class="muted-box" style="margin-bottom: 0.6rem">
+            <strong>الحالة الحالية:</strong>
+            <span id="att-correct-current">—</span>
+          </div>
+
+          <div class="muted-box" style="margin-bottom: 0.6rem">
+            <strong>مهم:</strong> التصحيح متاح فقط بعد الاعتماد، وسيُسجل سبب
+            التصحيح لمنع التلاعب.
+          </div>
+
+          <form class="form-card" autocomplete="off">
+            <label>
+              <span>الحالة الجديدة</span>
+              <select id="att-correct-status">
+                <option value="present">حاضر</option>
+                <option value="absent">غائب</option>
+                <option value="late">متأخر</option>
+                <option value="excused">مستأذن</option>
+              </select>
+            </label>
+
+            <div id="att-correct-late-wrap" style="display: none">
+              <label>
+                <span>دقائق التأخر</span>
+                <input
+                  type="number"
+                  id="att-correct-late"
+                  min="1"
+                  placeholder="مثال: 5"
+                />
+              </label>
+            </div>
+
+            <!-- ✅ سبب الغياب (reasonId) -->
+            <label>
+              <span>سبب الغياب/العذر (اختياري)</span>
+              <select id="att-correct-reason-id">
+                <option value="">بدون سبب</option>
+              </select>
+            </label>
+
+            <!-- ✅ ملاحظة -->
+            <label>
+              <span>ملاحظة (اختياري)</span>
+              <input
+                type="text"
+                id="att-correct-note"
+                placeholder="مثال: حضر متأخر بسبب..."
+              />
+            </label>
+
+            <!-- ✅ سبب التصحيح النصي (إجباري) -->
+            <label>
+              <span>سبب التصحيح (إجباري)</span>
+              <input
+                type="text"
+                id="att-correct-reason"
+                placeholder="مثال: خطأ في التسجيل/تعديل بإذن الإدارة..."
+              />
+            </label>
+
+            <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
+              <button
+                type="button"
+                class="primary-btn"
+                id="att-correct-save"
+                style="background: linear-gradient(120deg, #16a34a, #22c55e)"
+              >
+                <i class="ri-check-line"></i><span>حفظ التصحيح</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- /MODAL: Attendance Correction -->
+
+    <!-- /MODAL: Attendance Correction -->
+
+    <!-- ✅ مودال التصحيح بعد الاعتماد (إضافة جديدة) -->
+
+    <!-- ========== مودال الدرجات ========== -->
+    <!-- ========== مودال الدرجات (Gradebook + رصد تقييم + نشر) ========== -->
+    <!-- =========================
+  MODAL: Grades (Gradebook + Entry + Report)
+========================= -->
+    <!-- =========================================================
+  MODAL 1: ASSESSMENTS
+  إنشاء وإدارة التقييمات (نشاط / واجب / اختبار)
+========================================================= -->
+    <div
+      class="modal ss-modal"
+      id="modal-assessments"
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="asm-title"
+      tabindex="-1"
+    >
+      <div class="modal-dialog modal-xl" role="document">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h3 id="asm-title">
+              <i class="ri-file-list-3-line"></i>
+              <span>التقييمات والاختبارات</span>
+            </h3>
+            <p class="modal-subtitle">
+              إنشاء التقييمات، ربطها بالنطاق الدراسي، ونشرها للطلاب.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal
+            aria-label="إغلاق"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Tabs -->
+          <div class="ss-tabs" role="tablist" aria-label="تبويبات التقييمات">
+            <button
+              type="button"
+              class="ss-tab is-active"
+              id="asm-tab-list"
+              role="tab"
+              aria-selected="true"
+              aria-controls="asm-view-list"
+              tabindex="0"
+            >
+              <i class="ri-list-check-2"></i>
+              <span>قائمة التقييمات</span>
+            </button>
+
+            <button
+              type="button"
+              class="ss-tab"
+              id="asm-tab-create"
+              role="tab"
+              aria-selected="false"
+              aria-controls="asm-view-create"
+              tabindex="-1"
+            >
+              <i class="ri-add-circle-line"></i>
+              <span>إنشاء تقييم</span>
+            </button>
+          </div>
+
+          <!-- =======================
+        VIEW: LIST
+      ======================== -->
+          <section
+            id="asm-view-list"
+            class="ss-tab-panel"
+            role="tabpanel"
+            aria-labelledby="asm-tab-list"
+          >
+            <form class="ss-form-card" id="asm-filter-form" autocomplete="off">
+              <label class="field">
+                <span class="field-label">الفصل الدراسي</span>
+                <select id="asm-filter-term" required>
+                  <option value="">— اختر —</option>
+                  <option value="1">الفصل الأول</option>
+                  <option value="2">الفصل الثاني</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">نطاق التدريس</span>
+                <select id="asm-filter-scope" required disabled>
+                  <option value="">— اختر الفصل أولًا —</option>
+                </select>
+                <small class="field-help"
+                  >سيتم جلب المواد والشعب الخاصة بالمعلم فقط.</small
+                >
+              </label>
+
+              <label class="field">
+                <span class="field-label">نوع التقييم</span>
+                <select id="asm-filter-type">
+                  <option value="all">الكل</option>
+                  <option value="classwork">نشاط صفي</option>
+                  <option value="activity">نشاط</option>
+                  <option value="homework">واجب منزلي</option>
+                  <option value="project">مشروع / بحث مطول</option>
+                  <option value="oral">شفهي</option>
+                  <option value="exam">الاختبارات كلها</option>
+                  <option value="monthly_exam">اختبار شهري</option>
+                  <option value="midterm_exam">اختبار نصفي</option>
+                  <option value="final_exam">اختبار نهائي</option>
+                  <option value="aggregate">المحصلة</option>
+                </select>
+                <small class="field-help"
+                  >يمكنك التصفية حسب النوع العام أو نوع اختبار محدد.</small
+                >
+              </label>
+
+         <label class="field">
+  <span class="field-label">الحالة</span>
+  <select id="asm-filter-status">
+    <option value="all">الكل</option>
+    <option value="draft">مسودة</option>
+    <option value="active">نشط</option>
+    <option value="published">منشور</option>
+    <option value="closed">مغلق</option>
+    <option value="reopened">مفتوح للتعديل</option>
+    <option value="scheduled">مجدول / رسمي</option>
+  </select>
+</label>
+
+              <label class="field field-span-2">
+                <span class="field-label">بحث</span>
+                <input
+                  type="text"
+                  id="asm-filter-search"
+                  placeholder="ابحث بعنوان التقييم أو النوع..."
+                />
+              </label>
+
+              <div class="ss-actions field-span-2">
+                <button type="button" class="primary-btn" id="asm-load-list">
+                  <i class="ri-refresh-line"></i>
+                  <span>تحميل القائمة</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--success"
+                  id="asm-open-create"
+                >
+                  <i class="ri-add-circle-line"></i>
+                  <span>تقييم جديد</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="ss-summary-grid" id="asm-list-summary">
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">إجمالي التقييمات</span>
+                <strong id="asm-sum-total">0</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">المسودات</span>
+                <strong id="asm-sum-drafts">0</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">المنشورة</span>
+                <strong id="asm-sum-published">0</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">المغلقة</span>
+                <strong id="asm-sum-closed">0</strong>
+              </div>
+            </div>
+
+            <div class="ss-table-wrap">
+              <table class="data-table" id="asm-table">
+                <thead>
+                  <tr>
+                    <th>العنوان</th>
+                    <th>النوع</th>
+                    <th>النطاق</th>
+                    <th>طريقة التنفيذ</th>
+                    <th>الدرجة</th>
+                    <th>الموعد</th>
+                    <th>التسليمات</th>
+                    <th>الحالة</th>
+                    <th>إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody id="asm-table-body"></tbody>
+              </table>
+            </div>
+
+            <div class="empty-state" id="asm-empty" style="display: none">
+              لا توجد تقييمات ضمن الفلاتر الحالية.
+            </div>
+          </section>
+
+          <!-- =======================
+        VIEW: CREATE
+      ======================== -->
+          <section
+            id="asm-view-create"
+            class="ss-tab-panel"
+            role="tabpanel"
+            aria-labelledby="asm-tab-create"
+            hidden
+          >
+            <!-- Smart Context -->
+            <div class="ss-banner ss-banner--info" id="asm-smart-context">
+              <div class="ss-banner-icon">
+                <i class="ri-lightbulb-flash-line"></i>
+              </div>
+              <div class="ss-banner-content">
+                <strong>السياق الذكي</strong>
+                <p id="asm-smart-context-text">
+                  سيتم اقتراح المادة والشعبة الحالية اعتمادًا على جدول اليوم، مع
+                  إمكانية التعديل اليدوي إذا لم يكن هناك اختبار رسمي مرتبط الآن.
+                </p>
+              </div>
+            </div>
+
+            <!-- Official Exam Detection -->
+            <div
+              class="ss-banner ss-banner--warning"
+              id="asm-official-exam-box"
+              style="display: none"
+            >
+              <div class="ss-banner-icon">
+                <i class="ri-alarm-warning-line"></i>
+              </div>
+              <div class="ss-banner-content">
+                <strong>تم اكتشاف اختبار رسمي</strong>
+                <p id="asm-official-exam-text">
+                  النظام اكتشف أن الحصة الحالية مرتبطة باختبار رسمي، وسيتم قفل
+                  النوع والنطاق والدرجة تلقائيًا.
+                </p>
+              </div>
+            </div>
+
+            <form class="ss-form-card" id="asm-create-form" autocomplete="off">
+              <label class="field">
+                <span class="field-label">الفصل الدراسي</span>
+                <select id="asm-create-term" required>
+                  <option value="">— اختر —</option>
+                  <option value="1">الفصل الأول</option>
+                  <option value="2">الفصل الثاني</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">نطاق التدريس</span>
+                <select id="asm-create-scope" required disabled>
+                  <option value="">— اختر الفصل أولًا —</option>
+                </select>
+              </label>
+
+              <label class="field field-span-2">
+                <span class="field-label">عنوان التقييم</span>
+                <input
+                  type="text"
+                  id="asm-title-input"
+                  placeholder="مثال: نشاط سورة الكهف / واجب الوحدة 3 / اختبار شهري 1"
+                  required
+                />
+              </label>
+
+          <label class="field">
+  <span class="field-label">نوع التقييم</span>
+  <select id="asm-create-type" required>
+    <option value="">— اختر النوع —</option>
+    <option value="classwork">نشاط صفي (داخل الفصل)</option>
+    <option value="activity">نشاط عام</option>
+    <option value="homework">واجب منزلي</option>
+    <option value="live_online">نشاط أونلاين مباشر</option>
+    <option value="project">مشروع / بحث مطول</option>
+    <option value="oral">تقييم شفهي</option>
+
+    <option value="monthly_exam" disabled style="background:#f1f5f9;">اختبار شهري (يُدرج آليًا من الإدارة)</option>
+    <option value="midterm_exam" disabled style="background:#f1f5f9;">اختبار نصفي (يُدرج آليًا من الإدارة)</option>
+    <option value="final_exam" disabled style="background:#f1f5f9;">اختبار نهائي (يُدرج آليًا من الإدارة)</option>
+  </select>
+  <small class="field-help">الاختبارات الرسمية لا ينشئها المعلم يدويًا، وإنما تُكتشف تلقائيًا من جدول الاختبارات.</small>
+</label>
+
+              <label class="field">
+                <span class="field-label">طريقة التنفيذ</span>
+                <select id="asm-mode" required>
+                  <option value="">— اختر —</option>
+                  <option value="in_class">داخل الصف</option>
+                  <option value="home_submission">واجب مع تسليم</option>
+                  <option value="home_no_submission">واجب بدون تسليم</option>
+                  <option value="live_online">نشاط أونلاين مباشر</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">الدرجة الكاملة</span>
+                <input
+                  type="number"
+                  id="asm-max-score"
+                  min="1"
+                  step="0.01"
+                  value="10"
+                  required
+                />
+              </label>
+
+              <label class="field">
+                <span class="field-label">نافذة البداية</span>
+                <input type="datetime-local" id="asm-start-at" />
+              </label>
+
+              <label class="field">
+                <span class="field-label">آخر موعد / نهاية النشاط</span>
+                <input type="datetime-local" id="asm-due-at" />
+              </label>
+
+              <label class="field">
+                <span class="field-label">مدة التنفيذ (دقائق)</span>
+                <input
+                  type="number"
+                  id="asm-duration-minutes"
+                  min="1"
+                  placeholder="مثال: 20"
+                />
+                <small class="field-help"
+                  >للنشاطات الصفية والاختبارات، ويمكن استخدامها لتشغيل
+                  العداد.</small
+                >
+              </label>
+
+              <!-- Timer Preview -->
+              <div class="field field-span-2">
+                <div class="ss-timer-card" id="asm-timer-preview">
+                  <div class="ss-timer-head">
+                    <strong>العداد</strong>
+                    <span
+                      id="asm-timer-mode-badge"
+                      class="ss-badge ss-badge--soft"
+                      >غير مفعّل</span
+                    >
+                  </div>
+                  <div class="ss-timer-value" id="asm-timer-value">
+                    00:00:00
+                  </div>
+                  <p class="ss-timer-help" id="asm-timer-help">
+                    سيتم تجهيز العداد تلقائيًا حسب النوع وطريقة التنفيذ.
+                  </p>
+                </div>
+              </div>
+
+              <!-- Submission Policy -->
+              <div class="field field-span-2">
+                <div class="ss-section-card" id="asm-submission-settings">
+                  <div class="ss-section-head">
+                    <strong>سياسة التسليم</strong>
+                    <span class="ss-badge">تسليم واحد فقط</span>
+                  </div>
+
+                  <div class="ss-inline-grid">
+                    <label class="field">
+                      <span class="field-label">نوع التسليم</span>
+                      <select id="asm-submission-kind">
+                        <option value="none">لا يوجد تسليم</option>
+                        <option value="text">نص</option>
+                        <option value="image">صورة</option>
+                        <option value="file">ملف</option>
+                        <option value="mixed">مختلط</option>
+                      </select>
+                    </label>
+
+                    <label class="field">
+                      <span class="field-label">السماح بالتأخير</span>
+                      <select id="asm-late-policy">
+                        <option value="no">لا</option>
+                        <option value="soft">نعم - تسليم متأخر مع شارة</option>
+                      </select>
+                    </label>
+
+                    <label class="field">
+                      <span class="field-label">نهاية فترة التأخير</span>
+                      <input type="datetime-local" id="asm-late-until" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <label class="field field-span-2">
+                <span class="field-label">تعليمات المعلم</span>
+                <textarea
+                  id="asm-description"
+                  rows="4"
+                  placeholder="اكتب تعليمات التقييم، آلية الحل، وما المطلوب من الطالب..."
+                ></textarea>
+              </label>
+
+              <label class="field field-span-2">
+                <span class="field-label">مرفقات المعلم</span>
+                <input type="file" id="asm-files" multiple />
+                <small class="field-help"
+                  >يدعم صورًا أو PDF أو ملفات أخرى حسب إعدادات الرفع في الـ
+                  API.</small
+                >
+              </label>
+
+              <div class="ss-note-box field-span-2">
+  <strong>سلوك التقييم:</strong>
+  عند نشر التقييم سيتم إشعار الطلاب. أما الدرجات فتُنشر لاحقًا من مودال الدرجات. بعد نشر الدرجات يصبح التعديل مقفولًا من الواجهة، ويمكن بعد ذلك إغلاق التقييم نهائيًا أو إرسال طلب إعادة فتح للإدارة عند الحاجة.
+</div>
+
+              <div class="ss-actions field-span-2">
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--ghost"
+                  id="asm-save-draft"
+                >
+                  <i class="ri-draft-line"></i>
+                  <span>حفظ كمسودة</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--success"
+                  id="asm-publish"
+                >
+                  <i class="ri-megaphone-line"></i>
+                  <span>نشر التقييم وإشعار الطلاب</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="asm-go-to-grading"
+                >
+                  <i class="ri-arrow-left-right-line"></i>
+                  <span>الانتقال لموديل الدرجات</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--light"
+                  id="asm-cancel-create"
+                >
+                  <i class="ri-arrow-right-line"></i>
+                  <span>رجوع للقائمة</span>
+                </button>
+              </div>
+                        <!-- Hidden hooks -->
+              <input type="hidden" id="asm-edit-id" value="" />
+              <input type="hidden" id="asm-official-source-type" value="" />
+              <input type="hidden" id="asm-official-source-id" value="" />
+            </form>
+
+            <div
+              class="ss-status-box"
+              id="asm-create-status"
+              style="display: none"
+            ></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+  MODAL 2: GRADES
+  رصد الدرجات + كشف المادة + طلب إعادة فتح النشاط
+========================================================= -->
+    <div
+      class="modal ss-modal"
+      id="modal-grades"
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="grd-title"
+      tabindex="-1"
+    >
+      <div class="modal-dialog modal-2xl" role="document">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h3 id="grd-title">
+              <i class="ri-bar-chart-2-line"></i>
+              <span>رصد الدرجات وكشف المادة</span>
+            </h3>
+            <p class="modal-subtitle">
+              إدخال الدرجات، مراجعة التسليمات، ونشر النتائج مع نظام قفل واعتماد.
+            </p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal
+            aria-label="إغلاق"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Tabs -->
+          <div class="ss-tabs" role="tablist" aria-label="تبويبات الدرجات">
+            <button
+              type="button"
+              class="ss-tab is-active"
+              id="grd-tab-entry"
+              role="tab"
+              aria-selected="true"
+              aria-controls="grd-view-entry"
+              tabindex="0"
+            >
+              <i class="ri-edit-2-line"></i>
+              <span>رصد تقييم</span>
+            </button>
+
+            <button
+              type="button"
+              class="ss-tab"
+              id="grd-tab-sheet"
+              role="tab"
+              aria-selected="false"
+              aria-controls="grd-view-sheet"
+              tabindex="-1"
+            >
+              <i class="ri-table-2"></i>
+              <span>كشف المادة</span>
+            </button>
+
+            <button
+              type="button"
+              class="ss-tab"
+              id="grd-tab-log"
+              role="tab"
+              aria-selected="false"
+              aria-controls="grd-view-log"
+              tabindex="-1"
+            >
+              <i class="ri-lock-unlock-line"></i>
+              <span>إعادة فتح النشاط</span>
+            </button>
+          </div>
+
+          <!-- =======================
+        VIEW: ENTRY
+      ======================== -->
+          <section
+            id="grd-view-entry"
+            class="ss-tab-panel"
+            role="tabpanel"
+            aria-labelledby="grd-tab-entry"
+          >
+            <form class="ss-form-card" id="grd-entry-form" autocomplete="off">
+              <label class="field">
+                <span class="field-label">الفصل الدراسي</span>
+                <select id="grd-entry-term" required>
+                  <option value="">— اختر —</option>
+                  <option value="1">الفصل الأول</option>
+                  <option value="2">الفصل الثاني</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">نطاق التدريس</span>
+                <select id="grd-entry-scope" required disabled>
+                  <option value="">— اختر الفصل أولًا —</option>
+                </select>
+              </label>
+
+              <label class="field field-span-2">
+                <span class="field-label">التقييم</span>
+                <select id="grd-assessment-id" required>
+                  <option value="">— اختر تقييمًا —</option>
+                </select>
+              </label>
+
+              <div class="ss-actions field-span-2">
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="grd-load-students"
+                >
+                  <i class="ri-group-line"></i>
+                  <span>تحميل الطلاب</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--ghost"
+                  id="grd-fill-sequence"
+                >
+                  <i class="ri-sort-number-asc"></i>
+                  <span>تعبئة متسلسلة</span>
+                </button>
+              </div>
+            </form>
+
+            <!-- Assessment Summary -->
+            <div class="ss-summary-grid" id="grd-entry-summary">
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">عنوان التقييم</span>
+                <strong id="grd-info-title">—</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">الدرجة الكاملة</span>
+                <strong id="grd-info-max">—</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">التسليمات</span>
+                <strong id="grd-info-submissions">—</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">الحالة</span>
+                <strong id="grd-info-status">—</strong>
+              </div>
+            </div>
+
+            <div class="ss-note-box" id="grd-entry-note">
+              <strong>تعليمات الرصد:</strong>
+              عند اختيار <strong>غائب</strong> يتم تعطيل الدرجة. وعند وجود تسليم
+              متأخر ستظهر شارة حمراء بجانب الطالب. النشر يقفل جميع الحقول.
+            </div>
+
+            <div class="ss-table-wrap">
+              <table class="data-table" id="grd-entry-table">
+                <thead>
+                  <tr>
+                    <th>الطالب</th>
+                    <th>التسليم</th>
+                    <th>مراجعة</th>
+                    <th>الحالة</th>
+                    <th>غائب</th>
+                    <th>الدرجة</th>
+                    <th>ملاحظة</th>
+                  </tr>
+                </thead>
+                <tbody id="grd-entry-body"></tbody>
+              </table>
+            </div>
+
+            <div class="empty-state" id="grd-entry-empty" style="display: none">
+              اختر تقييمًا ثم اضغط تحميل الطلاب.
+            </div>
+
+            <div
+              class="ss-lock-box"
+              id="grd-lock-state-box"
+              style="display: none"
+            >
+              <i class="ri-lock-2-line"></i>
+              <div>
+                <strong>هذا التقييم مقفول</strong>
+                <p id="grd-lock-state-text">
+                  تم نشر الدرجات وقفلها. يمكنك إرسال طلب إعادة فتح النشاط كاملًا
+                  من تبويب "إعادة فتح النشاط".
+                </p>
+              </div>
+            </div>
+
+            <div class="ss-actions">
+              <button
+                type="button"
+                class="primary-btn primary-btn--success"
+                id="grd-save-draft"
+              >
+                <i class="ri-save-3-line"></i>
+                <span>حفظ المسودة</span>
+              </button>
+
+              <button
+                type="button"
+                class="primary-btn primary-btn--warning"
+                id="grd-publish-grades"
+              >
+                <i class="ri-megaphone-line"></i>
+                <span>نشر الدرجات + إشعار</span>
+              </button>
+
+              <button
+                type="button"
+                class="primary-btn primary-btn--danger"
+                id="grd-close-assessment"
+              >
+                <i class="ri-lock-2-line"></i>
+                <span>إغلاق التقييم</span>
+              </button>
+            </div>
+
+            <input type="hidden" id="grd-open-assessment-id" value="" />
+          </section>
+
+          <!-- =======================
+        VIEW: SHEET
+      ======================== -->
+          <section
+            id="grd-view-sheet"
+            class="ss-tab-panel"
+            role="tabpanel"
+            aria-labelledby="grd-tab-sheet"
+            hidden
+          >
+            <form class="ss-form-card" id="grd-sheet-form" autocomplete="off">
+              <label class="field">
+                <span class="field-label">الفصل الدراسي</span>
+                <select id="grd-sheet-term" required>
+                  <option value="">— اختر —</option>
+                  <option value="1">الفصل الأول</option>
+                  <option value="2">الفصل الثاني</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">نطاق التدريس</span>
+                <select id="grd-sheet-scope" required disabled>
+                  <option value="">— اختر الفصل أولًا —</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">بحث طالب</span>
+                <input
+                  type="text"
+                  id="grd-sheet-student-search"
+                  placeholder="اسم الطالب أو الكود..."
+                />
+              </label>
+
+              <label class="field">
+                <span class="field-label">عرض الدرجات</span>
+                <select id="grd-sheet-visibility">
+                  <option value="published_only">المنشورة فقط</option>
+                  <option value="all">الكل</option>
+                </select>
+              </label>
+
+              <div class="ss-actions field-span-2">
+                <button type="button" class="primary-btn" id="grd-load-sheet">
+                  <i class="ri-table-line"></i>
+                  <span>عرض الكشف</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--warning"
+                  id="grd-submit-midterm-muhassala"
+                  style="display: none"
+                >
+                  <i class="ri-shield-check-line"></i>
+                  <span>اعتماد محصلة النصفي</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--warning"
+                  id="grd-submit-final-muhassala"
+                  style="display: none"
+                >
+                  <i class="ri-shield-check-line"></i>
+                  <span>اعتماد محصلة النهائي</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--ghost"
+                  id="grd-export-sheet"
+                >
+                  <i class="ri-file-pdf-2-line"></i>
+                  <span>تصدير PDF</span>
+                </button>
+              </div>
+            </form>
+
+        <div class="ss-note-box" id="grd-sheet-info-box">
+  <strong>كشف المادة:</strong>
+  يعرض هذا الجدول التقييمات التفصيلية، ومحصلتي النصفي والنهائي، ودرجات الاختبارات الرسمية إن وجدت. بعد إدخال المحصلة واعتمادها، تُنشر وتصبح غير قابلة للتعديل إلا عبر إعادة الفتح.
+</div>
+
+            <div class="ss-summary-grid" id="grd-sheet-summary">
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">عدد الطلاب</span>
+                <strong id="grd-sheet-students-count">0</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">عدد التقييمات</span>
+                <strong id="grd-sheet-assessments-count">0</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">المحصلة</span>
+                <strong id="grd-sheet-muhassala-info">-</strong>
+              </div>
+              <div class="ss-summary-card">
+                <span class="ss-summary-label">الوضع</span>
+                <strong id="grd-sheet-status-info">—</strong>
+              </div>
+            </div>
+
+            <div class="ss-table-wrap">
+              <table
+                class="data-table"
+                id="grd-sheet-table"
+                style="min-width: 1300px"
+              >
+              <thead id="grd-sheet-head">
+  <tr>
+    <th>الطالب</th>
+    <th>جاري تحميل أعمدة الكشف...</th>
+  </tr>
+</thead>
+                <tbody id="grd-sheet-body"></tbody>
+              </table>
+            </div>
+
+            <div class="empty-state" id="grd-sheet-empty" style="display: none">
+              لا توجد بيانات ضمن الفلاتر الحالية.
+            </div>
+          </section>
+
+          <!-- =======================
+        VIEW: REOPEN REQUEST
+      ======================== -->
+          <section
+            id="grd-view-log"
+            class="ss-tab-panel"
+            role="tabpanel"
+            aria-labelledby="grd-tab-log"
+            hidden
+          >
+            <div class="ss-banner ss-banner--danger">
+              <div class="ss-banner-icon">
+                <i class="ri-shield-keyhole-line"></i>
+              </div>
+              <div class="ss-banner-content">
+                <strong>إعادة فتح النشاط بعد النشر</strong>
+                <p>
+                  عند إرسال الطلب والموافقة عليه من الإدارة، سيتم فتح النشاط
+                  كاملًا مؤقتًا لتعديل الدرجات ثم إعادة نشرها.
+                </p>
+              </div>
+            </div>
+
+            <form class="ss-form-card" id="grd-reopen-form" autocomplete="off">
+              <label class="field">
+                <span class="field-label">الفصل الدراسي</span>
+                <select id="grd-reopen-term" required>
+                  <option value="">— اختر —</option>
+                  <option value="1">الفصل الأول</option>
+                  <option value="2">الفصل الثاني</option>
+                </select>
+              </label>
+
+              <label class="field">
+                <span class="field-label">نطاق التدريس</span>
+                <select id="grd-reopen-scope" required disabled>
+                  <option value="">— اختر الفصل أولًا —</option>
+                </select>
+              </label>
+
+              <label class="field field-span-2">
+                <span class="field-label">التقييم المغلق</span>
+                <select id="grd-reopen-assessment-id" required>
+                  <option value="">— اختر تقييمًا مغلقًا أو منشورًا —</option>
+                </select>
+              </label>
+
+              <label class="field field-span-2">
+                <span class="field-label">سبب طلب إعادة الفتح</span>
+                <textarea
+                  id="grd-reopen-reason"
+                  rows="4"
+                  placeholder="مثال: وُجد خطأ في التصحيح أو إدخال الدرجات، وأحتاج فتح النشاط كاملًا لتعديله."
+                  required
+                ></textarea>
+              </label>
+
+              <div class="ss-actions field-span-2">
+                <button
+                  type="button"
+                  class="primary-btn primary-btn--danger"
+                  id="grd-send-reopen-request"
+                >
+                  <i class="ri-send-plane-line"></i>
+                  <span>إرسال الطلب للإدارة</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="ss-table-wrap" style="margin-top: 1rem">
+              <table class="data-table" id="grd-reopen-log-table">
+                <thead>
+                  <tr>
+                    <th>التقييم</th>
+                    <th>تاريخ الطلب</th>
+                    <th>السبب</th>
+                    <th>الحالة</th>
+                    <th>قرار الإدارة</th>
+                  </tr>
+                </thead>
+                <tbody id="grd-reopen-log-body"></tbody>
+              </table>
+            </div>
+
+            <div
+              class="empty-state"
+              id="grd-reopen-empty"
+              style="display: none"
+            >
+              لا توجد طلبات إعادة فتح حتى الآن.
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <!-- =========================================================
+  QUICK REVIEW MODAL
+  مراجعة تسليم الطالب + إدخال الدرجة بشكل سريع
+========================================================= -->
+    <div
+      class="modal ss-modal ss-modal--nested"
+      id="modal-grade-review"
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="gvr-title"
+      tabindex="-1"
+    >
+      <div class="modal-dialog modal-2xl" role="document">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <h3 id="gvr-title">
+              <i class="ri-file-search-line"></i>
+              <span>مراجعة إجابة الطالب</span>
+            </h3>
+            <p class="modal-subtitle" id="gvr-student-meta">—</p>
+          </div>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal
+            aria-label="إغلاق"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="grading-review-layout">
+            <!-- Right / Preview -->
+            <section class="grading-preview-panel">
+              <div class="grading-panel-head">
+                <strong>المرفق / الإجابة</strong>
+                <span
+                  class="ss-badge ss-badge--danger"
+                  id="gvr-late-badge"
+                  style="display: none"
+                  >تسليم متأخر</span
+                >
+              </div>
+
+              <div class="grading-preview-frame" id="gvr-preview-frame">
+                <div class="empty-state">لا يوجد مرفق حاليًا.</div>
+              </div>
+
+              <div class="grading-preview-meta" id="gvr-submission-meta">—</div>
+            </section>
+
+            <!-- Left / Grade -->
+            <section class="grading-editor-panel">
+              <div class="grading-panel-head">
+                <strong>إدخال الدرجة</strong>
+              </div>
+
+              <form id="gvr-grade-form" autocomplete="off">
+                <label class="field">
+                  <span class="field-label">الحالة</span>
+                  <select id="gvr-status">
+                    <option value="graded">تم التقييم</option>
+                    <option value="absent">غائب</option>
+                    <option value="missing">لم يسلّم</option>
+                    <option value="excused">معذور</option>
+                  </select>
+                </label>
+
+                <label class="field">
+                  <span class="field-label">الدرجة</span>
+                  <input type="number" id="gvr-score" min="0" step="0.01" />
+                </label>
+
+                <label class="field">
+                  <span class="field-label">ملاحظة للطالب</span>
+                  <textarea
+                    id="gvr-feedback"
+                    rows="4"
+                    placeholder="اكتب ملاحظتك هنا..."
+                  ></textarea>
+                </label>
+
+                <div class="ss-actions">
+                  <button
+                    type="button"
+                    class="primary-btn primary-btn--success"
+                    id="gvr-save-grade"
+                  >
+                    <i class="ri-save-3-line"></i>
+                    <span>حفظ</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="gvr-prev-student"
+                  >
+                    <i class="ri-arrow-right-s-line"></i>
+                    <span>السابق</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="gvr-next-student"
+                  >
+                    <i class="ri-arrow-left-s-line"></i>
+                    <span>التالي</span>
+                  </button>
+                </div>
+              </form>
+            </section>
+          </div>
+
+          <input type="hidden" id="gvr-assessment-id" value="" />
+          <input type="hidden" id="gvr-student-id" value="" />
+          <input type="hidden" id="gvr-submission-id" value="" />
+          <input type="hidden" id="gvr-grade-id" value="" />
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== مودال الإشعارات ========== -->
+    <div class="modal" id="modal-notifications">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-notification-3-line"></i>
+            <span>الإشعارات والمراسلات</span>
+          </h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="nt-wrap">
+            <!-- Toolbar -->
+            <div class="nt-toolbar">
+              <div
+                class="nt-tabs"
+                role="tablist"
+                aria-label="تبويبات الإشعارات"
+              >
+                <button
+                  type="button"
+                  class="nt-tab is-active"
+                  id="nt-tab-inbox"
+                  role="tab"
+                  aria-selected="true"
+                >
+                  <i class="ri-inbox-line"></i><span>الوارد</span>
+                  <span class="chip" id="nt-inbox-unread-chip" hidden>0</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="nt-tab"
+                  id="nt-tab-outbox"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  <i class="ri-send-plane-line"></i><span>الصادر</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="nt-tab"
+                  id="nt-tab-compose"
+                  role="tab"
+                  aria-selected="false"
+                >
+                  <i class="ri-edit-2-line"></i><span>إرسال</span>
+                </button>
+              </div>
+
+              <div class="nt-actions">
+                <div class="nt-search">
+                  <i class="ri-search-line"></i>
+                  <input
+                    type="text"
+                    id="nt-search"
+                    placeholder="بحث في الإشعارات..."
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="nt-refresh"
+                  style="
+                    background: linear-gradient(120deg, #0ea5e9, #2563eb);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-refresh-line"></i><span>تحديث</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="nt-mark-all-read"
+                  style="
+                    background: linear-gradient(120deg, #16a34a, #22c55e);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-check-double-line"></i
+                  ><span>تعليم الكل مقروء</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="nt-filters" id="nt-filters">
+              <button
+                type="button"
+                class="nt-filter is-active"
+                data-status="all"
+              >
+                الكل
+              </button>
+              <button type="button" class="nt-filter" data-status="unread">
+                غير مقروء
+              </button>
+              <button type="button" class="nt-filter" data-status="read">
+                مقروء
+              </button>
+            </div>
+
+            <!-- INBOX VIEW -->
+            <div class="nt-view" id="nt-view-inbox">
+              <div class="nt-list" id="nt-inbox-list"></div>
+              <div
+                class="empty-state"
+                id="nt-inbox-empty"
+                style="display: none"
+              >
+                لا توجد إشعارات واردة.
+              </div>
+            </div>
+
+            <!-- OUTBOX VIEW -->
+            <div class="nt-view" id="nt-view-outbox" style="display: none">
+              <div class="nt-list" id="nt-outbox-list"></div>
+              <div
+                class="empty-state"
+                id="nt-outbox-empty"
+                style="display: none"
+              >
+                لا توجد إشعارات صادرة.
+              </div>
+            </div>
+
+            <!-- COMPOSE VIEW (احتفظت بالـ IDs القديمة اللي عندك) -->
+            <div class="nt-view" id="nt-view-compose" style="display: none">
+              <div
+                class="muted-box"
+                id="nt-compose-status"
+                style="display: none"
+              ></div>
+
+              <form class="form-card" autocomplete="off">
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 2fr 1fr;
+                    gap: 0.6rem;
+                  "
+                >
+                  <label>
+                    <span>اختر شعبة من نطاق تدريسِك</span>
+                    <select id="nt-scope-select">
+                      <option value="">— اختر —</option>
+                    </select>
+                  </label>
+
+                  <div
+                    style="
+                      display: flex;
+                      gap: 0.45rem;
+                      align-items: flex-end;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <button
+                      type="button"
+                      class="primary-btn"
+                      id="nt-send-admins"
+                      style="
+                        background: linear-gradient(120deg, #0f172a, #111827);
+                        box-shadow: none;
+                      "
+                    >
+                      <i class="ri-building-2-line"></i
+                      ><span>إرسال للإدارة</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: 1fr 1fr;
+                    gap: 0.6rem;
+                    margin-top: 0.6rem;
+                  "
+                >
+                  <label>
+                    <span>عنوان الرسالة</span>
+                    <input
+                      type="text"
+                      id="nt-send-title"
+                      placeholder="مثال: تنبيه مهم"
+                    />
+                  </label>
+
+                  <label>
+                    <span>بحث داخل الطلاب</span>
+                    <input
+                      type="text"
+                      id="nt-st-search"
+                      placeholder="اكتب اسم الطالب أو كوده..."
+                    />
+                  </label>
+                </div>
+
+                <label style="margin-top: 0.6rem">
+                  <span>نص الرسالة</span>
+                  <textarea
+                    id="nt-send-body"
+                    rows="3"
+                    style="resize: vertical"
+                  ></textarea>
+                </label>
+
+                <div
+                  class="att-actions"
+                  style="gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem"
+                >
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="nt-select-all"
+                    style="
+                      background: linear-gradient(120deg, #0ea5e9, #2563eb);
+                      box-shadow: none;
+                    "
+                  >
+                    <i class="ri-check-double-line"></i><span>تحديد الكل</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="nt-clear-selection"
+                    style="
+                      background: linear-gradient(120deg, #111827, #374151);
+                      box-shadow: none;
+                    "
+                  >
+                    <i class="ri-close-circle-line"></i
+                    ><span>إلغاء التحديد</span>
+                  </button>
+
+                  <span class="muted-box" style="margin: 0">
+                    المحدد: <strong id="nt-selected-count">0</strong>
+                  </span>
+
+                  <div
+                    style="
+                      margin-inline-start: auto;
+                      display: flex;
+                      gap: 0.45rem;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <button
+                      type="button"
+                      class="primary-btn"
+                      id="nt-send-selected-students"
+                      style="
+                        background: linear-gradient(120deg, #16a34a, #22c55e);
+                        box-shadow: none;
+                      "
+                    >
+                      <i class="ri-send-plane-2-line"></i
+                      ><span>إرسال للطلاب المحددين</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="primary-btn"
+                      id="nt-send-selected-guardians"
+                      style="
+                        background: linear-gradient(120deg, #f59e0b, #f97316);
+                        box-shadow: none;
+                      "
+                    >
+                      <i class="ri-user-heart-line"></i
+                      ><span>إرسال لأولياء أمورهم</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="primary-btn"
+                      id="nt-send-section"
+                      style="
+                        background: linear-gradient(120deg, #0f172a, #111827);
+                        box-shadow: none;
+                      "
+                    >
+                      <i class="ri-group-line"></i
+                      ><span>إرسال للشعبة كاملة</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="primary-btn"
+                      id="nt-send-grade"
+                      style="
+                        background: linear-gradient(120deg, #0f172a, #111827);
+                        box-shadow: none;
+                      "
+                    >
+                      <i class="ri-stack-line"></i
+                      ><span>إرسال للصف (كل الشعب التي أدرّسها)</span>
+                    </button>
+                  </div>
+                </div>
+              </form>
+
+              <div class="muted-box" style="margin-top: 0.6rem">
+                <strong>الطلاب:</strong> اختر طلابًا أو استخدم “الشعبة
+                كاملة/الصف”. لكل طالب يوجد زرّان: <strong>للـطالب</strong> و
+                <strong>لولي أمره</strong>.
+              </div>
+
+              <div
+                class="nt-list"
+                id="nt-students-list"
+                style="margin-top: 0.6rem"
+              ></div>
+              <div
+                class="empty-state"
+                id="nt-students-empty"
+                style="display: none"
+              >
+                اختر شعبة أولاً لعرض الطلاب.
+              </div>
+
+              <!-- Guardian Picker -->
+              <div
+                id="nt-guardian-picker"
+                style="display: none; margin-top: 0.6rem"
+                class="muted-box"
+              >
+                <strong>اختر ولي الأمر لإرسال الرسالة:</strong>
+                <div
+                  id="nt-guardian-list"
+                  style="margin-top: 0.6rem; display: grid; gap: 0.4rem"
+                ></div>
+                <div class="att-actions" style="margin-top: 0.6rem">
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="nt-guardian-cancel"
+                    style="
+                      background: linear-gradient(120deg, #111827, #374151);
+                      box-shadow: none;
+                    "
+                  >
+                    <i class="ri-close-line"></i><span>إلغاء</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- DETAIL VIEW -->
+            <div class="nt-detail" id="nt-detail" style="display: none">
+              <div class="nt-detail-head">
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="nt-detail-back"
+                  style="
+                    background: linear-gradient(120deg, #0f172a, #111827);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-arrow-right-line"></i><span>رجوع</span>
+                </button>
+
+                <div class="nt-detail-meta">
+                  <div class="nt-detail-title" id="nt-detail-title">—</div>
+                  <div class="nt-detail-sub" id="nt-detail-sub">—</div>
+                </div>
+              </div>
+
+              <div
+                class="muted-box"
+                id="nt-detail-body"
+                style="margin-top: 0.6rem"
+              >
+                —
+              </div>
+
+              <!-- Outbox receipts -->
+              <div
+                class="muted-box"
+                id="nt-receipts-box"
+                style="margin-top: 0.6rem; display: none"
+              >
+                <strong>حالة المستلمين:</strong>
+                <span id="nt-receipts-summary">—</span>
+                <div
+                  class="nt-recipients"
+                  id="nt-recipients"
+                  style="margin-top: 0.6rem"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== مودال الاختبارات والأنشطة ========== -->
+    <!-- ========== مودال التقييمات (اختبارات/واجبات/نشاطات/مشاريع) ========== -->
+
+    <!-- ========== مودال الجدول الأسبوعي (مع Tabs) ========== -->
+    <div class="modal" id="modal-timetable">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-calendar-schedule-line"></i>
+            <span>الجدول</span>
+          </h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <div
+            class="form-card"
+            style="
+              display: flex;
+              gap: 0.4rem;
+              flex-wrap: wrap;
+              align-items: center;
+              justify-content: space-between;
+            "
+          >
+            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap">
+              <button
+                type="button"
+                class="primary-btn"
+                id="tt-tab-weekly"
+                style="background: linear-gradient(120deg, #0f172a, #111827)"
+              >
+                <i class="ri-calendar-schedule-line"></i>
+                <span>الأسبوعي</span>
+              </button>
+
+              <button
+                type="button"
+                class="primary-btn"
+                id="tt-tab-exams"
+                style="background: linear-gradient(120deg, #334155, #0f172a)"
+              >
+                <i class="ri-calendar-event-line"></i>
+                <span>الاختبارات</span>
+              </button>
+            </div>
+
+            <small
+              class="muted-box"
+              style="margin: 0; padding: 0.35rem 0.55rem"
+            >
+              داخل نفس المودال: أسبوعي + اختبارات
+            </small>
+          </div>
+
+          <div id="tt-view-weekly">
+            <form
+              class="form-card"
+              id="tt-filter"
+              style="
+                margin-top: 0.4rem;
+                display: flex;
+                gap: 0.6rem;
+                flex-wrap: wrap;
+                align-items: flex-end;
+              "
+            >
+              <label>
+                <span>السنة الدراسية</span>
+                <select id="tt-year"></select>
+              </label>
+
+              <label>
+                <span>الترم</span>
+                <select id="tt-term">
+                  <option value="1">الفصل الأول</option>
+                  <option value="2">الفصل الثاني</option>
+                </select>
+              </label>
+
+              <!-- ✅ اختيار الأسبوع -->
+              <label style="min-width: 260px">
+                <span>الأسبوع (بداية السبت)</span>
+                <div style="display: flex; gap: 0.35rem; align-items: center">
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="tt-week-prev"
+                    style="padding: 0.35rem 0.55rem"
+                  >
+                    <i class="ri-arrow-right-s-line"></i>
+                  </button>
+
+                  <input
+                    type="date"
+                    id="tt-week-start"
+                    style="min-width: 160px"
+                  />
+
+                  <button
+                    type="button"
+                    class="primary-btn"
+                    id="tt-week-next"
+                    style="padding: 0.35rem 0.55rem"
+                  >
+                    <i class="ri-arrow-left-s-line"></i>
+                  </button>
+                </div>
+                <small
+                  class="muted"
+                  id="tt-week-label"
+                  style="display: block; margin-top: 0.2rem; opacity: 0.8"
+                  >—</small
+                >
+              </label>
+
+              <!-- ✅ زر التحميل -->
+              <button type="button" class="primary-btn" id="tt-load-real">
+                <i class="ri-refresh-line"></i>
+                <span>تحميل الجدول</span>
+              </button>
+            </form>
+
+            <table class="data-table" style="margin-top: 0.4rem">
+              <thead></thead>
+              <tbody id="tt-table-body"></tbody>
+            </table>
+
+            <div class="empty-state" id="tt-next-info">
+              سيتم عرض مثال لأول حصة في جدولك حسب البيانات التجريبية.
+            </div>
+          </div>
+
+          <div id="tt-view-exams" style="display: none">
+            <form
+              class="form-card"
+              id="tt-ex-filter"
+              style="margin-top: 0.4rem"
+            >
+              <label>
+                <span>نوع الاختبار</span>
+                <select id="tt-ex-type">
+                  <option value="midyear">نصف العام</option>
+                  <option value="final">آخر العام</option>
+                  <option value="monthly">شهري</option>
+                </select>
+              </label>
+
+              <label id="tt-ex-month-wrap" style="display: none">
+                <span>الشهر</span>
+                <select id="tt-ex-month">
+                  <option value="">كل الأشهر</option>
+                </select>
+              </label>
+
+              <label>
+                <span>المادة</span>
+                <select id="tt-ex-subject">
+                  <option value="">كل المواد</option>
+                </select>
+              </label>
+
+              <button type="button" class="primary-btn" id="tt-ex-load">
+                <i class="ri-filter-3-line"></i>
+                <span>تطبيق الفلاتر</span>
+              </button>
+            </form>
+
+            <table class="data-table" style="margin-top: 0.4rem">
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>اليوم</th>
+                  <th>المادة</th>
+                  <th>النوع</th>
+                  <th>الوقت</th>
+                  <th>الصف/الشعبة</th>
+                  <th>القاعة</th>
+                  <th>ملاحظات</th>
+                </tr>
+              </thead>
+              <tbody id="tt-ex-body"></tbody>
+            </table>
+
+            <div class="empty-state" id="tt-ex-empty" style="display: none">
+              لا توجد اختبارات مطابقة للفلاتر.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== مودال الطلاب ========== -->
+    <div class="modal" id="modal-students">
+      <div class="modal-backdrop" data-close-modal></div>
+
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-group-line"></i>
+            <span>قوائم الطلاب</span>
+          </h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <form class="form-card">
+            <label>
+              <span>السنة الدراسية</span>
+              <select id="st-year"></select>
+            </label>
+
+            <label>
+              <span>الترم</span>
+              <select id="st-term">
+                <option value="1">الفصل الأول</option>
+                <option value="2">الفصل الثاني</option>
+              </select>
+            </label>
+
+            <label>
+              <span>المرحلة</span>
+              <select id="st-stage">
+                <option value="">اختر المرحلة</option>
+                <option value="ابتدائية">ابتدائية</option>
+                <option value="إعدادية">إعدادية</option>
+                <option value="ثانوية">ثانوية</option>
+              </select>
+            </label>
+
+            <label>
+              <span>الصف</span>
+              <select id="st-grade" disabled>
+                <option value="">اختر الصف</option>
+              </select>
+            </label>
+
+            <label>
+              <span>الشعبة</span>
+              <select id="st-section" disabled>
+                <option value="">اختر الشعبة</option>
+              </select>
+            </label>
+
+            <label>
+              <span>بحث عن طالب</span>
+              <input
+                type="text"
+                id="st-search"
+                autocomplete="off"
+                placeholder="اسم الطالب أو جزء منه..."
+              />
+            </label>
+
+            <button type="button" class="primary-btn" id="st-load">
+              <i class="ri-list-check-2"></i>
+              <span>عرض قائمة الطلاب</span>
+            </button>
+
+            <div
+              class="hint"
+              id="st-status"
+              style="margin-top: 10px; display: none"
+            ></div>
+          </form>
+
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>الكود</th>
+                <th>الاسم</th>
+                <th>الصف / الشعبة</th>
+                <th>رقم ولي الأمر</th>
+              </tr>
+            </thead>
+            <tbody id="st-table-body"></tbody>
+          </table>
+
+          <div
+            class="empty-state"
+            id="st-empty"
+            style="display: none; padding: 12px"
+          >
+            لا توجد بيانات مطابقة للفلاتر الحالية.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== مودال إدارة الحصص ========== -->
+    <div class="modal" id="modal-lessons">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-book-open-line"></i>
+            <span>إدارة الحصص</span>
+          </h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Tabs -->
+          <div class="att-tabs" style="margin-top: 0.2rem">
+            <button type="button" class="att-tab is-active" id="ls-tab-live">
+              <i class="ri-play-circle-line"></i><span>الحصة الحالية</span>
+            </button>
+            <button type="button" class="att-tab" id="ls-tab-log">
+              <i class="ri-time-line"></i><span>سجل الحصص</span>
+            </button>
+          </div>
+
+          <!-- ===================== View: Live Lesson ===================== -->
+          <div id="ls-view-live">
+            <form class="form-card" autocomplete="off">
+              <!-- ✅ ربطات خفية (سيملؤها JS) -->
+              <input type="hidden" id="ls-session-id-hidden" value="" />
+              <input type="hidden" id="ls-timetable-entry-id-hidden" value="" />
+
+              <label>
+                <span>المرحلة</span>
+                <select id="ls-stage">
+                  <option value="">اختر المرحلة</option>
+                </select>
+              </label>
+
+              <label>
+                <span>الصف</span>
+                <select id="ls-grade" disabled>
+                  <option value="">اختر الصف</option>
+                </select>
+              </label>
+
+              <label>
+                <span>الشعبة</span>
+                <select id="ls-section" disabled>
+                  <option value="">اختر الشعبة</option>
+                </select>
+              </label>
+
+              <label>
+                <span>المادة</span>
+                <select id="ls-subject" disabled>
+                  <option value="">اختر المادة</option>
+                </select>
+              </label>
+
+              <label>
+                <span>التاريخ (اليوم)</span>
+                <input type="date" id="ls-date" />
+              </label>
+
+              <label>
+                <span>الحصة</span>
+                <select id="ls-lesson" disabled>
+                  <option value="">اختر الحصة</option>
+                </select>
+              </label>
+
+              <label>
+                <span>ملاحظة الدرس</span>
+                <input type="text" id="ls-note" />
+              </label>
+
+              <!-- ✅ وقت الحصة المحدد من الإدارة (periods) -->
+              <div
+                class="muted-box"
+                id="ls-schedule-meta"
+                style="display: none"
+              >
+                <strong>وقت الحصة:</strong>
+                <span id="ls-sched-start">—</span>
+                <span style="margin-inline: 6px">→</span>
+                <span id="ls-sched-end">—</span>
+
+                <span style="margin-inline: 10px">|</span>
+
+                <strong>الحالة:</strong>
+                <span id="ls-session-status">—</span>
+
+                <span
+                  class="att-lock-badge"
+                  id="ls-locked-badge"
+                  style="display: none; margin-inline-start: 10px"
+                >
+                  <i class="ri-lock-2-line"></i>
+                  <span>مقفولة</span>
+                </span>
+              </div>
+
+              <!-- ✅ عداد الحصة -->
+              <div class="muted-box" id="ls-timer" aria-live="polite">
+                <span class="dot"></span>
+                <span>مدة الحصة: <span id="ls-timer-text">00:00:00</span></span>
+              </div>
+
+              <!-- ✅ تفاصيل الجلسة -->
+              <div class="muted-box" id="ls-session-meta" style="display: none">
+                <strong>جلسة:</strong>
+                <span id="ls-session-id">—</span>
+                <span style="margin-inline: 8px">|</span>
+                <strong>بدأت:</strong>
+                <span id="ls-started-at">—</span>
+                <span style="margin-inline: 8px">|</span>
+                <strong>انتهت:</strong>
+                <span id="ls-ended-at">—</span>
+              </div>
+
+              <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
+                <button type="button" class="primary-btn" id="ls-start">
+                  <i class="ri-play-circle-line"></i>
+                  <span>بدء الحصة</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="ls-end"
+                  disabled
+                  style="
+                    background: linear-gradient(120deg, #b91c1c, #ef4444);
+                    opacity: 0.7;
+                  "
+                >
+                  <i class="ri-stop-circle-line"></i>
+                  <span>إنهاء الحصة</span>
+                </button>
+
+                <!-- ✅ زر اختياري لفتح الحضور مباشرة -->
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="ls-open-att"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-calendar-check-line"></i>
+                  <span>فتح الحضور</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="muted-box" id="ls-timeline">لم يتم بدء أي حصة بعد.</div>
+            <div class="empty-state" id="ls-log">
+              عند بدء/إنهاء الحصة سيتم تسجيل الوقت والمدة والحالة
+              (جارية/منتهية/مقفولة).
+            </div>
+          </div>
+
+          <!-- ===================== View: Lessons Log (كشف الحصص) ===================== -->
+          <div id="ls-view-log" style="display: none">
+            <div class="muted-box" style="margin-top: 0.6rem">
+              <strong>كشف الحصص:</strong>
+              يعرض كل الجلسات التي بدأتها مع مدة كل حصة وحالتها + فتح الحضور
+              مباشرة.
+            </div>
+
+            <form
+              class="form-card"
+              id="ls-report-form"
+              style="margin-top: 0.6rem"
+              autocomplete="off"
+            >
+              <label>
+                <span>من تاريخ</span>
+                <input type="date" id="lsr-from" />
+              </label>
+              <label>
+                <span>إلى تاريخ</span>
+                <input type="date" id="lsr-to" />
+              </label>
+
+              <label>
+                <span>الحالة</span>
+                <select id="lsr-status">
+                  <option value="">الكل</option>
+                  <option value="running">جارية</option>
+                  <option value="ended">منتهية</option>
+                  <option value="locked">معتمدة</option>
+                </select>
+              </label>
+
+              <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
+                <button type="button" class="primary-btn" id="lsr-show">
+                  <i class="ri-filter-3-line"></i><span>عرض السجل</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="lsr-export-csv"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
+                </button>
+
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="lsr-print"
+                  style="background: linear-gradient(120deg, #111827, #374151)"
+                >
+                  <i class="ri-printer-line"></i><span>طباعة</span>
+                </button>
+              </div>
+            </form>
+
+            <div class="muted-box" id="lsr-summary">—</div>
+
+            <table class="data-table" id="lsr-table">
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th>الحصة</th>
+                  <th>الشعبة</th>
+                  <th>المادة</th>
+                  <th>وقت الحصة</th>
+                  <th>بداية فعلية</th>
+                  <th>نهاية فعلية</th>
+                  <th>المدة</th>
+                  <th>الحالة</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="lsr-body"></tbody>
+            </table>
+
+            <div class="empty-state" id="lsr-empty" style="display: none">
+              لا توجد حصص ضمن الفلاتر المحددة.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========== مودال التقارير ========== -->
+<!-- مودال التقارير -->
+<div class="modal" id="modal-reports" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-header">
+      <div class="modal-title-wrap">
+        <h3 class="modal-title">إنشاء تقرير</h3>
+        <p class="modal-subtitle">
+          اختر نوع التقرير وحدد البيانات المطلوبة ثم اضغط على "إنشاء التقرير".
+        </p>
+      </div>
+
+      <button
+        type="button"
+        class="modal-close"
+        id="reports-close"
+        aria-label="إغلاق"
+      >
+        ×
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <form id="reports-form" class="reports-form" novalidate>
+        <div class="form-grid">
+          <!-- نوع التقرير -->
+          <div class="form-group full-width">
+            <label for="rp-type">نوع التقرير <span class="req">*</span></label>
+            <select id="rp-type" name="reportType" required>
+              <option value="">اختر نوع التقرير</option>
+
+              <optgroup label="تقارير الدرجات والتقييم">
+                <option value="class_grades_report">كشف درجات الصف</option>
+                <option value="student_performance_report">تقرير أداء طالب</option>
+                <option value="exam_results_summary">ملخص نتائج اختبار</option>
+                <option value="grade_entry_sheet">كشف رصد الدرجات</option>
+              </optgroup>
+
+              <optgroup label="تقارير المتابعة الأكاديمية">
+                <option value="assignments_report">تقرير الواجبات والتكليفات</option>
+                <option value="struggling_students_report">تقرير الطلاب المتعثرين</option>
+                <option value="top_students_report">تقرير الطلاب المتميزين</option>
+              </optgroup>
+
+              <optgroup label="تقارير الانضباط">
+                <option value="attendance_report">تقرير الحضور والغياب</option>
+              </optgroup>
+            </select>
+          </div>
+
+          <!-- السنة الدراسية -->
+          <div class="form-group">
+            <label for="rp-year">السنة الدراسية <span class="req">*</span></label>
+            <select id="rp-year" name="academicYearId" required>
+              <option value="">اختر السنة الدراسية</option>
+            </select>
+          </div>
+
+          <!-- الترم / الفصل -->
+          <div class="form-group">
+            <label for="rp-term">الفصل الدراسي <span class="req">*</span></label>
+            <select id="rp-term" name="term" required>
+              <option value="">اختر الفصل الدراسي</option>
+              <option value="1">الفصل الأول</option>
+              <option value="2">الفصل الثاني</option>
+              <option value="3">الفصل الثالث</option>
+            </select>
+          </div>
+
+          <!-- المرحلة -->
+          <div class="form-group">
+            <label for="rp-stage">المرحلة <span class="req">*</span></label>
+            <select id="rp-stage" name="stageId" required>
+              <option value="">اختر المرحلة</option>
+            </select>
+          </div>
+
+          <!-- الصف -->
+          <div class="form-group">
+            <label for="rp-grade">الصف <span class="req">*</span></label>
+            <select id="rp-grade" name="gradeId" required disabled>
+              <option value="">اختر الصف</option>
+            </select>
+          </div>
+
+          <!-- الشعبة -->
+          <div class="form-group">
+            <label for="rp-section">الشعبة <span class="req">*</span></label>
+            <select id="rp-section" name="sectionId" required disabled>
+              <option value="">اختر الشعبة</option>
+            </select>
+          </div>
+
+          <!-- المادة -->
+          <div class="form-group">
+            <label for="rp-subject">المادة <span class="req">*</span></label>
+            <select id="rp-subject" name="subjectId" required>
+              <option value="">اختر المادة</option>
+            </select>
+          </div>
+
+          <!-- الفترة الدراسية العامة -->
+          <div class="form-group">
+            <label for="rp-period">الفترة <span class="req">*</span></label>
+            <select id="rp-period" name="period" required>
+              <option value="">اختر الفترة</option>
+              <option value="term">الفصل الدراسي</option>
+              <option value="month">شهر</option>
+              <option value="custom">من تاريخ إلى تاريخ</option>
+              <option value="all">كل الفترة</option>
+            </select>
+          </div>
+
+          <!-- من تاريخ -->
+          <div class="form-group is-dynamic" id="rp-from-wrap" hidden>
+            <label for="rp-from-date">من تاريخ</label>
+            <input type="date" id="rp-from-date" name="fromDate" />
+          </div>
+
+          <!-- إلى تاريخ -->
+          <div class="form-group is-dynamic" id="rp-to-wrap" hidden>
+            <label for="rp-to-date">إلى تاريخ</label>
+            <input type="date" id="rp-to-date" name="toDate" />
+          </div>
+
+          <!-- نوع التقييم -->
+          <div class="form-group is-dynamic" id="rp-evaluation-type-wrap" hidden>
+            <label for="rp-evaluation-type">نوع التقييم</label>
+            <select id="rp-evaluation-type" name="evaluationType">
+              <option value="">اختر نوع التقييم</option>
+              <option value="all">جميع التقييمات</option>
+              <option value="quiz">اختبار قصير</option>
+              <option value="exam">اختبار</option>
+              <option value="midterm">منتصف الفصل</option>
+              <option value="final">نهائي</option>
+              <option value="homework">واجب</option>
+              <option value="participation">مشاركة</option>
+              <option value="project">مشروع</option>
+              <option value="oral">شفهي</option>
+            </select>
+          </div>
+
+          <!-- الطالب -->
+          <div class="form-group is-dynamic" id="rp-student-wrap" hidden>
+            <label for="rp-student">الطالب</label>
+            <select id="rp-student" name="studentId">
+              <option value="">اختر الطالب</option>
+            </select>
+          </div>
+
+          <!-- نطاق تقرير الحضور -->
+          <div class="form-group is-dynamic" id="rp-attendance-scope-wrap" hidden>
+            <label for="rp-attendance-scope">نطاق التقرير</label>
+            <select id="rp-attendance-scope" name="attendanceScope">
+              <option value="">اختر النطاق</option>
+              <option value="class">الصف كامل</option>
+              <option value="student">طالب واحد</option>
+            </select>
+          </div>
+
+          <!-- الاختبار -->
+          <div class="form-group is-dynamic" id="rp-exam-wrap" hidden>
+            <label for="rp-exam">الاختبار</label>
+            <select id="rp-exam" name="assessmentId">
+              <option value="">اختر الاختبار</option>
+            </select>
+          </div>
+
+          <!-- الواجب -->
+          <div class="form-group is-dynamic" id="rp-assignment-wrap" hidden>
+            <label for="rp-assignment">الواجب / التكليف</label>
+            <select id="rp-assignment" name="assignmentId">
+              <option value="">اختر الواجب أو التكليف</option>
+              <option value="all">جميع الواجبات</option>
+            </select>
+          </div>
+
+          <!-- معيار التعثر -->
+          <div class="form-group is-dynamic" id="rp-struggling-criteria-wrap" hidden>
+            <label for="rp-struggling-criteria">معيار التعثر</label>
+            <select id="rp-struggling-criteria" name="strugglingCriteria">
+              <option value="">اختر معيار التعثر</option>
+              <option value="below_50">أقل من 50</option>
+              <option value="below_60">أقل من 60</option>
+              <option value="below_average">أقل من متوسط الصف</option>
+              <option value="high_absence_low_grade">غياب مرتفع مع درجات منخفضة</option>
+            </select>
+          </div>
+
+          <!-- معيار التميز -->
+          <div class="form-group is-dynamic" id="rp-top-criteria-wrap" hidden>
+            <label for="rp-top-criteria">معيار التميز</label>
+            <select id="rp-top-criteria" name="topCriteria">
+              <option value="">اختر معيار التميز</option>
+              <option value="above_90">أعلى من 90</option>
+              <option value="above_95">أعلى من 95</option>
+              <option value="top_3">أفضل 3 طلاب</option>
+              <option value="top_5">أفضل 5 طلاب</option>
+              <option value="top_10">أفضل 10 طلاب</option>
+            </select>
+          </div>
+
+          <!-- نوع الرصد -->
+          <div class="form-group is-dynamic" id="rp-grade-sheet-type-wrap" hidden>
+            <label for="rp-grade-sheet-type">نوع الرصد</label>
+            <select id="rp-grade-sheet-type" name="gradeSheetType">
+              <option value="">اختر نوع الرصد</option>
+              <option value="period">رصد فترة محددة</option>
+              <option value="final">رصد نهائي</option>
+              <option value="assessment_type">حسب نوع التقييم</option>
+            </select>
+          </div>
+
+          <!-- ملاحظات إضافية -->
+          <div class="form-group full-width is-dynamic" id="rp-notes-wrap" hidden>
+            <label for="rp-notes">ملاحظات إضافية</label>
+            <textarea
+              id="rp-notes"
+              name="notes"
+              rows="3"
+              placeholder="اكتب أي ملاحظات تريد إضافتها داخل التقرير إن لزم"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- رسائل الحالة -->
+        <div class="report-status-wrap">
+          <p id="rp-status" class="report-status">
+            اختر نوع التقرير وحدد البيانات المطلوبة ثم اضغط على "إنشاء التقرير".
+          </p>
+          <p id="rp-error" class="report-error" hidden></p>
+          <p id="rp-success" class="report-success" hidden></p>
+        </div>
+
+        <!-- منطقة المعاينة -->
+        <div class="report-preview" id="rp-preview-section" hidden>
+          <div class="report-preview-header">
+            <h4>معاينة التقرير</h4>
+            <p>بعد إنشاء التقرير بنجاح، ستظهر المعاينة هنا قبل التحميل.</p>
+          </div>
+
+          <div class="report-preview-box" id="rp-preview-box">
+            <iframe
+              id="rp-preview-frame"
+              title="معاينة التقرير"
+              src="about:blank"
+              width="100%"
+              height="420"
+            ></iframe>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="modal-footer">
+      <div class="modal-footer-left">
+        <button type="button" class="btn btn-secondary" id="rp-cancel">
+          إلغاء
+        </button>
+      </div>
+
+      <div class="modal-footer-right">
+        <button type="button" class="btn btn-light" id="rp-preview" hidden>
+          معاينة التقرير
+        </button>
+
+        <button type="button" class="btn btn-primary" id="rp-generate">
+          إنشاء التقرير
+        </button>
+
+        <button type="button" class="btn btn-success" id="rp-download" hidden>
+          تحميل PDF
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+    <!-- ========== مودالات الحساب ========== -->
+    <div class="modal" id="profile-modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-id-card-line"></i>
+            <span>الملف الوظيفي</span>
+          </h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- بطاقة معلومات أساسية -->
+          <div class="profile-card">
+            <div class="profile-top">
+              <div class="profile-avatar" aria-hidden="true">
+                <i class="ri-user-3-line"></i>
+              </div>
+
+              <div class="profile-main">
+                <div class="profile-name-row">
+                  <h4 id="profile-name">—</h4>
+                  <span class="profile-badge" id="profile-status">معلم</span>
+                </div>
+
+                <div class="profile-meta">
+                  <span class="meta-item">
+                    <i class="ri-hashtag"></i>
+                    <span>الرقم:</span>
+                    <strong id="profile-code">—</strong>
+                  </span>
+
+                  <span class="meta-item">
+                    <i class="ri-phone-line"></i>
+                    <span>الهاتف:</span>
+                    <strong id="profile-phone">—</strong>
+                  </span>
+                </div>
+
+                <div class="profile-note">
+                  <i class="ri-information-line"></i>
+                  <span
+                    >الحساب الشخصي يظهر في صفحة "الحساب"، وهنا نعرض المعلومات
+                    الوظيفية فقط.</span
+                  >
+                </div>
+              </div>
+            </div>
+
+            <!-- ملخص أرقام -->
+            <div class="profile-stats">
+              <div class="stat">
+                <div class="stat-label">المراحل</div>
+                <div class="stat-value" id="profile-stages-count">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">الصفوف</div>
+                <div class="stat-value" id="profile-grades-count">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">الشُعب</div>
+                <div class="stat-value" id="profile-sections-count">0</div>
+              </div>
+              <div class="stat">
+                <div class="stat-label">المواد</div>
+                <div class="stat-value" id="profile-subjects-count">0</div>
+              </div>
+            </div>
+            <!-- بطاقة التحضير (QR/Barcode + نص) -->
+            <div class="profile-block" style="margin-top: 0.8rem">
+              <div
+                class="block-head"
+                style="
+                  display: flex;
+                  align-items: center;
+                  justify-content: space-between;
+                  gap: 0.6rem;
+                "
+              >
+                <h5 style="margin: 0">
+                  <i class="ri-qr-code-line"></i>
+                  <span>بطاقة التحضير</span>
+                </h5>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="tcard-copy"
+                  style="
+                    background: linear-gradient(120deg, #0ea5e9, #2563eb);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-file-copy-line"></i><span>نسخ الكود</span>
+                </button>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="tcard-print"
+                  style="
+                    background: linear-gradient(120deg, #111827, #374151);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-printer-line"></i><span>طباعة البطاقة</span>
+                </button>
+              </div>
+
+              <div
+                class="muted-box"
+                id="tcard-status"
+                style="margin-top: 0.6rem"
+              >
+                —
+              </div>
+
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: 1fr 1fr;
+                  gap: 0.6rem;
+                  margin-top: 0.6rem;
+                "
+              >
+                <div class="muted-box" style="margin: 0">
+                  <strong>الكود:</strong>
+                  <div
+                    style="
+                      margin-top: 0.35rem;
+                      font-weight: 800;
+                      direction: ltr;
+                      user-select: all;
+                    "
+                    id="tcard-code"
+                  >
+                    —
+                  </div>
+                  <small
+                    style="opacity: 0.85; display: block; margin-top: 0.35rem"
+                  >
+                    يمكن للإدارة مسح QR/Barcode أو نسخ هذا النص في حقل التحضير.
+                  </small>
+                </div>
+
+                <div
+                  class="muted-box"
+                  style="
+                    margin: 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 150px;
+                  "
+                >
+                  <!-- إذا توفر مولّد QR/Barcode رح نعبيه، وإلا يظهر نص فقط -->
+                  <div
+                    id="tcard-visual"
+                    style="
+                      width: 100%;
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                    "
+                  >
+                    <div class="empty-state" style="padding: 10px">
+                      سيظهر QR/Barcode هنا (اختياري)
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ✅ تفاصيل “ماهي” -->
+            <div class="profile-lists">
+              <div class="plist">
+                <h6><i class="ri-building-2-line"></i> المراحل</h6>
+                <div class="plist-body" id="profile-stages-list"></div>
+              </div>
+
+              <div class="plist">
+                <h6><i class="ri-stack-line"></i> الصفوف</h6>
+                <div class="plist-body" id="profile-grades-list"></div>
+              </div>
+
+              <div class="plist">
+                <h6><i class="ri-group-line"></i> الشُعب</h6>
+                <div class="plist-body" id="profile-sections-list"></div>
+              </div>
+
+              <div class="plist">
+                <h6><i class="ri-book-2-line"></i> المواد</h6>
+                <div class="plist-body" id="profile-subjects-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- نطاقات التدريس (تفصيلية) -->
+          <div class="profile-block">
+            <div class="block-head">
+              <h5>
+                <i class="ri-book-open-line"></i>
+                <span>نطاقات التدريس (من الجدول)</span>
+              </h5>
+              <span class="mini-hint" id="profile-scope-hint">—</span>
+            </div>
+
+            <div
+              class="profile-status"
+              id="profile-msg"
+              style="display: none"
+            ></div>
+
+            <div class="scope-list" id="profile-scopes"></div>
+
+            <div class="empty-state" id="profile-empty" style="display: none">
+              لا توجد نطاقات تدريس مرتبطة بهذا المعلم حالياً.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="change-password-modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3><i class="ri-key-2-line"></i><span>تغيير كلمة المرور</span></h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="changePasswordForm" class="form-card">
+            <label
+              ><span>كلمة المرور الحالية</span
+              ><input type="password" id="currentPassword" required
+            /></label>
+            <label
+              ><span>كلمة المرور الجديدة</span
+              ><input type="password" id="newPassword" required
+            /></label>
+            <label
+              ><span>تأكيد كلمة المرور الجديدة</span
+              ><input type="password" id="confirmNewPassword" required
+            /></label>
+            <button type="submit" class="primary-btn">
+              <i class="ri-save-3-line"></i><span>حفظ التغييرات</span>
+            </button>
+          </form>
+          <div class="muted-box">لاحقًا سيتم ربط هذا النموذج مع API.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="change-email-modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-mail-line"></i><span>تغيير البريد الإلكتروني</span>
+          </h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="modal-body">
+          <form id="changeEmailForm" class="form-card">
+            <label
+              ><span>البريد الحالي</span
+              ><input
+                type="email"
+                id="currentEmail"
+                value="teacher@example.com"
+                disabled
+            /></label>
+            <label
+              ><span>البريد الجديد</span
+              ><input type="email" id="newEmail" required
+            /></label>
+            <button type="submit" class="primary-btn">
+              <i class="ri-save-3-line"></i><span>حفظ البريد الجديد</span>
+            </button>
+          </form>
+          <div class="muted-box">سيتم ربطه لاحقًا مع API.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="change-avatar-modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-image-edit-line"></i><span>تغيير الصورة الشخصية</span>
+          </h3>
+          <button class="modal-close" data-close-modal>&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="muted-box">
+            اختر صورة من جهازك ليتم عرضها في أعلى الصفحة (حاليًا تُحفظ فقط في
+            <code>localStorage</code> كتجربة).
+          </div>
+          <button type="button" class="primary-btn" id="change-avatar-btn">
+            <i class="ri-image-add-line"></i>
+            <span>اختيار صورة من الجهاز</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <!-- ========== مودال أذوناتي (إذن المعلم) ========== -->
+    <div
+      class="modal"
+      id="modal-teacher-permits"
+      dir="rtl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="tp-title"
+      tabindex="-1"
+    >
+      <div class="modal-dialog" role="document">
+        <div class="modal-header">
+          <h3 id="tp-title">
+            <i class="ri-shield-user-line"></i>
+            <span>أذوناتي (إذن المعلم)</span>
+          </h3>
+          <button
+            type="button"
+            class="modal-close"
+            data-close-modal
+            aria-label="إغلاق"
+          >
+            &times;
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="muted-box">
+            <strong>ملاحظة:</strong> هذا الإذن خاص بالمعلم (دوام/حصص). الإدارة
+            هي من تقبل أو ترفض.
+          </div>
+
+          <!-- بطاقة سريعة للكود داخل نفس المودال -->
+          <div class="muted-box" style="margin-top: 0.6rem">
+            <strong>كود التحضير:</strong>
+            <span
+              id="tp-card-inline"
+              style="font-weight: 800; direction: ltr; user-select: all"
+              >—</span
+            >
+            <button
+              type="button"
+              class="primary-btn"
+              id="tp-card-copy-inline"
+              style="
+                margin-inline-start: 0.5rem;
+                background: linear-gradient(120deg, #0ea5e9, #2563eb);
+                box-shadow: none;
+              "
+            >
+              <i class="ri-file-copy-line"></i><span>نسخ</span>
+            </button>
+          </div>
+
+          <!-- إنشاء طلب -->
+          <form
+            class="form-card"
+            id="tp-form"
+            autocomplete="off"
+            style="margin-top: 0.6rem"
+          >
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.6rem;
+              "
+            >
+              <label>
+                <span>التاريخ</span>
+                <input type="date" id="tp-date" />
+              </label>
+
+              <label>
+                <span>نوع الإذن</span>
+                <select id="tp-scope">
+                  <option value="full_day">اليوم كامل</option>
+                  <option value="slots">حصص محددة</option>
+                </select>
+              </label>
+            </div>
+
+            <div id="tp-slots-wrap" style="display: none; margin-top: 0.6rem">
+              <div class="muted-box" style="margin: 0">
+                اختر الحصص التي يغطيها الإذن (يتم تحميلها من جدولك لذلك اليوم).
+              </div>
+
+              <div
+                class="att-actions"
+                style="gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem"
+              >
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="tp-load-slots"
+                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+                >
+                  <i class="ri-refresh-line"></i
+                  ><span>تحميل حصص هذا اليوم</span>
+                </button>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="tp-select-all"
+                  style="
+                    background: linear-gradient(120deg, #111827, #374151);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-check-double-line"></i><span>تحديد الكل</span>
+                </button>
+                <button
+                  type="button"
+                  class="primary-btn"
+                  id="tp-clear-all"
+                  style="
+                    background: linear-gradient(120deg, #111827, #374151);
+                    box-shadow: none;
+                  "
+                >
+                  <i class="ri-close-circle-line"></i><span>إلغاء التحديد</span>
+                </button>
+              </div>
+
+              <div
+                id="tp-slots"
+                style="margin-top: 0.6rem; display: grid; gap: 0.45rem"
+              ></div>
+
+              <div
+                class="empty-state"
+                id="tp-slots-empty"
+                style="display: none"
+              >
+                لا توجد حصص في هذا اليوم أو لم يتم تحميلها بعد.
+              </div>
+            </div>
+
+            <label style="margin-top: 0.6rem">
+              <span>سبب الإذن</span>
+              <input
+                type="text"
+                id="tp-reason"
+                placeholder="مثال: موعد طبي / ظرف طارئ..."
+              />
+            </label>
+
+            <label>
+              <span>ملاحظة إضافية (اختياري)</span>
+              <input type="text" id="tp-notes" placeholder="تفاصيل مختصرة..." />
+            </label>
+
+            <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
+              <button
+                type="button"
+                class="primary-btn"
+                id="tp-submit"
+                style="background: linear-gradient(120deg, #16a34a, #22c55e)"
+              >
+                <i class="ri-send-plane-2-line"></i><span>إرسال الطلب</span>
+              </button>
+
+              <button
+                type="button"
+                class="primary-btn"
+                id="tp-refresh"
+                style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
+              >
+                <i class="ri-refresh-line"></i><span>تحديث القائمة</span>
+              </button>
+            </div>
+          </form>
+
+          <!-- قائمة طلباتي -->
+          <div class="muted-box" id="tp-summary" style="margin-top: 0.6rem">
+            —
+          </div>
+          <div
+            id="tp-list"
+            style="margin-top: 0.6rem; display: grid; gap: 0.6rem"
+          ></div>
+          <div class="empty-state" id="tp-empty" style="display: none">
+            لا توجد طلبات حتى الآن.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast"></div>
+<script src="/frontend/shared/js/config.js"></script>
+    <script src="/frontend/shared/profile-account.js" defer></script>
+    <!-- <script src="js/teacher.js" defer></script>
+<script src="js/teacher-academic.js" defer></script> -->
+    <!-- core -->
+    <script src="js/core/dom.js"></script>
+    <script src="js/core/toast.js"></script>
+    <script src="js/core/api.js"></script>
+    <script src="js/core/storage.js"></script>
+
+    <!-- ui -->
+    <script src="js/ui/modals.js"></script>
+    <script src="js/ui/theme.js"></script>
+    <script src="js/ui/clock.js"></script>
+    <script src="js/ui/accountMenu.js"></script>
+    <script src="js/ui/avatar.js"></script>
+    <script src="js/ui/commandPalette.js"></script>
+
+    <!-- features -->
+    <script src="js/features/timetable.js"></script>
+    <script src="js/features/teachingScopes.js"></script>
+    <script src="js/features/sessions.js"></script>
+    <script src="js/features/attendance-scan-tab.js"></script>
+    <script src="js/features/profile.js"></script>
+    <script src="js/features/studentsModal.js"></script>
+    <script src="js/features/teacherPermits.js"></script>
+    <script src="http://127.0.0.1:5000/socket.io/socket.io.js"></script>
+    <script src="js/features/notifications.js"></script>
+    <script src="js/features/assessmentsModal.js"></script>
+    <script src="js/features/gradesModal.js"></script>
+    <script src="js/features/reportsModal.js"></script>
+
+    <script>
+      window.initTeacherNotifications && window.initTeacherNotifications();
+    </script>
+    <script>
+      window.initTeacherStudentsModal && window.initTeacherStudentsModal();
+    </script>
+    <script src="js/features/profileModal.js"></script>
+
+    <script src="js/features/heroStrip.js"></script>
+
+    <!-- main -->
+    <script src="js/teacher.main.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script> -->
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+  </body>
+</html>

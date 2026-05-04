@@ -1,0 +1,294 @@
+<section id="employeesPage" class="emp-page" dir="rtl" lang="ar">
+  <div class="emp-head">
+    <div class="emp-title">
+      <div class="emp-icon"><i class="ri-id-card-line"></i></div>
+      <div>
+        <h2>تسجيل الموظفين</h2>
+      </div>
+    </div>
+
+    <div class="emp-actions">
+      <button type="button" class="emp-btn emp-btn-ghost" id="empNewBtn">
+        <i class="ri-add-line"></i><span>جديد</span>
+      </button>
+      <button type="button" class="emp-btn emp-btn-primary" id="empSaveBtn">
+        <i class="ri-save-3-line"></i><span>حفظ</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Tabs: Form | View -->
+  <div class="emp-mainTabs">
+    <button type="button" class="emp-tab is-active" id="empMainTabForm" data-main="form">
+      <i class="ri-edit-2-line"></i><span>الإضافة / التعديل</span>
+    </button>
+    <button type="button" class="emp-tab" id="empMainTabView" data-main="view">
+      <i class="ri-team-line"></i><span>العرض</span>
+    </button>
+  </div>
+
+  <!-- Pane: FORM -->
+  <div id="empPaneForm">
+    <div class="emp-card">
+      <div class="emp-cardHead">
+        <h3><i class="ri-edit-2-line"></i> نموذج الموظف</h3>
+        <div class="emp-badges">
+          <span class="emp-badge" id="empModeBadge">إضافة</span>
+          <span class="emp-badge emp-badge-muted" id="empIdBadge" hidden>#</span>
+        </div>
+      </div>
+
+      <div class="emp-cardBody">
+        <form id="empForm" class="emp-form" autocomplete="off">
+          <div class="emp-row">
+            <label class="emp-field">
+              <span class="emp-label">الاسم الكامل <b>*</b></span>
+              <input id="empFullName" type="text" required />
+            </label>
+
+            <label class="emp-field">
+              <span class="emp-label">رقم الجوال <b>*</b></span>
+              <input id="empPhone" type="tel" required />
+            </label>
+          </div>
+
+          <div class="emp-row">
+            <label class="emp-field">
+              <span class="emp-label">المسمى الوظيفي</span>
+              <input id="empJobTitle" type="text" placeholder="مثال: وكيل / محاسب..." />
+            </label>
+
+            <label class="emp-field">
+              <span class="emp-label">هل هو معلم؟</span>
+              <select id="empIsTeacher">
+                <option value="0">لا (موظف)</option>
+                <option value="1">نعم (معلم)</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="emp-row">
+            <label class="emp-field">
+              <span class="emp-label">ملاحظات</span>
+              <textarea id="empNotes" rows="3"></textarea>
+            </label>
+
+            <div class="emp-field">
+              <span class="emp-label">الحالة</span>
+              <label class="emp-switch">
+                <input id="empIsActive" type="checkbox" checked />
+                <span class="emp-switchUi"></span>
+                <span class="emp-switchText">نشط</span>
+              </label>
+            </div>
+          </div>
+
+          <hr class="emp-hr" />
+
+          <div class="emp-subHead">
+            <h4><i class="ri-key-2-line"></i> الحساب والصلاحيات</h4>
+
+            <label class="emp-switch emp-switch-compact">
+              <input id="empHasAccount" type="checkbox" checked />
+              <span class="emp-switchUi"></span>
+              <span class="emp-switchText">لديه حساب</span>
+            </label>
+          </div>
+
+          <div id="empAccountBox">
+            <div class="emp-seg">
+              <label class="emp-segItem">
+                <input type="radio" name="accMode" value="link" checked />
+                <span><i class="ri-link"></i> ربط</span>
+              </label>
+              <label class="emp-segItem">
+                <input type="radio" name="accMode" value="create" />
+                <span><i class="ri-user-add-line"></i> إنشاء</span>
+              </label>
+              <label class="emp-segItem">
+                <input type="radio" name="accMode" value="none" />
+                <span><i class="ri-close-circle-line"></i> بدون</span>
+              </label>
+            </div>
+
+            <div class="emp-block" data-acc="link">
+              <label class="emp-field">
+                <span class="emp-label">اختر حساب (User)</span>
+                <select id="empUserSelect">
+                  <option value="">— اختر —</option>
+                </select>
+              </label>
+              <div class="emp-mini" id="empUserPreview">لم يتم اختيار حساب.</div>
+            </div>
+
+            <div class="emp-block" data-acc="create" hidden>
+              <div class="emp-row">
+                <label class="emp-field">
+                  <span class="emp-label">اسم المستخدم <b>*</b></span>
+                  <input id="empUsername" type="text" />
+                </label>
+                <label class="emp-field">
+                  <span class="emp-label">البريد <b>*</b></span>
+                  <input id="empEmail" type="email" />
+                </label>
+              </div>
+              <div class="emp-row">
+                <label class="emp-field">
+                  <span class="emp-label">كلمة المرور <b>*</b></span>
+                  <input id="empPassword" type="password" />
+                </label>
+                <label class="emp-field">
+                  <span class="emp-label">تأكيد كلمة المرور <b>*</b></span>
+                  <input id="empPassword2" type="password" />
+                </label>
+              </div>
+            </div>
+
+            <div class="emp-block" data-acc="none" hidden>
+              <div class="emp-alert">
+                <i class="ri-information-line"></i>
+                <div>سيُحفظ بدون حساب دخول. يمكن الربط لاحقًا.</div>
+              </div>
+            </div>
+
+            <div class="emp-roles">
+              <div class="emp-rolesHead">
+                <b>الأدوار</b>
+                <input id="empRoleSearch" type="text" placeholder="بحث دور..." />
+              </div>
+              <div id="empRolesList" class="emp-roleGrid"></div>
+            </div>
+          </div>
+
+          <div class="emp-foot">
+            <button class="emp-btn emp-btn-ghost" type="button" id="empResetBtn">
+              <i class="ri-eraser-line"></i><span>تفريغ</span>
+            </button>
+            <button class="emp-btn emp-btn-primary" type="submit">
+              <i class="ri-save-3-line"></i><span>حفظ</span>
+            </button>
+          </div>
+
+          <small class="emp-hint">
+            عند اختيار "معلم": سيتم إنشاء/تحديث سجل في teachers تلقائيًا وربطه بالموظف.
+          </small>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pane: VIEW -->
+  <div id="empPaneView" hidden>
+    <div class="emp-card">
+      <div class="emp-cardHead emp-cardHead-col">
+        <div class="emp-cardHeadTop">
+          <h3><i class="ri-team-line"></i> العرض</h3>
+
+          <div class="emp-tools">
+            <div class="emp-search">
+              <i class="ri-search-line"></i>
+              <input id="empSearch" type="text" placeholder="بحث..." />
+            </div>
+            <button type="button" class="emp-btn emp-btn-ghost" id="empRefreshBtn">
+              <i class="ri-refresh-line"></i><span>تحديث</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sub Tabs inside View -->
+        <div class="emp-tabs">
+          <button type="button" class="emp-tab is-active" id="empTabTeachers" data-tab="teachers">
+            <i class="ri-graduation-cap-line"></i><span>المعلمين</span><b id="empCountTeachers">0</b>
+          </button>
+          <button type="button" class="emp-tab" id="empTabEmployees" data-tab="employees">
+            <i class="ri-briefcase-3-line"></i><span>الموظفين</span><b id="empCountEmployees">0</b>
+          </button>
+        </div>
+      </div>
+
+      <div class="emp-cardBody">
+        <!-- Teachers Table (separate) -->
+        <div id="empTeachersWrap">
+          <div class="emp-tableWrap">
+            <table class="emp-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>الاسم</th>
+                  <th>الجوال</th>
+                  <th>المسمى</th>
+                  <th>حساب</th>
+                  <th>الحالة</th>
+                  <th>إجراء</th>
+                </tr>
+              </thead>
+              <tbody id="empTeachersBody"></tbody>
+            </table>
+          </div>
+
+          <div class="emp-empty" id="empEmptyTeachers" hidden>
+            <i class="ri-inbox-2-line"></i>
+            <p>لا توجد بيانات للمعلمين.</p>
+          </div>
+        </div>
+
+        <!-- Employees Table (separate) -->
+        <div id="empEmployeesWrap" hidden>
+          <div class="emp-tableWrap">
+            <table class="emp-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>الاسم</th>
+                  <th>الجوال</th>
+                  <th>المسمى</th>
+                  <th>حساب</th>
+                  <th>الحالة</th>
+                  <th>إجراء</th>
+                </tr>
+              </thead>
+              <tbody id="empEmployeesBody"></tbody>
+            </table>
+          </div>
+
+          <div class="emp-empty" id="empEmptyEmployees" hidden>
+            <i class="ri-inbox-2-line"></i>
+            <p>لا توجد بيانات للموظفين.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Modal -->
+  <div class="emp-modal" id="empViewModal" hidden>
+    <div class="emp-modalBackdrop" data-close="1"></div>
+    <div class="emp-modalCard" role="dialog" aria-modal="true">
+      <div class="emp-modalHead">
+        <h4 id="empViewTitle">بيانات</h4>
+        <button type="button" class="emp-iconBtn" data-close="1">
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="emp-modalBody" id="empViewBody"></div>
+
+      <div class="emp-modalFoot">
+        <button type="button" class="emp-btn emp-btn-ghost" id="empViewEditBtn">
+          <i class="ri-edit-line"></i><span>تعديل</span>
+        </button>
+
+        <!-- ✅ زر تعطيل/تفعيل (JS يغير النص/الأيقونة حسب الحالة) -->
+        <button type="button" class="emp-btn emp-btn-ghost" id="empViewToggleBtn">
+          <i class="ri-forbid-2-line"></i><span>تعطيل</span>
+        </button>
+
+        <button type="button" class="emp-btn emp-btn-primary" data-close="1">
+          <i class="ri-check-line"></i><span>إغلاق</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Toast داخل الصفحة (staffRegister.js يستخدمه) -->
+  <div id="toast" hidden></div>
+</section>

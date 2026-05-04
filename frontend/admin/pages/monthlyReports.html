@@ -1,0 +1,376 @@
+<section id="monthlyReportsPage" class="mr-page" dir="rtl">
+  <style>
+    .mr-page {
+      padding: 22px;
+      color: #e5e7eb;
+      font-family: "Tajawal", sans-serif;
+    }
+
+    .mr-hero {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+      padding: 20px;
+      border-radius: 22px;
+      background:
+        radial-gradient(circle at top right, rgba(59, 130, 246, .22), transparent 35%),
+        linear-gradient(135deg, rgba(15, 23, 42, .96), rgba(30, 41, 59, .92));
+      border: 1px solid rgba(148, 163, 184, .18);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, .22);
+    }
+
+    .mr-title {
+      margin: 0;
+      font-size: 25px;
+      font-weight: 900;
+      color: #f8fafc;
+    }
+
+    .mr-subtitle {
+      margin: 8px 0 0;
+      color: #94a3b8;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .mr-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(14, 165, 233, .14);
+      color: #bae6fd;
+      border: 1px solid rgba(14, 165, 233, .25);
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .mr-panel {
+      background: rgba(15, 23, 42, .88);
+      border: 1px solid rgba(148, 163, 184, .16);
+      border-radius: 20px;
+      padding: 18px;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, .18);
+      margin-bottom: 18px;
+    }
+
+    .mr-filters {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(170px, 1fr));
+      gap: 14px;
+      align-items: end;
+    }
+
+    .mr-field label {
+      display: block;
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .mr-field select,
+    .mr-field input {
+      width: 100%;
+      height: 44px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, .2);
+      background: rgba(2, 6, 23, .55);
+      color: #f8fafc;
+      padding: 0 12px;
+      outline: none;
+      font-family: inherit;
+      font-weight: 700;
+    }
+
+    .mr-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .mr-btn {
+      height: 44px;
+      border: 0;
+      border-radius: 14px;
+      padding: 0 18px;
+      font-family: inherit;
+      font-weight: 900;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    .mr-btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .mr-btn:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .mr-btn-primary {
+      background: linear-gradient(135deg, #2563eb, #06b6d4);
+      color: white;
+    }
+
+    .mr-btn-soft {
+      background: rgba(148, 163, 184, .12);
+      color: #e5e7eb;
+      border: 1px solid rgba(148, 163, 184, .18);
+    }
+.mr-btn-success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: white;
+}
+
+.mr-btn-danger {
+  background: linear-gradient(135deg, #dc2626, #f97316);
+  color: white;
+}
+    .mr-summary {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .mr-card {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(2, 6, 23, .44);
+      border: 1px solid rgba(148, 163, 184, .14);
+    }
+
+    .mr-card span {
+      display: block;
+      color: #94a3b8;
+      font-size: 13px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .mr-card strong {
+      display: block;
+      color: #f8fafc;
+      font-size: 24px;
+      font-weight: 900;
+    }
+
+    .mr-table-wrap {
+      overflow: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, .15);
+      background: rgba(2, 6, 23, .32);
+    }
+
+    .mr-table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 850px;
+    }
+
+    .mr-table th,
+    .mr-table td {
+      padding: 13px 14px;
+      border-bottom: 1px solid rgba(148, 163, 184, .12);
+      text-align: right;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+
+    .mr-table th {
+      background: rgba(15, 23, 42, .96);
+      color: #cbd5e1;
+      font-size: 13px;
+      font-weight: 900;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    .mr-table td {
+      color: #e5e7eb;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .mr-student-name {
+      color: #f8fafc;
+      font-weight: 900;
+    }
+
+    .mr-muted {
+      color: #94a3b8;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+
+    .mr-score {
+      font-weight: 900;
+      color: #f8fafc;
+    }
+
+    .mr-empty-score {
+      color: #f87171;
+      font-weight: 900;
+    }
+
+    .mr-status {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .mr-status-ok {
+      background: rgba(34, 197, 94, .14);
+      color: #86efac;
+      border: 1px solid rgba(34, 197, 94, .25);
+    }
+
+    .mr-status-bad {
+      background: rgba(239, 68, 68, .14);
+      color: #fecaca;
+      border: 1px solid rgba(239, 68, 68, .25);
+    }
+
+    .mr-missing-list {
+      margin: 8px 0 0;
+      padding: 0;
+      list-style: none;
+      color: #fecaca;
+      font-size: 12px;
+      line-height: 1.8;
+      white-space: normal;
+    }
+
+    .mr-message {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(2, 6, 23, .4);
+      border: 1px dashed rgba(148, 163, 184, .22);
+      color: #cbd5e1;
+      text-align: center;
+      font-weight: 800;
+      line-height: 1.9;
+    }
+
+    .mr-error {
+      color: #fecaca;
+      border-color: rgba(248, 113, 113, .35);
+      background: rgba(127, 29, 29, .15);
+    }
+
+    @media (max-width: 1100px) {
+      .mr-filters,
+      .mr-summary {
+        grid-template-columns: repeat(2, minmax(160px, 1fr));
+      }
+
+      .mr-hero {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+
+    @media (max-width: 680px) {
+      .mr-page {
+        padding: 14px;
+      }
+
+      .mr-filters,
+      .mr-summary {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+
+  <div class="mr-hero">
+    <div>
+      <h2 class="mr-title">تسجيل الأعمال الفصلية</h2>
+      <p class="mr-subtitle">
+        مراجعة درجات الفصل الأول أو الفصل الثاني حسب المادة والشعبة قبل مرحلة الاعتماد والنتائج.
+      </p>
+    </div>
+    <div class="mr-badge">
+      <i class="ri-file-list-3-line"></i>
+      كشف أعمال الفصل
+    </div>
+  </div>
+
+  <div class="mr-panel">
+    <div class="mr-filters">
+      <div class="mr-field">
+        <label for="mrAcademicYear">السنة الدراسية</label>
+        <select id="mrAcademicYear"></select>
+      </div>
+
+      <div class="mr-field">
+        <label for="mrTerm">الفصل الدراسي</label>
+        <select id="mrTerm">
+          <option value="1">الفصل الأول</option>
+          <option value="2">الفصل الثاني</option>
+        </select>
+      </div>
+
+      <div class="mr-field">
+        <label for="mrStage">المرحلة</label>
+        <select id="mrStage"></select>
+      </div>
+
+      <div class="mr-field">
+        <label for="mrGrade">الصف</label>
+        <select id="mrGrade"></select>
+      </div>
+
+      <div class="mr-field">
+        <label for="mrSection">الشعبة</label>
+        <select id="mrSection"></select>
+      </div>
+
+      <div class="mr-field">
+        <label for="mrSubject">المادة</label>
+        <select id="mrSubject"></select>
+      </div>
+
+      <div class="mr-actions">
+        <button type="button" class="mr-btn mr-btn-primary" id="mrLoadBtn">
+          <i class="ri-search-line"></i>
+          عرض الأعمال
+        </button>
+
+        <button type="button" class="mr-btn mr-btn-soft" id="mrPrintBtn" disabled>
+          <i class="ri-printer-line"></i>
+          طباعة
+        </button>
+        <button type="button" class="mr-btn mr-btn-success" id="mrApproveBtn" disabled>
+  <i class="ri-checkbox-circle-line"></i>
+  اعتماد المادة
+</button>
+
+<button type="button" class="mr-btn mr-btn-danger" id="mrReturnBtn" disabled>
+  <i class="ri-arrow-go-back-line"></i>
+  إرجاع للمعلم
+</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="mrResult">
+    <div class="mr-message">
+      اختر البيانات المطلوبة ثم اضغط عرض الأعمال.
+    </div>
+  </div>
+</section>

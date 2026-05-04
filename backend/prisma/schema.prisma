@@ -1,0 +1,1797 @@
+generator client {
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  previewFeatures = ["partialIndexes"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model academic_years {
+  id                                                                                 Int                        @id @default(autoincrement())
+  name                                                                               String                     @db.VarChar(50)
+  start_date                                                                         DateTime                   @db.Date
+  end_date                                                                           DateTime                   @db.Date
+  is_active                                                                          Boolean                    @default(false)
+  created_at                                                                         DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                                                                         DateTime?                  @db.Timestamptz(6)
+  school_id                                                                          BigInt                     @unique(map: "uq_academic_years_one_active_per_school", where: raw("(is_active = true)"))
+  schools                                                                            schools                    @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_academic_years_school")
+  attendance_sessions                                                                attendance_sessions[]
+  continuing_batches_continuing_batches_from_year_idToacademic_years                 continuing_batches[]       @relation("continuing_batches_from_year_idToacademic_years")
+  continuing_batches_continuing_batches_to_year_idToacademic_years                   continuing_batches[]       @relation("continuing_batches_to_year_idToacademic_years")
+  exam_schedules                                                                     exam_schedules[]
+  exam_timetables                                                                    exam_timetables[]
+  fee_contracts_fee_contracts_academic_year_idToacademic_years                       fee_contracts[]            @relation("fee_contracts_academic_year_idToacademic_years")
+  fee_contracts_fee_contracts_academic_year_id_school_idToacademic_years             fee_contracts[]            @relation("fee_contracts_academic_year_id_school_idToacademic_years")
+  fee_rules                                                                          fee_rules[]
+  section_advisors                                                                   section_advisors[]
+  section_subject_teachers                                                           section_subject_teachers[]
+  student_enrollments_student_enrollments_academic_year_idToacademic_years           student_enrollments[]      @relation("student_enrollments_academic_year_idToacademic_years")
+  student_enrollments_student_enrollments_academic_year_id_school_idToacademic_years student_enrollments[]      @relation("student_enrollments_academic_year_id_school_idToacademic_years")
+  student_year_results                                                               student_year_results[]
+  teacher_assignments                                                                teacher_assignments[]
+  teacher_attendance_days                                                            teacher_attendance_days[]
+  timetables_timetables_academic_year_idToacademic_years                             timetables[]               @relation("timetables_academic_year_idToacademic_years")
+  timetables_timetables_academic_year_id_school_idToacademic_years                   timetables[]               @relation("timetables_academic_year_id_school_idToacademic_years")
+
+  @@unique([id, school_id], map: "uq_academic_years_id_school_id")
+  @@unique([school_id, name], map: "uq_academic_years_school_name")
+  @@index([school_id], map: "idx_academic_years_school_id")
+}
+
+model activity_logs {
+  id            BigInt    @id @default(autoincrement())
+  school_id     BigInt?
+  user_id       Int?
+  action        String?
+  entity_type   String?
+  entity_id     BigInt?
+  description   String?
+  details       Json?     @default("{}")
+  metadata      Json?     @default("{}")
+  path          String?
+  method        String?   @db.VarChar(16)
+  status_code   Int?
+  ip_address    String?
+  user_agent    String?
+  created_at    DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime? @default(now()) @db.Timestamptz(6)
+  resource_type String?
+  resource_id   String?
+
+  @@index([created_at(sort: Desc)], map: "idx_activity_logs_created_at")
+  @@index([school_id], map: "idx_activity_logs_school_id")
+  @@index([school_id, created_at(sort: Desc)], map: "idx_activity_logs_school_id_created_at")
+  @@index([user_id], map: "idx_activity_logs_user_id")
+}
+
+model assessment_attachments {
+  id            BigInt      @id @default(autoincrement())
+  assessment_id BigInt
+  file_url      String
+  file_name     String?     @db.VarChar(255)
+  file_type     String?     @db.VarChar(80)
+  file_size     BigInt?
+  created_at    DateTime    @default(now()) @db.Timestamptz(6)
+  assessments   assessments @relation(fields: [assessment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ass_attach")
+
+  @@index([assessment_id], map: "idx_ass_attach")
+}
+
+model assessment_grades {
+  id                BigInt              @id @default(autoincrement())
+  assessment_id     BigInt
+  student_id        Int
+  status            String              @default("missing") @db.VarChar(20)
+  score             Decimal?            @db.Decimal(6, 2)
+  feedback          String?
+  graded_by         BigInt?
+  graded_at         DateTime?           @db.Timestamptz(6)
+  is_published      Boolean             @default(false)
+  published_at      DateTime?           @db.Timestamptz(6)
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  assessments       assessments         @relation(fields: [assessment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ag_ass")
+  students          students            @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_assessment_grades_student")
+  grade_change_logs grade_change_logs[]
+
+  @@unique([assessment_id, student_id], map: "uq_assessment_grade")
+  @@unique([assessment_id, student_id], map: "uq_assessment_grades_assessment_student")
+  @@index([assessment_id], map: "idx_ag_assessment")
+  @@index([assessment_id, is_published], map: "idx_ag_publish")
+  @@index([student_id], map: "idx_ag_student")
+  @@index([assessment_id], map: "idx_assessment_grades_assessment")
+  @@index([student_id], map: "idx_assessment_grades_student")
+}
+
+model assessment_reopen_requests {
+  id                                                           BigInt      @id @default(autoincrement())
+  assessment_id                                                BigInt
+  requested_by_user_id                                         Int
+  reason                                                       String
+  status                                                       String      @default("pending") @db.VarChar(30)
+  admin_note                                                   String?
+  decided_by_user_id                                           Int?
+  decided_at                                                   DateTime?   @db.Timestamptz(6)
+  created_at                                                   DateTime    @default(now()) @db.Timestamptz(6)
+  assessments                                                  assessments @relation(fields: [assessment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_assessment_reopen_requests_decided_by_user_idTousers   users?      @relation("assessment_reopen_requests_decided_by_user_idTousers", fields: [decided_by_user_id], references: [id], onUpdate: NoAction)
+  users_assessment_reopen_requests_requested_by_user_idTousers users       @relation("assessment_reopen_requests_requested_by_user_idTousers", fields: [requested_by_user_id], references: [id], onUpdate: NoAction)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model assessments {
+  id                         BigInt                       @id @default(autoincrement())
+  teacher_assignment_id      BigInt
+  type                       String                       @db.VarChar(30)
+  mode                       String                       @db.VarChar(20)
+  status                     String                       @default("draft") @db.VarChar(20)
+  title                      String                       @db.VarChar(255)
+  description                String?
+  max_score                  Decimal                      @db.Decimal(6, 2)
+  starts_at                  DateTime?                    @db.Timestamptz(6)
+  due_at                     DateTime?                    @db.Timestamptz(6)
+  duration_minutes           Int?
+  late_policy_json           Json?
+  published_at               DateTime?                    @db.Timestamptz(6)
+  closed_at                  DateTime?                    @db.Timestamptz(6)
+  created_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  exam_kind                  String?                      @db.VarChar(20)
+  aggregate_kind             String?                      @db.VarChar(20)
+  sequence_no                Int?                         @db.SmallInt
+  is_system_generated        Boolean                      @default(false)
+  source_assessment_ids      Json?
+  title_short                String?                      @db.VarChar(255)
+  school_id                  BigInt?
+  assessment_attachments     assessment_attachments[]
+  assessment_grades          assessment_grades[]
+  assessment_reopen_requests assessment_reopen_requests[]
+  teacher_assignments        teacher_assignments          @relation(fields: [teacher_assignment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_ass_ta")
+  schools                    schools?                     @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_assessments_school")
+  submissions                submissions[]
+
+  @@unique([teacher_assignment_id, aggregate_kind], map: "uq_assessments_aggregate_kind", where: raw("((type)::text = 'aggregate'::text)"))
+  @@unique([teacher_assignment_id, exam_kind], map: "uq_assessments_midterm_final_exam", where: raw("(((type)::text = 'exam'::text) AND ((exam_kind)::text = ANY (ARRAY[('midterm'::character varying)::text, ('final'::character varying)::text])))"))
+  @@unique([teacher_assignment_id, exam_kind, sequence_no], map: "uq_assessments_monthly_exam", where: raw("(((type)::text = 'exam'::text) AND ((exam_kind)::text = 'monthly'::text))"))
+  @@index([starts_at, due_at], map: "idx_ass_dates")
+  @@index([status], map: "idx_ass_status")
+  @@index([teacher_assignment_id], map: "idx_ass_ta")
+  @@index([aggregate_kind], map: "idx_assessments_aggregate_kind", where: raw("(aggregate_kind IS NOT NULL)"))
+  @@index([exam_kind], map: "idx_assessments_exam_kind", where: raw("(exam_kind IS NOT NULL)"))
+  @@index([teacher_assignment_id], map: "idx_assessments_teacher_assignment")
+  @@index([teacher_assignment_id, exam_kind, sequence_no], map: "idx_assessments_teacher_assignment_exam_kind", where: raw("(exam_kind IS NOT NULL)"))
+  @@index([teacher_assignment_id, type], map: "idx_assessments_teacher_assignment_type")
+  @@index([type], map: "idx_assessments_type")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model attendance_entries {
+  id                  BigInt              @id @default(autoincrement())
+  session_id          BigInt
+  student_id          Int
+  status              String
+  reason_id           Int?
+  late_minutes        Int?
+  note                String?
+  created_at          DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime            @default(now()) @db.Timestamptz(6)
+  attendance_reasons  attendance_reasons? @relation(fields: [reason_id], references: [id], onUpdate: NoAction)
+  attendance_sessions attendance_sessions @relation(fields: [session_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  students            students            @relation(fields: [student_id], references: [id], onUpdate: NoAction)
+
+  @@unique([session_id, student_id], map: "attendance_entries_session_student_uniq")
+  @@unique([session_id, student_id], map: "uniq_attendance_entry")
+  @@unique([session_id, student_id], map: "uniq_attendance_entry_once")
+  @@unique([session_id, student_id], map: "ux_att_entries_session_student")
+  @@unique([session_id, student_id], map: "ux_attendance_entries_session_student")
+  @@index([session_id], map: "attendance_entries_session_idx")
+  @@index([session_id], map: "idx_attendance_entries_session")
+  @@index([session_id], map: "idx_entries_session")
+  @@index([status], map: "ix_att_entries_status")
+  @@index([student_id], map: "ix_att_entries_student")
+  @@index([student_id, session_id], map: "ix_att_entries_student_session")
+}
+
+model attendance_entry_corrections {
+  id                     BigInt               @id @default(autoincrement())
+  session_id             BigInt
+  student_id             Int
+  corrected_status       String               @db.VarChar(20)
+  corrected_reason_id    Int?
+  corrected_late_minutes Int?
+  corrected_note         String?
+  correction_reason      String
+  corrected_by_user_id   Int?
+  created_at             DateTime             @default(now()) @db.Timestamptz(6)
+  permission_request_id  BigInt?
+  permission_requests    permission_requests? @relation(fields: [permission_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  attendance_sessions    attendance_sessions  @relation(fields: [session_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  students               students             @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  attendance_reasons     attendance_reasons?  @relation(fields: [corrected_reason_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_att_corr_reason")
+  users                  users?               @relation(fields: [corrected_by_user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_att_corr_user")
+
+  @@index([session_id, student_id, created_at(sort: Desc)], map: "idx_aec_session_student")
+  @@index([session_id, student_id, created_at(sort: Desc)], map: "idx_att_corr_session_student_created")
+}
+
+model attendance_reasons {
+  id                           Int                            @id @default(autoincrement())
+  name                         String
+  is_active                    Boolean                        @default(true)
+  created_at                   DateTime                       @default(now()) @db.Timestamptz(6)
+  school_id                    BigInt?
+  attendance_entries           attendance_entries[]
+  attendance_entry_corrections attendance_entry_corrections[]
+  schools                      schools?                       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_attendance_reasons_school")
+
+  @@unique([school_id, name], map: "uq_attendance_reasons_school_name")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model attendance_sessions {
+  id                                          BigInt                         @id @default(autoincrement())
+  academic_year_id                            Int
+  term                                        Int                            @db.SmallInt
+  attendance_date                             DateTime                       @db.Date
+  period_id                                   Int
+  section_id                                  Int
+  subject_id                                  Int
+  teacher_id                                  Int
+  created_by                                  Int?
+  is_locked                                   Boolean                        @default(false)
+  created_at                                  DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                                  DateTime                       @default(now()) @db.Timestamptz(6)
+  locked_at                                   DateTime?                      @db.Timestamptz(6)
+  locked_by                                   Int?
+  started_at                                  DateTime?                      @db.Timestamptz(6)
+  ended_at                                    DateTime?                      @db.Timestamptz(6)
+  lesson_note                                 String?
+  source                                      String                         @default("manual")
+  notes                                       String?
+  stage_id                                    Int?
+  grade_id                                    Int?
+  duration_seconds                            Int?
+  school_id                                   BigInt?
+  attendance_entries                          attendance_entries[]
+  attendance_entry_corrections                attendance_entry_corrections[]
+  academic_years                              academic_years                 @relation(fields: [academic_year_id], references: [id], onUpdate: NoAction)
+  users_attendance_sessions_created_byTousers users?                         @relation("attendance_sessions_created_byTousers", fields: [created_by], references: [id], onUpdate: NoAction)
+  users_attendance_sessions_locked_byTousers  users?                         @relation("attendance_sessions_locked_byTousers", fields: [locked_by], references: [id], onUpdate: NoAction)
+  periods                                     periods                        @relation(fields: [period_id], references: [id], onUpdate: NoAction)
+  sections                                    sections                       @relation(fields: [section_id], references: [id], onUpdate: NoAction)
+  subjects                                    subjects                       @relation(fields: [subject_id], references: [id], onUpdate: NoAction)
+  teachers                                    teachers                       @relation(fields: [teacher_id], references: [id], onUpdate: NoAction)
+  grades                                      grades?                        @relation(fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_attendance_sessions_grade")
+  schools                                     schools?                       @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_attendance_sessions_school")
+  stages                                      stages?                        @relation(fields: [stage_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_attendance_sessions_stage")
+  teacher_lesson_presence                     teacher_lesson_presence[]
+
+  @@unique([teacher_id, academic_year_id, term, attendance_date, period_id, stage_id, grade_id, section_id, subject_id], map: "attendance_sessions_unique_idx")
+  @@unique([academic_year_id, term, attendance_date, period_id, section_id, subject_id, teacher_id], map: "attendance_sessions_unique_scope")
+  @@unique([teacher_id, academic_year_id, term, attendance_date, period_id, section_id], map: "attendance_sessions_unique_slot")
+  @@unique([teacher_id, section_id, subject_id, period_id, attendance_date], map: "uniq_attendance_session_once")
+  @@unique([teacher_id, academic_year_id, term, attendance_date, period_id, section_id], map: "uniq_attendance_session_scope")
+  @@unique([academic_year_id, term, attendance_date, period_id, section_id, subject_id], map: "uq_attendance_sessions_key")
+  @@unique([academic_year_id, term, attendance_date, period_id, section_id, subject_id], map: "ux_att_sessions_unique")
+  @@unique([academic_year_id, term, attendance_date, period_id, section_id, subject_id, teacher_id], map: "ux_attendance_sessions_unique")
+  @@index([teacher_id, attendance_date], map: "idx_attendance_sessions_teacher_date")
+  @@index([teacher_id, attendance_date], map: "idx_sessions_teacher_date")
+  @@index([attendance_date], map: "ix_att_sessions_date")
+  @@index([section_id, attendance_date], map: "ix_att_sessions_section_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model continuing_batch_items {
+  id                                                                                 Int                  @id @default(autoincrement())
+  batch_id                                                                           Int
+  student_id                                                                         Int
+  from_enrollment_id                                                                 Int
+  to_grade_id                                                                        Int?
+  to_section_id                                                                      Int?
+  to_enrollment_id                                                                   Int?
+  decision                                                                           String               @default("promote") @db.VarChar(20)
+  reason                                                                             String?
+  created_at                                                                         DateTime             @default(now()) @db.Timestamptz(6)
+  continuing_batches                                                                 continuing_batches   @relation(fields: [batch_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  student_enrollments_continuing_batch_items_from_enrollment_idTostudent_enrollments student_enrollments  @relation("continuing_batch_items_from_enrollment_idTostudent_enrollments", fields: [from_enrollment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students                                                                           students             @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student_enrollments_continuing_batch_items_to_enrollment_idTostudent_enrollments   student_enrollments? @relation("continuing_batch_items_to_enrollment_idTostudent_enrollments", fields: [to_enrollment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sections                                                                           sections?            @relation(fields: [to_section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([batch_id, student_id])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model continuing_batches {
+  id                                                             Int                      @id @default(autoincrement())
+  from_year_id                                                   Int
+  to_year_id                                                     Int
+  mode                                                           String                   @default("AUTO") @db.VarChar(10)
+  keep_section                                                   Boolean                  @default(true)
+  default_section_id                                             Int?
+  created_by                                                     Int?
+  created_at                                                     DateTime                 @default(now()) @db.Timestamptz(6)
+  continuing_batch_items                                         continuing_batch_items[]
+  users                                                          users?                   @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sections                                                       sections?                @relation(fields: [default_section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  academic_years_continuing_batches_from_year_idToacademic_years academic_years           @relation("continuing_batches_from_year_idToacademic_years", fields: [from_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  academic_years_continuing_batches_to_year_idToacademic_years   academic_years           @relation("continuing_batches_to_year_idToacademic_years", fields: [to_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model employees {
+  id         BigInt    @id @default(autoincrement())
+  user_id    Int?      @unique
+  teacher_id Int?      @unique
+  full_name  String
+  phone      String
+  job_title  String?
+  notes      String?
+  is_teacher Boolean   @default(false)
+  is_active  Boolean   @default(true)
+  created_at DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime  @default(now()) @db.Timestamptz(6)
+  school_id  BigInt
+  schools    schools   @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_employees_school")
+  teachers   teachers? @relation(fields: [teacher_id], references: [id], onUpdate: NoAction, map: "fk_employees_teacher")
+  users      users?    @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_employees_user")
+
+  @@index([is_active], map: "idx_employees_active")
+  @@index([is_teacher], map: "idx_employees_is_teacher")
+  @@index([school_id, is_active], map: "idx_employees_school_active")
+  @@index([school_id], map: "idx_employees_school_id")
+  @@index([school_id, teacher_id], map: "idx_employees_school_teacher_id")
+  @@index([school_id, user_id], map: "idx_employees_school_user_id")
+  @@index([full_name, phone], map: "idx_employees_search")
+}
+
+model exam_entries {
+  id                    Int            @id @default(autoincrement())
+  exam_schedule_id      Int
+  exam_date             DateTime       @db.Date
+  start_time            DateTime       @db.Time(6)
+  end_time              DateTime       @db.Time(6)
+  subject_id            Int
+  room                  String?        @db.VarChar(50)
+  supervisor_teacher_id Int?
+  notes                 String?
+  created_at            DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime       @default(now()) @db.Timestamptz(6)
+  exam_schedules        exam_schedules @relation(fields: [exam_schedule_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subjects              subjects       @relation(fields: [subject_id], references: [id], onUpdate: NoAction)
+  teachers              teachers?      @relation(fields: [supervisor_teacher_id], references: [id], onUpdate: NoAction)
+
+  @@index([exam_date], map: "idx_exam_entries_date")
+  @@index([exam_schedule_id], map: "idx_exam_entries_schedule")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model exam_schedules {
+  id               Int            @id @default(autoincrement())
+  academic_year_id Int
+  stage_id         Int
+  grade_id         Int
+  section_id       Int
+  term             Int            @default(1) @db.SmallInt
+  status           String         @default("draft") @db.VarChar(12)
+  created_by       Int?
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime       @default(now()) @db.Timestamptz(6)
+  exam_entries     exam_entries[]
+  academic_years   academic_years @relation(fields: [academic_year_id], references: [id], onUpdate: NoAction)
+  users            users?         @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+  sections         sections       @relation(fields: [section_id], references: [id], onUpdate: NoAction)
+  stages           stages         @relation(fields: [stage_id], references: [id], onUpdate: NoAction)
+
+  @@unique([academic_year_id, stage_id, grade_id, section_id, term])
+  @@unique([academic_year_id, term, stage_id, grade_id, section_id], map: "uq_exam_schedules_year_term_stage_grade_section")
+  @@index([academic_year_id, stage_id, grade_id, section_id, term], map: "idx_exam_schedules_lookup")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model exam_timetable_entries {
+  id                  BigInt          @id @default(autoincrement())
+  exam_timetable_id   Int
+  exam_date           DateTime        @db.Date
+  start_time          DateTime        @db.Time(6)
+  end_time            DateTime        @db.Time(6)
+  subject_id          Int
+  room                String?
+  notes               String?
+  apply_to_section_id Int?
+  created_at          DateTime        @default(now()) @db.Timestamptz(6)
+  sections            sections?       @relation(fields: [apply_to_section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  exam_timetables     exam_timetables @relation(fields: [exam_timetable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  subjects            subjects        @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([exam_date], map: "ix_exam_entries_date")
+  @@index([exam_timetable_id], map: "ix_exam_entries_tt")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model exam_timetables {
+  id                     Int                      @id @default(autoincrement())
+  academic_year_id       Int
+  stage_id               Int
+  grade_id               Int
+  scope                  String                   @db.VarChar(10)
+  section_id             Int?
+  exam_type              String                   @db.VarChar(10)
+  month                  Int?                     @db.SmallInt
+  status                 String                   @default("draft") @db.VarChar(10)
+  created_by             Int?
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  exam_timetable_entries exam_timetable_entries[]
+  academic_years         academic_years           @relation(fields: [academic_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sections               sections?                @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stages                 stages                   @relation(fields: [stage_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  users                  users?                   @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_exam_timetables_created_by")
+  grades                 grades                   @relation(fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_exam_timetables_grade")
+
+  @@unique([academic_year_id, stage_id, grade_id, exam_type, month, scope], map: "ux_exam_tt_grade", where: raw("((scope)::text = 'grade'::text)"))
+  @@unique([academic_year_id, stage_id, grade_id, section_id, exam_type, month, scope], map: "ux_exam_tt_section", where: raw("((scope)::text = 'section'::text)"))
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fee_contracts {
+  id                                                                         BigInt             @id @default(autoincrement())
+  student_id                                                                 Int
+  academic_year_id                                                           Int
+  annual_amount                                                              BigInt
+  installments_count                                                         Int
+  first_due_date                                                             DateTime           @db.Date
+  status                                                                     String             @default("active")
+  created_at                                                                 DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at                                                                 DateTime           @default(now()) @db.Timestamptz(6)
+  discount_amount                                                            Decimal?           @default(0) @db.Decimal(10, 2)
+  discount_reason                                                            String?            @db.VarChar(255)
+  fee_rule_id                                                                BigInt?
+  school_id                                                                  BigInt?
+  academic_years_fee_contracts_academic_year_idToacademic_years              academic_years     @relation("fee_contracts_academic_year_idToacademic_years", fields: [academic_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_contracts_academic_year")
+  academic_years_fee_contracts_academic_year_id_school_idToacademic_years    academic_years?    @relation("fee_contracts_academic_year_id_school_idToacademic_years", fields: [academic_year_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_contracts_academic_year_id_same_school")
+  fee_rules_fee_contracts_fee_rule_idTofee_rules                             fee_rules?         @relation("fee_contracts_fee_rule_idTofee_rules", fields: [fee_rule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_contracts_fee_rule")
+  fee_rules_fee_contracts_fee_rule_id_school_idTofee_rules                   fee_rules?         @relation("fee_contracts_fee_rule_id_school_idTofee_rules", fields: [fee_rule_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_contracts_fee_rule_id_same_school")
+  schools                                                                    schools?           @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_contracts_school")
+  students_fee_contracts_student_idTostudents                                students           @relation("fee_contracts_student_idTostudents", fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_contracts_student")
+  students_fee_contracts_student_id_school_idTostudents                      students?          @relation("fee_contracts_student_id_school_idTostudents", fields: [student_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_contracts_student_id_same_school")
+  fee_installments_fee_installments_contract_idTofee_contracts               fee_installments[] @relation("fee_installments_contract_idTofee_contracts")
+  fee_installments_fee_installments_contract_id_school_idTofee_contracts     fee_installments[] @relation("fee_installments_contract_id_school_idTofee_contracts")
+  fee_installments_fee_installments_fee_contract_idTofee_contracts           fee_installments[] @relation("fee_installments_fee_contract_idTofee_contracts")
+  fee_installments_fee_installments_fee_contract_id_school_idTofee_contracts fee_installments[] @relation("fee_installments_fee_contract_id_school_idTofee_contracts")
+  fee_payments_fee_payments_contract_idTofee_contracts                       fee_payments[]     @relation("fee_payments_contract_idTofee_contracts")
+  fee_payments_fee_payments_contract_id_school_idTofee_contracts             fee_payments[]     @relation("fee_payments_contract_id_school_idTofee_contracts")
+  fee_payments_fee_payments_fee_contract_idTofee_contracts                   fee_payments[]     @relation("fee_payments_fee_contract_idTofee_contracts")
+  fee_payments_fee_payments_fee_contract_id_school_idTofee_contracts         fee_payments[]     @relation("fee_payments_fee_contract_id_school_idTofee_contracts")
+
+  @@unique([student_id, academic_year_id], map: "uq_contract_student_year")
+  @@unique([id, school_id], map: "uq_fee_contracts_id_school_id")
+  @@index([fee_rule_id], map: "idx_fee_contracts_fee_rule_id")
+  @@index([fee_rule_id], map: "idx_fee_contracts_rule")
+  @@index([school_id], map: "idx_fee_contracts_school_id")
+  @@index([student_id], map: "idx_fee_contracts_student")
+  @@index([academic_year_id], map: "idx_fee_contracts_year")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fee_installments {
+  id                                                                                         BigInt                    @id @default(autoincrement())
+  contract_id                                                                                BigInt
+  installment_no                                                                             Int
+  due_date                                                                                   DateTime                  @db.Date
+  amount                                                                                     BigInt
+  paid_amount                                                                                BigInt                    @default(0)
+  status                                                                                     String                    @default("unpaid")
+  created_at                                                                                 DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                                                                 DateTime                  @default(now()) @db.Timestamptz(6)
+  fee_contract_id                                                                            BigInt?
+  school_id                                                                                  BigInt?
+  fee_contracts_fee_installments_contract_idTofee_contracts                                  fee_contracts             @relation("fee_installments_contract_idTofee_contracts", fields: [contract_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  fee_contracts_fee_installments_contract_id_school_idTofee_contracts                        fee_contracts?            @relation("fee_installments_contract_id_school_idTofee_contracts", fields: [contract_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_installments_contract_id_same_school")
+  fee_contracts_fee_installments_fee_contract_idTofee_contracts                              fee_contracts?            @relation("fee_installments_fee_contract_idTofee_contracts", fields: [fee_contract_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_installments_fee_contract")
+  fee_contracts_fee_installments_fee_contract_id_school_idTofee_contracts                    fee_contracts?            @relation("fee_installments_fee_contract_id_school_idTofee_contracts", fields: [fee_contract_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_installments_fee_contract_id_same_school")
+  schools                                                                                    schools?                  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_installments_school")
+  fee_payment_allocations_fee_payment_allocations_installment_idTofee_installments           fee_payment_allocations[] @relation("fee_payment_allocations_installment_idTofee_installments")
+  fee_payment_allocations_fee_payment_allocations_installment_id_school_idTofee_installments fee_payment_allocations[] @relation("fee_payment_allocations_installment_id_school_idTofee_installments")
+
+  @@unique([id, school_id], map: "uq_fee_installments_id_school_id")
+  @@unique([contract_id, installment_no], map: "uq_installment_no")
+  @@index([contract_id], map: "idx_fee_installments_contract")
+  @@index([fee_contract_id], map: "idx_fee_installments_contract_id")
+  @@index([due_date], map: "idx_fee_installments_due")
+  @@index([school_id], map: "idx_fee_installments_school_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fee_payment_allocations {
+  id                                                                                  BigInt            @id @default(autoincrement())
+  payment_id                                                                          BigInt
+  installment_id                                                                      BigInt
+  allocated_amount                                                                    BigInt
+  created_at                                                                          DateTime          @default(now()) @db.Timestamptz(6)
+  school_id                                                                           BigInt?
+  fee_installments_fee_payment_allocations_installment_idTofee_installments           fee_installments  @relation("fee_payment_allocations_installment_idTofee_installments", fields: [installment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  fee_payments_fee_payment_allocations_payment_idTofee_payments                       fee_payments      @relation("fee_payment_allocations_payment_idTofee_payments", fields: [payment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  fee_installments_fee_payment_allocations_installment_id_school_idTofee_installments fee_installments? @relation("fee_payment_allocations_installment_id_school_idTofee_installments", fields: [installment_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_payment_allocations_installment_id_same_school")
+  fee_payments_fee_payment_allocations_payment_id_school_idTofee_payments             fee_payments?     @relation("fee_payment_allocations_payment_id_school_idTofee_payments", fields: [payment_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_payment_allocations_payment_id_same_school")
+  schools                                                                             schools?          @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_payment_allocations_school")
+
+  @@index([installment_id], map: "idx_fee_alloc_installment")
+  @@index([payment_id], map: "idx_fee_alloc_payment")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fee_payments {
+  id                                                                                 BigInt                    @id @default(autoincrement())
+  contract_id                                                                        BigInt
+  student_id                                                                         String
+  amount                                                                             BigInt
+  method                                                                             String
+  provider                                                                           String?
+  reference                                                                          String?
+  note                                                                               String?
+  attachment_path                                                                    String?
+  attachment_mime                                                                    String?
+  status                                                                             String                    @default("confirmed")
+  receipt_number                                                                     String                    @unique
+  paid_at                                                                            DateTime                  @default(now()) @db.Timestamptz(6)
+  created_at                                                                         DateTime                  @default(now()) @db.Timestamptz(6)
+  fee_rule_id                                                                        BigInt?
+  fee_contract_id                                                                    BigInt?
+  school_id                                                                          BigInt?
+  received_by_user_id                                                                Int?
+  fee_payment_allocations_fee_payment_allocations_payment_idTofee_payments           fee_payment_allocations[] @relation("fee_payment_allocations_payment_idTofee_payments")
+  fee_payment_allocations_fee_payment_allocations_payment_id_school_idTofee_payments fee_payment_allocations[] @relation("fee_payment_allocations_payment_id_school_idTofee_payments")
+  fee_contracts_fee_payments_contract_idTofee_contracts                              fee_contracts             @relation("fee_payments_contract_idTofee_contracts", fields: [contract_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  fee_contracts_fee_payments_contract_id_school_idTofee_contracts                    fee_contracts?            @relation("fee_payments_contract_id_school_idTofee_contracts", fields: [contract_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_payments_contract_id_same_school")
+  fee_contracts_fee_payments_fee_contract_idTofee_contracts                          fee_contracts?            @relation("fee_payments_fee_contract_idTofee_contracts", fields: [fee_contract_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_payments_fee_contract")
+  fee_contracts_fee_payments_fee_contract_id_school_idTofee_contracts                fee_contracts?            @relation("fee_payments_fee_contract_id_school_idTofee_contracts", fields: [fee_contract_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_payments_fee_contract_id_same_school")
+  users                                                                              users?                    @relation(fields: [received_by_user_id], references: [id], onUpdate: NoAction, map: "fk_fee_payments_received_by")
+  fee_rules                                                                          fee_rules?                @relation(fields: [fee_rule_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_payments_rule")
+  schools                                                                            schools?                  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_payments_school")
+
+  @@unique([id, school_id], map: "uq_fee_payments_id_school_id")
+  @@index([contract_id], map: "idx_fee_payments_contract")
+  @@index([fee_contract_id], map: "idx_fee_payments_contract_id")
+  @@index([fee_rule_id], map: "idx_fee_payments_fee_rule_id")
+  @@index([received_by_user_id], map: "idx_fee_payments_received_by")
+  @@index([school_id], map: "idx_fee_payments_school_id")
+  @@index([status], map: "idx_fee_payments_status")
+  @@index([student_id], map: "idx_fee_payments_student")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model fee_rules {
+  id                                                           BigInt          @id @default(autoincrement())
+  academic_year_id                                             Int
+  scope                                                        String
+  stage_id                                                     Int?
+  grade_id                                                     Int?
+  section_id                                                   Int?
+  student_id                                                   Int?
+  annual_amount                                                BigInt
+  installments_count                                           Int
+  first_due_date                                               DateTime        @db.Date
+  interval_months                                              Int             @default(1)
+  reason_code                                                  String?
+  notes                                                        String?
+  is_active                                                    Boolean         @default(true)
+  created_at                                                   DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at                                                   DateTime        @default(now()) @db.Timestamptz(6)
+  school_id                                                    BigInt?
+  fee_contracts_fee_contracts_fee_rule_idTofee_rules           fee_contracts[] @relation("fee_contracts_fee_rule_idTofee_rules")
+  fee_contracts_fee_contracts_fee_rule_id_school_idTofee_rules fee_contracts[] @relation("fee_contracts_fee_rule_id_school_idTofee_rules")
+  fee_payments                                                 fee_payments[]
+  academic_years                                               academic_years  @relation(fields: [academic_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  grades                                                       grades?         @relation(fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sections                                                     sections?       @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stages                                                       stages?         @relation(fields: [stage_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students                                                     students?       @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  schools                                                      schools?        @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_fee_rules_school")
+
+  @@unique([id, school_id], map: "uq_fee_rules_id_school_id")
+  @@unique([academic_year_id, scope], map: "ux_fee_rules_default", where: raw("(scope = 'DEFAULT'::text)"))
+  @@unique([academic_year_id, scope, grade_id], map: "ux_fee_rules_grade", where: raw("(scope = 'GRADE'::text)"))
+  @@unique([academic_year_id, scope, section_id], map: "ux_fee_rules_section", where: raw("(scope = 'SECTION'::text)"))
+  @@unique([academic_year_id, scope, stage_id], map: "ux_fee_rules_stage", where: raw("(scope = 'STAGE'::text)"))
+  @@unique([academic_year_id, scope, student_id], map: "ux_fee_rules_student", where: raw("(scope = 'STUDENT'::text)"))
+}
+
+model grade_change_logs {
+  id                BigInt            @id @default(autoincrement())
+  grade_id          BigInt
+  changed_by        BigInt
+  old_status        String?           @db.VarChar(20)
+  new_status        String?           @db.VarChar(20)
+  old_score         Decimal?          @db.Decimal(6, 2)
+  new_score         Decimal?          @db.Decimal(6, 2)
+  reason            String?           @db.VarChar(255)
+  changed_at        DateTime          @default(now()) @db.Timestamptz(6)
+  assessment_grades assessment_grades @relation(fields: [grade_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_gcl_grade")
+
+  @@index([changed_by], map: "idx_gcl_changed_by")
+  @@index([grade_id], map: "idx_gcl_grade")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model grade_policies {
+  id                       BigInt   @id @default(autoincrement())
+  academic_year_id         BigInt
+  term                     Int      @db.SmallInt
+  subject_id               BigInt
+  stage_id                 BigInt?
+  grade_id                 BigInt?
+  weights_json             Json
+  rounding_rule            String?  @db.VarChar(30)
+  created_at               DateTime @default(now()) @db.Timestamptz(6)
+  midterm_aggregate_weight Decimal? @db.Decimal(5, 2)
+  midterm_exam_weight      Decimal? @db.Decimal(5, 2)
+  final_aggregate_weight   Decimal? @db.Decimal(5, 2)
+  final_exam_weight        Decimal? @db.Decimal(5, 2)
+  max_total_score          Decimal? @db.Decimal(5, 2)
+  passing_score            Decimal? @db.Decimal(5, 2)
+  monthly_exam_count       Int?     @db.SmallInt
+  is_active                Boolean  @default(true)
+  notes                    String?
+
+  @@index([academic_year_id, term, subject_id], map: "idx_policy")
+}
+
+model grade_subjects {
+  id                                                     Int      @id @default(autoincrement())
+  grade_id                                               Int
+  subject_id                                             Int
+  is_active                                              Boolean  @default(true)
+  created_at                                             DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                                             DateTime @default(now()) @db.Timestamptz(6)
+  school_id                                              BigInt
+  grades_grade_subjects_grade_idTogrades                 grades   @relation("grade_subjects_grade_idTogrades", fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_grade_subjects_grade")
+  grades_grade_subjects_grade_id_school_idTogrades       grades   @relation("grade_subjects_grade_id_school_idTogrades", fields: [grade_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_grade_subjects_grade_id_same_school")
+  schools                                                schools  @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_grade_subjects_school")
+  subjects_grade_subjects_subject_idTosubjects           subjects @relation("grade_subjects_subject_idTosubjects", fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_grade_subjects_subject")
+  subjects_grade_subjects_subject_id_school_idTosubjects subjects @relation("grade_subjects_subject_id_school_idTosubjects", fields: [subject_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_grade_subjects_subject_id_same_school")
+
+  @@unique([grade_id, subject_id])
+  @@unique([school_id, grade_id, subject_id], map: "uq_grade_subjects_school_grade_subject")
+  @@index([grade_id], map: "idx_grade_subjects_grade")
+  @@index([school_id, grade_id], map: "idx_grade_subjects_school_grade")
+  @@index([school_id], map: "idx_grade_subjects_school_id")
+  @@index([school_id, subject_id], map: "idx_grade_subjects_school_subject")
+  @@index([subject_id], map: "idx_grade_subjects_subject")
+}
+
+model grades {
+  id                                                                 Int                   @id @default(autoincrement())
+  stage_id                                                           Int
+  name                                                               String                @db.VarChar(120)
+  grade_name                                                         String?               @default(dbgenerated("name")) @db.VarChar(120)
+  order_no                                                           Int                   @default(1) @db.SmallInt
+  is_active                                                          Boolean               @default(true)
+  created_at                                                         DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at                                                         DateTime?             @db.Timestamptz(6)
+  order_index                                                        Int                   @default(0)
+  school_id                                                          BigInt
+  attendance_sessions                                                attendance_sessions[]
+  exam_timetables                                                    exam_timetables[]
+  fee_rules                                                          fee_rules[]
+  grade_subjects_grade_subjects_grade_idTogrades                     grade_subjects[]      @relation("grade_subjects_grade_idTogrades")
+  grade_subjects_grade_subjects_grade_id_school_idTogrades           grade_subjects[]      @relation("grade_subjects_grade_id_school_idTogrades")
+  schools                                                            schools               @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_grades_school")
+  stages                                                             stages                @relation(fields: [stage_id], references: [id], onUpdate: NoAction, map: "fk_grades_stage")
+  sections_sections_grade_idTogrades                                 sections[]            @relation("sections_grade_idTogrades")
+  sections_sections_grade_id_school_idTogrades                       sections[]            @relation("sections_grade_id_school_idTogrades")
+  student_enrollments_student_enrollments_grade_idTogrades           student_enrollments[] @relation("student_enrollments_grade_idTogrades")
+  student_enrollments_student_enrollments_grade_id_school_idTogrades student_enrollments[] @relation("student_enrollments_grade_id_school_idTogrades")
+  teacher_assignments                                                teacher_assignments[]
+  timetables_timetables_grade_idTogrades                             timetables[]          @relation("timetables_grade_idTogrades")
+  timetables_timetables_grade_id_school_idTogrades                   timetables[]          @relation("timetables_grade_id_school_idTogrades")
+
+  @@unique([stage_id, name])
+  @@unique([id, school_id], map: "uq_grades_id_school_id")
+  @@unique([school_id, name], map: "uq_grades_school_name")
+  @@unique([school_id, stage_id, name], map: "uq_grades_school_stage_name")
+  @@unique([school_id, stage_id, order_index], map: "uq_grades_school_stage_order_index")
+  @@index([is_active], map: "idx_grades_is_active")
+  @@index([school_id], map: "idx_grades_school_id")
+  @@index([school_id, stage_id], map: "idx_grades_school_stage_id")
+  @@index([stage_id], map: "idx_grades_stage_id")
+}
+
+model guardians {
+  id                Int                 @id @default(autoincrement())
+  user_id           Int?                @unique
+  full_name         String              @db.VarChar(150)
+  gender            String?             @db.VarChar(10)
+  phone             String              @db.VarChar(20)
+  email             String?             @db.VarChar(150)
+  address           String?
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?           @db.Timestamptz(6)
+  school_id         BigInt
+  schools           schools             @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_guardians_school")
+  users             users?              @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_guardians_user")
+  student_guardians student_guardians[]
+
+  @@index([school_id, email], map: "idx_guardians_school_email")
+  @@index([school_id], map: "idx_guardians_school_id")
+  @@index([school_id, phone], map: "idx_guardians_school_phone")
+  @@index([school_id, user_id], map: "idx_guardians_school_user_id")
+}
+
+model lesson_substitutions {
+  id                                                            Int                @id @default(autoincrement())
+  substitution_date                                             DateTime           @db.Date
+  timetable_entry_id                                            Int?
+  absent_teacher_id                                             Int?
+  substitute_teacher_id                                         Int?
+  assigned_by_user_id                                           Int?
+  created_at                                                    DateTime?          @default(now()) @db.Timestamptz(6)
+  status                                                        String?            @default("pending_teacher") @db.VarChar(20)
+  school_id                                                     BigInt?
+  schools                                                       schools?           @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_lesson_substitutions_school")
+  teachers_lesson_substitutions_absent_teacher_idToteachers     teachers?          @relation("lesson_substitutions_absent_teacher_idToteachers", fields: [absent_teacher_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users                                                         users?             @relation(fields: [assigned_by_user_id], references: [id], onUpdate: NoAction)
+  teachers_lesson_substitutions_substitute_teacher_idToteachers teachers?          @relation("lesson_substitutions_substitute_teacher_idToteachers", fields: [substitute_teacher_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  timetable_entries                                             timetable_entries? @relation(fields: [timetable_entry_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([substitution_date, timetable_entry_id])
+  @@index([school_id], map: "idx_lesson_substitutions_school_id")
+}
+
+model modules {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(100)
+  code        String        @unique @db.VarChar(100)
+  description String?
+  created_at  DateTime?     @default(now()) @db.Timestamp(6)
+  updated_at  DateTime?     @default(now()) @db.Timestamp(6)
+  permissions permissions[]
+}
+
+model notification_attachments {
+  id              BigInt        @id @default(autoincrement())
+  notification_id BigInt
+  kind            String        @db.VarChar(20)
+  original_name   String?
+  mime_type       String?
+  size_bytes      BigInt?
+  storage_path    String?
+  link_url        String?
+  link_label      String?
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  notifications   notifications @relation(fields: [notification_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([notification_id], map: "idx_notif_attach_nid")
+}
+
+model notification_recipients {
+  id                BigInt        @id @default(autoincrement())
+  notification_id   BigInt
+  recipient_user_id Int
+  is_read           Boolean       @default(false)
+  read_at           DateTime?     @db.Timestamptz(6)
+  created_at        DateTime      @default(now()) @db.Timestamptz(6)
+  school_id         BigInt?
+  schools           schools?      @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_notification_recipients_school")
+  notifications     notifications @relation(fields: [notification_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users             users         @relation(fields: [recipient_user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([notification_id, recipient_user_id])
+  @@unique([notification_id, recipient_user_id], map: "uq_notification_recipients_notification_user")
+  @@index([notification_id, recipient_user_id], map: "idx_notif_recipient_nid_uid")
+  @@index([school_id], map: "idx_notification_recipients_school_id")
+  @@index([school_id, recipient_user_id, is_read], map: "idx_notification_recipients_school_user_read")
+  @@index([recipient_user_id, created_at(sort: Desc)], map: "idx_notification_recipients_user_created")
+  @@index([recipient_user_id, is_read], map: "idx_notification_recipients_user_is_read")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model notifications {
+  id                       BigInt                     @id @default(autoincrement())
+  source                   String                     @db.VarChar(20)
+  category                 String                     @default("general") @db.VarChar(50)
+  priority                 String                     @default("normal") @db.VarChar(20)
+  title                    String
+  body                     String
+  sender_user_id           Int?
+  sender_display_name      String?
+  related_type             String?                    @db.VarChar(100)
+  related_id               BigInt?
+  meta                     Json?                      @default("{}")
+  created_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  school_id                BigInt?
+  notification_attachments notification_attachments[]
+  notification_recipients  notification_recipients[]
+  schools                  schools?                   @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_notifications_school")
+  users                    users?                     @relation(fields: [sender_user_id], references: [id], onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_notifications_created_at")
+  @@index([school_id], map: "idx_notifications_school_id")
+}
+
+model periods {
+  id                                                               Int                   @id @default(autoincrement())
+  name                                                             String                @db.VarChar(50)
+  start_time                                                       DateTime              @db.Time(6)
+  end_time                                                         DateTime              @db.Time(6)
+  sort_order                                                       Int
+  created_at                                                       DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at                                                       DateTime              @default(now()) @db.Timestamptz(6)
+  is_active                                                        Boolean               @default(true)
+  school_id                                                        BigInt?
+  attendance_sessions                                              attendance_sessions[]
+  schools                                                          schools?              @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_periods_school")
+  timetable_entries_timetable_entries_period_idToperiods           timetable_entries[]   @relation("timetable_entries_period_idToperiods")
+  timetable_entries_timetable_entries_period_id_school_idToperiods timetable_entries[]   @relation("timetable_entries_period_id_school_idToperiods")
+  timetable_overrides                                              timetable_overrides[]
+
+  @@unique([id, school_id], map: "uq_periods_id_school_id")
+  @@unique([school_id, name], map: "uq_periods_school_name")
+  @@unique([school_id, sort_order], map: "uq_periods_school_sort_order", where: raw("((school_id IS NOT NULL) AND (sort_order IS NOT NULL))"))
+  @@index([school_id], map: "idx_periods_school_id")
+  @@index([sort_order], map: "idx_periods_sort")
+}
+
+model permission_request_recipients {
+  id                  BigInt              @id @default(autoincrement())
+  request_id          BigInt
+  teacher_id          Int
+  is_read             Boolean             @default(false)
+  created_at          DateTime            @default(now()) @db.Timestamptz(6)
+  permission_requests permission_requests @relation(fields: [request_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  teachers            teachers            @relation(fields: [teacher_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([request_id, teacher_id])
+  @@index([teacher_id, created_at(sort: Desc)], map: "idx_perm_rec_teacher")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model permission_requests {
+  id                            BigInt                          @id @default(autoincrement())
+  student_id                    Int
+  parent_user_id                Int
+  request_date                  DateTime                        @db.Date
+  type                          String                          @db.VarChar(20)
+  time_from                     DateTime?                       @db.Time(6)
+  time_to                       DateTime?                       @db.Time(6)
+  reason_text                   String?
+  attachment_url                String?
+  status                        String                          @default("PENDING") @db.VarChar(12)
+  decided_by_user_id            Int?
+  decided_at                    DateTime?                       @db.Timestamptz(6)
+  decision_note                 String?
+  created_at                    DateTime                        @default(now()) @db.Timestamptz(6)
+  updated_at                    DateTime?                       @db.Timestamptz(6)
+  school_id                     BigInt?
+  attendance_entry_corrections  attendance_entry_corrections[]
+  permission_request_recipients permission_request_recipients[]
+  schools                       schools?                        @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_permission_requests_school")
+  students                      students                        @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([student_id, request_date], map: "uq_permission_one_per_day")
+  @@index([school_id], map: "idx_permission_requests_school_id")
+  @@index([request_date], map: "ix_permission_by_date")
+  @@index([parent_user_id, request_date], map: "ix_permission_by_parent_date")
+  @@index([status, request_date], map: "ix_permission_by_status_date")
+}
+
+model permissions {
+  id               Int                @id @default(autoincrement())
+  module_id        Int
+  name             String             @db.VarChar(100)
+  code             String             @unique @db.VarChar(100)
+  created_at       DateTime?          @default(now()) @db.Timestamp(6)
+  modules          modules            @relation(fields: [module_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_permissions_module")
+  role_permissions role_permissions[]
+}
+
+model role_permissions {
+  id            Int         @id @default(autoincrement())
+  role_id       Int
+  permission_id Int
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_role_permissions_permission")
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_role_permissions_role")
+
+  @@unique([role_id, permission_id])
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model roles {
+  id                                             Int                @id @default(autoincrement())
+  name                                           String             @db.VarChar(100)
+  description                                    String?
+  school_id                                      BigInt
+  role_permissions                               role_permissions[]
+  schools                                        schools            @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_roles_school")
+  user_roles_user_roles_role_idToroles           user_roles[]       @relation("user_roles_role_idToroles")
+  user_roles_user_roles_role_id_school_idToroles user_roles[]       @relation("user_roles_role_id_school_idToroles")
+
+  @@unique([id, school_id], map: "uq_roles_id_school_id")
+  @@index([school_id], map: "idx_roles_school_id")
+}
+
+model scan_token_uses {
+  jti        String   @id
+  used_at    DateTime @default(now()) @db.Timestamptz(6)
+  teacher_id Int
+  session_id BigInt
+  student_id Int
+
+  @@index([session_id], map: "scan_token_uses_session_idx")
+  @@index([student_id], map: "scan_token_uses_student_idx")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model school_settings {
+  id                      BigInt    @id @default(autoincrement())
+  school_id               BigInt    @unique(map: "uq_school_settings_school")
+  default_language        String    @default("ar") @db.VarChar(20)
+  grading_scale           String    @default("100") @db.VarChar(50)
+  pass_mark               Decimal   @default(50.00) @db.Decimal(5, 2)
+  attendance_policy       String    @default("daily") @db.VarChar(50)
+  invoice_prefix          String?   @db.VarChar(20)
+  student_code_prefix     String?   @db.VarChar(20)
+  academic_year_starts_on DateTime? @db.Date
+  week_start_day          Int       @default(6) @db.SmallInt
+  max_students            Int?
+  max_teachers            Int?
+  allow_parent_portal     Boolean   @default(true)
+  allow_teacher_portal    Boolean   @default(true)
+  created_at              DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime  @default(now()) @db.Timestamptz(6)
+  schools                 schools   @relation(fields: [school_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_school_settings_school")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model schools {
+  id                               BigInt                             @id @default(autoincrement())
+  name_ar                          String                             @db.VarChar(255)
+  name_en                          String?                            @db.VarChar(255)
+  slug                             String                             @unique(map: "uq_schools_slug") @db.VarChar(150)
+  code                             String                             @unique(map: "uq_schools_code") @db.VarChar(50)
+  logo_url                         String?
+  phone                            String?                            @db.VarChar(50)
+  alt_phone                        String?                            @db.VarChar(50)
+  email                            String?                            @db.VarChar(255)
+  website                          String?                            @db.VarChar(255)
+  country                          String?                            @db.VarChar(100)
+  city                             String?                            @db.VarChar(100)
+  address                          String?
+  timezone                         String                             @default("Asia/Aden") @db.VarChar(100)
+  currency_code                    String                             @default("YER") @db.VarChar(10)
+  principal_name                   String?                            @db.VarChar(255)
+  established_date                 DateTime?                          @db.Date
+  license_number                   String?                            @db.VarChar(100)
+  subscription_status              String                             @default("trial") @db.VarChar(30)
+  is_active                        Boolean                            @default(true)
+  created_at                       DateTime                           @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime                           @default(now()) @db.Timestamptz(6)
+  currency                         String?                            @db.VarChar(10)
+  name_prefix                      String?
+  student_prefix                   String?
+  invoice_prefix                   String?
+  academic_years                   academic_years?
+  assessments                      assessments[]
+  attendance_reasons               attendance_reasons[]
+  attendance_sessions              attendance_sessions[]
+  employees                        employees[]
+  fee_contracts                    fee_contracts[]
+  fee_installments                 fee_installments[]
+  fee_payment_allocations          fee_payment_allocations[]
+  fee_payments                     fee_payments[]
+  fee_rules                        fee_rules[]
+  grade_subjects                   grade_subjects[]
+  grades                           grades[]
+  guardians                        guardians[]
+  lesson_substitutions             lesson_substitutions[]
+  notification_recipients          notification_recipients[]
+  notifications                    notifications[]
+  periods                          periods[]
+  permission_requests              permission_requests[]
+  roles                            roles[]
+  school_settings                  school_settings?
+  section_subject_teachers         section_subject_teachers[]
+  sections                         sections[]
+  stages                           stages[]
+  student_enrollments              student_enrollments[]
+  student_guardians                student_guardians[]
+  students                         students[]
+  subjects                         subjects[]
+  teacher_attendance_days          teacher_attendance_days[]
+  teacher_attendance_settings      teacher_attendance_settings?
+  teacher_lesson_presence          teacher_lesson_presence[]
+  teacher_permission_request_slots teacher_permission_request_slots[]
+  teacher_permission_requests      teacher_permission_requests[]
+  teacher_subjects                 teacher_subjects[]
+  teachers                         teachers[]
+  timetable_entries                timetable_entries[]
+  timetable_overrides              timetable_overrides[]
+  timetables                       timetables[]
+  user_roles                       user_roles[]
+  users                            users[]
+}
+
+model schools_master_registry {
+  id             Int       @id @default(autoincrement())
+  admin_email    String    @unique @db.VarChar(255)
+  db_name        String    @unique @db.VarChar(100)
+  school_name_ar String?   @db.VarChar(255)
+  school_name_en String?   @db.VarChar(255)
+  is_active      Boolean?  @default(true)
+  created_at     DateTime? @default(now()) @db.Timestamp(6)
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model section_advisors {
+  id               Int            @id @default(autoincrement())
+  academic_year_id Int
+  term             Int            @db.SmallInt
+  section_id       Int
+  teacher_id       Int
+  role             String         @default("homeroom") @db.VarChar(20)
+  is_active        Boolean        @default(true)
+  created_by       Int?
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime       @default(now()) @db.Timestamptz(6)
+  sections         sections       @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_section_advisors_section")
+  teachers         teachers       @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_section_advisors_teacher")
+  academic_years   academic_years @relation(fields: [academic_year_id], references: [id], onUpdate: NoAction)
+  users            users?         @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+
+  @@unique([academic_year_id, term, section_id, role])
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model section_subject_teachers {
+  id                                                               Int            @id @default(autoincrement())
+  academic_year_id                                                 Int
+  term                                                             Int            @db.SmallInt
+  section_id                                                       Int
+  subject_id                                                       Int
+  teacher_id                                                       Int
+  status                                                           String         @default("active") @db.VarChar(20)
+  created_by                                                       Int?
+  created_at                                                       DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at                                                       DateTime       @default(now()) @db.Timestamptz(6)
+  school_id                                                        BigInt
+  schools                                                          schools        @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_section_subject_teachers_school")
+  sections_section_subject_teachers_section_idTosections           sections       @relation("section_subject_teachers_section_idTosections", fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_section_subject_teachers_section")
+  sections_section_subject_teachers_section_id_school_idTosections sections       @relation("section_subject_teachers_section_id_school_idTosections", fields: [section_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_section_subject_teachers_section_id_same_school")
+  subjects_section_subject_teachers_subject_idTosubjects           subjects       @relation("section_subject_teachers_subject_idTosubjects", fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_section_subject_teachers_subject")
+  subjects_section_subject_teachers_subject_id_school_idTosubjects subjects       @relation("section_subject_teachers_subject_id_school_idTosubjects", fields: [subject_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_section_subject_teachers_subject_id_same_school")
+  teachers_section_subject_teachers_teacher_idToteachers           teachers       @relation("section_subject_teachers_teacher_idToteachers", fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_section_subject_teachers_teacher")
+  teachers_section_subject_teachers_teacher_id_school_idToteachers teachers       @relation("section_subject_teachers_teacher_id_school_idToteachers", fields: [teacher_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_section_subject_teachers_teacher_id_same_school")
+  academic_years                                                   academic_years @relation(fields: [academic_year_id], references: [id], onUpdate: NoAction)
+  users                                                            users?         @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+
+  @@unique([academic_year_id, term, section_id, subject_id])
+  @@unique([school_id, academic_year_id, term, section_id, subject_id], map: "uq_sst_school_year_term_section_subject")
+  @@index([school_id, academic_year_id], map: "idx_sst_school_academic_year")
+  @@index([school_id], map: "idx_sst_school_id")
+  @@index([school_id, section_id], map: "idx_sst_school_section")
+  @@index([section_id], map: "idx_sst_section")
+  @@index([teacher_id], map: "idx_sst_teacher")
+  @@index([academic_year_id, term], map: "idx_sst_year_term")
+}
+
+model sections {
+  id                                                                               Int                        @id @default(autoincrement())
+  grade_id                                                                         Int
+  name                                                                             String                     @db.VarChar(20)
+  capacity                                                                         Int?                       @db.SmallInt
+  is_active                                                                        Boolean                    @default(true)
+  created_at                                                                       DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                                                                       DateTime?                  @db.Timestamptz(6)
+  school_id                                                                        BigInt
+  attendance_sessions                                                              attendance_sessions[]
+  continuing_batch_items                                                           continuing_batch_items[]
+  continuing_batches                                                               continuing_batches[]
+  exam_schedules                                                                   exam_schedules[]
+  exam_timetable_entries                                                           exam_timetable_entries[]
+  exam_timetables                                                                  exam_timetables[]
+  fee_rules                                                                        fee_rules[]
+  section_advisors                                                                 section_advisors[]
+  section_subject_teachers_section_subject_teachers_section_idTosections           section_subject_teachers[] @relation("section_subject_teachers_section_idTosections")
+  section_subject_teachers_section_subject_teachers_section_id_school_idTosections section_subject_teachers[] @relation("section_subject_teachers_section_id_school_idTosections")
+  grades_sections_grade_idTogrades                                                 grades                     @relation("sections_grade_idTogrades", fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sections_grade")
+  grades_sections_grade_id_school_idTogrades                                       grades                     @relation("sections_grade_id_school_idTogrades", fields: [grade_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sections_grade_id_same_school")
+  schools                                                                          schools                    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_sections_school")
+  student_enrollments_student_enrollments_section_idTosections                     student_enrollments[]      @relation("student_enrollments_section_idTosections")
+  student_enrollments_student_enrollments_section_id_school_idTosections           student_enrollments[]      @relation("student_enrollments_section_id_school_idTosections")
+  teacher_assignments                                                              teacher_assignments[]
+  timetables_timetables_section_idTosections                                       timetables[]               @relation("timetables_section_idTosections")
+  timetables_timetables_section_id_school_idTosections                             timetables[]               @relation("timetables_section_id_school_idTosections")
+
+  @@unique([id, school_id], map: "uq_sections_id_school_id")
+  @@unique([school_id, grade_id, name], map: "uq_sections_school_grade_name")
+  @@index([school_id, grade_id, name], map: "idx_sections_school_grade_name")
+}
+
+model stages {
+  id                                                                 Int                   @id @default(autoincrement())
+  name                                                               String                @db.VarChar(100)
+  order_no                                                           Int                   @default(1) @db.SmallInt
+  is_active                                                          Boolean               @default(true)
+  order_index                                                        Int                   @default(0)
+  created_at                                                         DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at                                                         DateTime              @default(now()) @db.Timestamptz(6)
+  school_id                                                          BigInt
+  attendance_sessions                                                attendance_sessions[]
+  exam_schedules                                                     exam_schedules[]
+  exam_timetables                                                    exam_timetables[]
+  fee_rules                                                          fee_rules[]
+  grades                                                             grades[]
+  schools                                                            schools               @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_stages_school")
+  student_enrollments_student_enrollments_stage_idTostages           student_enrollments[] @relation("student_enrollments_stage_idTostages")
+  student_enrollments_student_enrollments_stage_id_school_idTostages student_enrollments[] @relation("student_enrollments_stage_id_school_idTostages")
+  teacher_assignments                                                teacher_assignments[]
+  timetables_timetables_stage_idTostages                             timetables[]          @relation("timetables_stage_idTostages")
+  timetables_timetables_stage_id_school_idTostages                   timetables[]          @relation("timetables_stage_id_school_idTostages")
+
+  @@unique([id, school_id], map: "uq_stages_id_school_id")
+  @@unique([school_id, name], map: "uq_stages_school_name")
+  @@unique([school_id, order_index], map: "uq_stages_school_order_index")
+  @@index([school_id], map: "idx_stages_school_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model student_enrollments {
+  id                                                                                    Int                      @id @default(autoincrement())
+  student_id                                                                            Int
+  academic_year_id                                                                      Int
+  stage_id                                                                              Int
+  grade_id                                                                              Int
+  section_id                                                                            Int?
+  roll_number                                                                           Int?
+  status                                                                                String                   @default("enrolled") @db.VarChar(20)
+  created_at                                                                            DateTime                 @default(now()) @db.Timestamptz(6)
+  term                                                                                  Int                      @default(1)
+  school_id                                                                             BigInt
+  continuing_batch_items_continuing_batch_items_from_enrollment_idTostudent_enrollments continuing_batch_items[] @relation("continuing_batch_items_from_enrollment_idTostudent_enrollments")
+  continuing_batch_items_continuing_batch_items_to_enrollment_idTostudent_enrollments   continuing_batch_items[] @relation("continuing_batch_items_to_enrollment_idTostudent_enrollments")
+  sections_student_enrollments_section_idTosections                                     sections?                @relation("student_enrollments_section_idTosections", fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_enroll_section")
+  stages_student_enrollments_stage_idTostages                                           stages                   @relation("student_enrollments_stage_idTostages", fields: [stage_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_enroll_stage")
+  students_student_enrollments_student_idTostudents                                     students                 @relation("student_enrollments_student_idTostudents", fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_enroll_student")
+  academic_years_student_enrollments_academic_year_idToacademic_years                   academic_years           @relation("student_enrollments_academic_year_idToacademic_years", fields: [academic_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_enroll_year")
+  academic_years_student_enrollments_academic_year_id_school_idToacademic_years         academic_years           @relation("student_enrollments_academic_year_id_school_idToacademic_years", fields: [academic_year_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_enrollments_academic_year_id_same_school")
+  grades_student_enrollments_grade_idTogrades                                           grades                   @relation("student_enrollments_grade_idTogrades", fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_enrollments_grade")
+  grades_student_enrollments_grade_id_school_idTogrades                                 grades                   @relation("student_enrollments_grade_id_school_idTogrades", fields: [grade_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_enrollments_grade_id_same_school")
+  schools                                                                               schools                  @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_student_enrollments_school")
+  sections_student_enrollments_section_id_school_idTosections                           sections?                @relation("student_enrollments_section_id_school_idTosections", fields: [section_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_enrollments_section_id_same_school")
+  stages_student_enrollments_stage_id_school_idTostages                                 stages                   @relation("student_enrollments_stage_id_school_idTostages", fields: [stage_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_enrollments_stage_id_same_school")
+  students_student_enrollments_student_id_school_idTostudents                           students                 @relation("student_enrollments_student_id_school_idTostudents", fields: [student_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_enrollments_student_id_same_school")
+
+  @@unique([student_id, academic_year_id, term], map: "uq_student_enrollments_student_year_term")
+  @@unique([student_id, academic_year_id], map: "uq_student_year")
+  @@index([school_id, grade_id], map: "idx_student_enrollments_school_grade")
+  @@index([school_id], map: "idx_student_enrollments_school_id")
+  @@index([school_id, section_id], map: "idx_student_enrollments_school_section")
+  @@index([school_id, stage_id], map: "idx_student_enrollments_school_stage")
+  @@index([school_id, student_id], map: "idx_student_enrollments_school_student")
+  @@index([school_id, academic_year_id], map: "idx_student_enrollments_school_year")
+  @@index([student_id, academic_year_id], map: "idx_student_enrollments_student_year")
+  @@index([academic_year_id, term, stage_id, grade_id, section_id, student_id], map: "ix_student_enrollments_scope")
+}
+
+model student_guardians {
+  id          Int       @id @default(autoincrement())
+  student_id  Int
+  guardian_id Int
+  relation    String?   @db.VarChar(50)
+  is_primary  Boolean   @default(true)
+  school_id   BigInt
+  guardians   guardians @relation(fields: [guardian_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sg_guardian")
+  students    students  @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sg_student")
+  schools     schools   @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_student_guardians_school")
+
+  @@unique([student_id, guardian_id], map: "uq_student_guardian")
+  @@unique([school_id, student_id, guardian_id], map: "uq_student_guardians_school_student_guardian")
+  @@index([school_id, guardian_id], map: "idx_student_guardians_school_guardian")
+  @@index([school_id], map: "idx_student_guardians_school_id")
+  @@index([school_id, student_id], map: "idx_student_guardians_school_student")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model student_year_results {
+  id                                           Int            @id @default(autoincrement())
+  student_id                                   Int
+  academic_year_id                             Int
+  result                                       String         @default("pending") @db.VarChar(20)
+  reason                                       String?
+  updated_by                                   Int?
+  updated_at                                   DateTime       @default(now()) @db.Timestamptz(6)
+  decided_at                                   DateTime?      @db.Timestamptz(6)
+  decided_by                                   Int?
+  users_student_year_results_decided_byTousers users?         @relation("student_year_results_decided_byTousers", fields: [decided_by], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_student_year_results_decided_by")
+  academic_years                               academic_years @relation(fields: [academic_year_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  students                                     students       @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users_student_year_results_updated_byTousers users?         @relation("student_year_results_updated_byTousers", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([student_id, academic_year_id])
+  @@unique([academic_year_id, student_id], map: "ux_student_year_results_year_student")
+  @@index([result], map: "idx_student_year_results_result")
+  @@index([student_id], map: "idx_student_year_results_student")
+  @@index([academic_year_id], map: "idx_student_year_results_year")
+}
+
+model students {
+  id                                                                     Int                            @id @default(autoincrement())
+  user_id                                                                Int?                           @unique
+  student_code                                                           String                         @db.VarChar(50)
+  full_name                                                              String                         @db.VarChar(150)
+  gender                                                                 String                         @db.VarChar(10)
+  birth_date                                                             DateTime                       @db.Date
+  birth_place                                                            String?                        @db.VarChar(150)
+  address                                                                String?
+  phone                                                                  String?                        @db.VarChar(20)
+  phone2                                                                 String?                        @db.VarChar(20)
+  admission_date                                                         DateTime                       @db.Date
+  status                                                                 String                         @default("active") @db.VarChar(20)
+  created_at                                                             DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                                                             DateTime?                      @db.Timestamptz(6)
+  school_id                                                              BigInt
+  assessment_grades                                                      assessment_grades[]
+  attendance_entries                                                     attendance_entries[]
+  attendance_entry_corrections                                           attendance_entry_corrections[]
+  continuing_batch_items                                                 continuing_batch_items[]
+  fee_contracts_fee_contracts_student_idTostudents                       fee_contracts[]                @relation("fee_contracts_student_idTostudents")
+  fee_contracts_fee_contracts_student_id_school_idTostudents             fee_contracts[]                @relation("fee_contracts_student_id_school_idTostudents")
+  fee_rules                                                              fee_rules[]
+  permission_requests                                                    permission_requests[]
+  student_enrollments_student_enrollments_student_idTostudents           student_enrollments[]          @relation("student_enrollments_student_idTostudents")
+  student_enrollments_student_enrollments_student_id_school_idTostudents student_enrollments[]          @relation("student_enrollments_student_id_school_idTostudents")
+  student_guardians                                                      student_guardians[]
+  student_year_results                                                   student_year_results[]
+  schools                                                                schools                        @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_students_school")
+  users                                                                  users?                         @relation(fields: [user_id], references: [id], onUpdate: NoAction, map: "fk_students_user")
+  submissions                                                            submissions[]
+
+  @@unique([id, school_id], map: "uq_students_id_school_id")
+  @@unique([school_id, student_code], map: "uq_students_school_student_code")
+  @@index([school_id], map: "idx_students_school_id")
+  @@index([school_id, user_id], map: "idx_students_school_user_id")
+}
+
+model subjects {
+  id                                                                               Int                        @id @default(autoincrement())
+  name                                                                             String                     @db.VarChar(120)
+  is_active                                                                        Boolean                    @default(true)
+  created_at                                                                       DateTime                   @default(now()) @db.Timestamptz(6)
+  updated_at                                                                       DateTime                   @default(now()) @db.Timestamptz(6)
+  school_id                                                                        BigInt
+  attendance_sessions                                                              attendance_sessions[]
+  exam_entries                                                                     exam_entries[]
+  exam_timetable_entries                                                           exam_timetable_entries[]
+  grade_subjects_grade_subjects_subject_idTosubjects                               grade_subjects[]           @relation("grade_subjects_subject_idTosubjects")
+  grade_subjects_grade_subjects_subject_id_school_idTosubjects                     grade_subjects[]           @relation("grade_subjects_subject_id_school_idTosubjects")
+  section_subject_teachers_section_subject_teachers_subject_idTosubjects           section_subject_teachers[] @relation("section_subject_teachers_subject_idTosubjects")
+  section_subject_teachers_section_subject_teachers_subject_id_school_idTosubjects section_subject_teachers[] @relation("section_subject_teachers_subject_id_school_idTosubjects")
+  schools                                                                          schools                    @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_subjects_school")
+  teacher_assignments                                                              teacher_assignments[]
+  teacher_subjects_teacher_subjects_subject_idTosubjects                           teacher_subjects[]         @relation("teacher_subjects_subject_idTosubjects")
+  teacher_subjects_teacher_subjects_subject_id_school_idTosubjects                 teacher_subjects[]         @relation("teacher_subjects_subject_id_school_idTosubjects")
+  timetable_entries_timetable_entries_subject_idTosubjects                         timetable_entries[]        @relation("timetable_entries_subject_idTosubjects")
+  timetable_entries_timetable_entries_subject_id_school_idTosubjects               timetable_entries[]        @relation("timetable_entries_subject_id_school_idTosubjects")
+  timetable_overrides                                                              timetable_overrides[]
+
+  @@unique([id, school_id], map: "uq_subjects_id_school_id")
+  @@unique([school_id, name], map: "uq_subjects_school_name")
+  @@index([school_id], map: "idx_subjects_school_id")
+}
+
+model submission_attachments {
+  id            BigInt      @id @default(autoincrement())
+  submission_id BigInt
+  file_url      String
+  file_name     String?     @db.VarChar(255)
+  file_type     String?     @db.VarChar(80)
+  file_size     BigInt?
+  created_at    DateTime    @default(now()) @db.Timestamptz(6)
+  submissions   submissions @relation(fields: [submission_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sub_attach")
+
+  @@index([submission_id], map: "idx_sub_attach")
+}
+
+model submissions {
+  id                     BigInt                   @id @default(autoincrement())
+  assessment_id          BigInt
+  student_id             Int
+  status                 String                   @default("submitted") @db.VarChar(20)
+  note                   String?
+  submitted_at           DateTime?                @db.Timestamptz(6)
+  created_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  updated_at             DateTime                 @default(now()) @db.Timestamptz(6)
+  submission_attachments submission_attachments[]
+  assessments            assessments              @relation(fields: [assessment_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_sub_assessment")
+  students               students                 @relation(fields: [student_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_submissions_student")
+
+  @@unique([assessment_id, student_id], map: "uq_submission")
+  @@index([assessment_id], map: "idx_sub_assessment")
+  @@index([student_id], map: "idx_sub_student")
+  @@index([assessment_id], map: "idx_submissions_assessment")
+  @@index([student_id], map: "idx_submissions_student")
+}
+
+model teacher_assignments {
+  id               BigInt         @id @default(autoincrement())
+  teacher_id       Int
+  academic_year_id Int
+  term             Int            @db.SmallInt
+  stage_id         Int?
+  grade_id         Int?
+  section_id       Int
+  subject_id       Int
+  created_at       DateTime       @default(now()) @db.Timestamptz(6)
+  assessments      assessments[]
+  academic_years   academic_years @relation(fields: [academic_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_assignments_academic_year")
+  grades           grades?        @relation(fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_assignments_grade")
+  sections         sections       @relation(fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_assignments_section")
+  stages           stages?        @relation(fields: [stage_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_assignments_stage")
+  subjects         subjects       @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_assignments_subject")
+  teachers         teachers       @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_assignments_teacher")
+
+  @@unique([teacher_id, academic_year_id, term, section_id, subject_id], map: "uq_teacher_scope")
+  @@index([academic_year_id, term, section_id, subject_id], map: "idx_ta_scope")
+  @@index([teacher_id], map: "idx_ta_teacher")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model teacher_attendance_corrections {
+  id                         BigInt                     @id @default(autoincrement())
+  entry_id                   BigInt
+  day_id                     BigInt
+  teacher_id                 Int
+  old_status                 String
+  new_status                 String
+  reason                     String?
+  corrected_by_user_id       Int
+  corrected_at               DateTime                   @default(now()) @db.Timestamptz(6)
+  teacher_attendance_days    teacher_attendance_days    @relation(fields: [day_id], references: [id], onDelete: Cascade, map: "fk_teacher_att_corr_day")
+  teacher_attendance_entries teacher_attendance_entries @relation(fields: [entry_id], references: [id], onDelete: Cascade, map: "fk_teacher_att_corr_entry")
+  teachers                   teachers                   @relation(fields: [teacher_id], references: [id], onDelete: Cascade, map: "fk_teacher_att_corr_teacher")
+  users                      users                      @relation(fields: [corrected_by_user_id], references: [id], map: "fk_teacher_att_corr_user")
+
+  @@index([day_id, teacher_id], map: "idx_teacher_att_corr_day_teacher")
+  @@index([entry_id], map: "idx_teacher_att_corr_entry")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model teacher_attendance_days {
+  id                                                      BigInt                           @id @default(autoincrement())
+  attendance_date                                         DateTime                         @db.Date
+  academic_year_id                                        Int?
+  is_locked                                               Boolean                          @default(false)
+  locked_by_user_id                                       Int?
+  locked_at                                               DateTime?                        @db.Timestamptz(6)
+  created_by_user_id                                      Int?
+  created_at                                              DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                                              DateTime?                        @db.Timestamptz(6)
+  school_id                                               BigInt?
+  teacher_attendance_corrections                          teacher_attendance_corrections[]
+  users_teacher_attendance_days_created_by_user_idTousers users?                           @relation("teacher_attendance_days_created_by_user_idTousers", fields: [created_by_user_id], references: [id], map: "fk_teacher_att_days_created_by")
+  users_teacher_attendance_days_locked_by_user_idTousers  users?                           @relation("teacher_attendance_days_locked_by_user_idTousers", fields: [locked_by_user_id], references: [id], map: "fk_teacher_att_days_locked_by")
+  academic_years                                          academic_years?                  @relation(fields: [academic_year_id], references: [id], map: "fk_teacher_att_days_year")
+  schools                                                 schools?                         @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_attendance_days_school")
+  teacher_attendance_entries                              teacher_attendance_entries[]
+  teacher_attendance_scan_events                          teacher_attendance_scan_events[]
+
+  @@unique([school_id, attendance_date], map: "uq_teacher_attendance_days_school_date")
+  @@index([attendance_date], map: "idx_teacher_attendance_days_date")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model teacher_attendance_entries {
+  id                             BigInt                           @id @default(autoincrement())
+  day_id                         BigInt
+  teacher_id                     Int
+  status                         String                           @default("present")
+  method                         String                           @default("scan")
+  scanned_card_uid               String?
+  notes                          String?
+  recorded_by_user_id            Int?
+  recorded_at                    DateTime                         @default(now()) @db.Timestamptz(6)
+  created_at                     DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                     DateTime?                        @db.Timestamptz(6)
+  scanned_card_id                BigInt?
+  teacher_attendance_corrections teacher_attendance_corrections[]
+  teacher_attendance_days        teacher_attendance_days          @relation(fields: [day_id], references: [id], onDelete: Cascade, map: "fk_teacher_att_entries_day")
+  users                          users?                           @relation(fields: [recorded_by_user_id], references: [id], map: "fk_teacher_att_entries_recorded_by")
+  teacher_cards                  teacher_cards?                   @relation(fields: [scanned_card_id], references: [id], map: "fk_teacher_att_entries_scanned_card")
+  teachers                       teachers                         @relation(fields: [teacher_id], references: [id], onDelete: Cascade, map: "fk_teacher_att_entries_teacher")
+
+  @@unique([day_id, teacher_id], map: "uq_teacher_att_entries_day_teacher")
+  @@index([day_id], map: "idx_teacher_att_entries_day")
+  @@index([status], map: "idx_teacher_att_entries_status")
+  @@index([teacher_id], map: "idx_teacher_att_entries_teacher")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model teacher_attendance_scan_events {
+  id                      BigInt                  @id @default(autoincrement())
+  day_id                  BigInt
+  teacher_id              Int?
+  raw_code                String
+  normalized_code         String
+  source                  String                  @default("scanner")
+  ip_address              String?
+  user_agent              String?
+  created_by_user_id      Int?
+  created_at              DateTime                @default(now()) @db.Timestamptz(6)
+  card_id                 BigInt?
+  teacher_cards           teacher_cards?          @relation(fields: [card_id], references: [id], map: "fk_teacher_att_scan_card")
+  teacher_attendance_days teacher_attendance_days @relation(fields: [day_id], references: [id], onDelete: Cascade, map: "fk_teacher_att_scan_day")
+  teachers                teachers?               @relation(fields: [teacher_id], references: [id], map: "fk_teacher_att_scan_teacher")
+  users                   users?                  @relation(fields: [created_by_user_id], references: [id], map: "fk_teacher_att_scan_user")
+
+  @@index([created_at(sort: Desc)], map: "idx_teacher_att_scan_created_at")
+  @@index([day_id], map: "idx_teacher_att_scan_day")
+  @@index([teacher_id], map: "idx_teacher_att_scan_teacher")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model teacher_attendance_settings {
+  id                 BigInt    @id @default(autoincrement())
+  duty_start_time    DateTime  @default(dbgenerated("'07:00:00'::time without time zone")) @db.Time(6)
+  grace_minutes      Int       @default(0)
+  allow_mark_absent  Boolean   @default(true)
+  lock_after_minutes Int?
+  created_by_user_id Int?
+  created_at         DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @db.Timestamptz(6)
+  school_id          BigInt?   @unique(map: "uq_teacher_attendance_settings_school")
+  users              users?    @relation(fields: [created_by_user_id], references: [id], map: "fk_teacher_att_settings_user")
+  schools            schools?  @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_attendance_settings_school")
+}
+
+model teacher_barcode_tokens {
+  teacher_id Int      @id
+  token_hash String
+  expires_at DateTime @db.Timestamptz(6)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+  teachers   teachers @relation(fields: [teacher_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([expires_at], map: "idx_teacher_barcode_tokens_expires")
+  @@index([token_hash], map: "idx_teacher_barcode_tokens_hash")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model teacher_cards {
+  id                             BigInt                           @id @default(autoincrement())
+  teacher_id                     Int                              @unique(map: "uq_teacher_one_active_card", where: raw("(is_active = true)"))
+  card_uid                       String                           @unique(map: "uq_teacher_cards_card_uid")
+  card_type                      String                           @default("qr")
+  is_active                      Boolean                          @default(true)
+  issued_at                      DateTime                         @default(now()) @db.Timestamptz(6)
+  revoked_at                     DateTime?                        @db.Timestamptz(6)
+  notes                          String?
+  created_at                     DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                     DateTime?                        @db.Timestamptz(6)
+  teacher_attendance_entries     teacher_attendance_entries[]
+  teacher_attendance_scan_events teacher_attendance_scan_events[]
+  teachers                       teachers                         @relation(fields: [teacher_id], references: [id], onDelete: Cascade, map: "fk_teacher_cards_teacher")
+
+  @@index([is_active], map: "idx_teacher_cards_active")
+  @@index([teacher_id], map: "idx_teacher_cards_teacher_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model teacher_lesson_presence {
+  id                                                                                        BigInt                       @id @default(autoincrement())
+  presence_date                                                                             DateTime                     @db.Date
+  teacher_id                                                                                Int
+  timetable_entry_id                                                                        Int
+  attendance_session_id                                                                     BigInt?
+  status                                                                                    String                       @default("taught")
+  permission_request_id                                                                     BigInt?
+  notes                                                                                     String?
+  created_at                                                                                DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at                                                                                DateTime?                    @db.Timestamptz(6)
+  school_id                                                                                 BigInt?
+  schools                                                                                   schools?                     @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_lesson_presence_school")
+  teachers_teacher_lesson_presence_teacher_id_school_idToteachers                           teachers?                    @relation("teacher_lesson_presence_teacher_id_school_idToteachers", fields: [teacher_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_lesson_presence_teacher_id_same_school")
+  timetable_entries_teacher_lesson_presence_timetable_entry_id_school_idTotimetable_entries timetable_entries?           @relation("teacher_lesson_presence_timetable_entry_id_school_idTotimetable_entries", fields: [timetable_entry_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_lesson_presence_timetable_entry_id_same_school")
+  attendance_sessions                                                                       attendance_sessions?         @relation(fields: [attendance_session_id], references: [id], map: "fk_tlp_att_session")
+  teacher_permission_requests                                                               teacher_permission_requests? @relation(fields: [permission_request_id], references: [id], map: "fk_tlp_permission")
+  teachers_teacher_lesson_presence_teacher_idToteachers                                     teachers                     @relation("teacher_lesson_presence_teacher_idToteachers", fields: [teacher_id], references: [id], onDelete: Cascade, map: "fk_tlp_teacher")
+  timetable_entries_teacher_lesson_presence_timetable_entry_idTotimetable_entries           timetable_entries            @relation("teacher_lesson_presence_timetable_entry_idTotimetable_entries", fields: [timetable_entry_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_tlp_tt_entry")
+
+  @@unique([presence_date, teacher_id, timetable_entry_id], map: "uq_tlp_date_teacher_tt")
+  @@index([school_id], map: "idx_teacher_lesson_presence_school_id")
+  @@index([attendance_session_id], map: "idx_tlp_att_session")
+  @@index([presence_date, teacher_id], map: "idx_tlp_date_teacher")
+  @@index([status], map: "idx_tlp_status")
+}
+
+model teacher_permission_request_slots {
+  id                                                                                                 BigInt                      @id @default(autoincrement())
+  permission_request_id                                                                              BigInt
+  timetable_entry_id                                                                                 Int
+  school_id                                                                                          BigInt?
+  teacher_permission_requests                                                                        teacher_permission_requests @relation(fields: [permission_request_id], references: [id], onDelete: Cascade, map: "fk_teacher_perm_slots_req")
+  timetable_entries_teacher_permission_request_slots_timetable_entry_idTotimetable_entries           timetable_entries           @relation("teacher_permission_request_slots_timetable_entry_idTotimetable_entries", fields: [timetable_entry_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_perm_slots_tt")
+  schools                                                                                            schools?                    @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_permission_request_slots_school")
+  timetable_entries_teacher_permission_request_slots_timetable_entry_id_school_idTotimetable_entries timetable_entries?          @relation("teacher_permission_request_slots_timetable_entry_id_school_idTotimetable_entries", fields: [timetable_entry_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_permission_request_slots_timetable_entry_id_same_sch")
+
+  @@unique([permission_request_id, timetable_entry_id], map: "uq_teacher_perm_slots_unique")
+  @@index([permission_request_id], map: "idx_teacher_perm_slots_req")
+  @@index([timetable_entry_id], map: "idx_teacher_perm_slots_tt")
+  @@index([school_id], map: "idx_teacher_permission_request_slots_school_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model teacher_permission_requests {
+  id                               BigInt                             @id @default(autoincrement())
+  teacher_id                       Int
+  request_date                     DateTime                           @db.Date
+  scope                            String                             @default("full_day")
+  status                           String                             @default("pending")
+  reason_text                      String?
+  notes                            String?
+  requested_at                     DateTime                           @default(now()) @db.Timestamptz(6)
+  decided_at                       DateTime?                          @db.Timestamptz(6)
+  decided_by_user_id               Int?
+  decision_note                    String?
+  created_at                       DateTime                           @default(now()) @db.Timestamptz(6)
+  updated_at                       DateTime?                          @db.Timestamptz(6)
+  school_id                        BigInt?
+  teacher_lesson_presence          teacher_lesson_presence[]
+  teacher_permission_request_slots teacher_permission_request_slots[]
+  users                            users?                             @relation(fields: [decided_by_user_id], references: [id], map: "fk_teacher_perm_decided_by")
+  teachers                         teachers                           @relation(fields: [teacher_id], references: [id], onDelete: Cascade, map: "fk_teacher_perm_teacher")
+  schools                          schools?                           @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_permission_requests_school")
+
+  @@unique([teacher_id, request_date], map: "uq_teacher_full_day_approved_once", where: raw("((status = 'approved'::text) AND (scope = 'full_day'::text))"))
+  @@unique([teacher_id, request_date], map: "uq_teacher_perm_pending_once", where: raw("(status = 'pending'::text)"))
+  @@index([status], map: "idx_teacher_perm_status")
+  @@index([teacher_id, request_date(sort: Desc)], map: "idx_teacher_perm_teacher_date")
+  @@index([school_id], map: "idx_teacher_permission_requests_school_id")
+}
+
+model teacher_subjects {
+  id                                                       Int      @id @default(autoincrement())
+  teacher_id                                               Int
+  subject_id                                               Int
+  is_active                                                Boolean  @default(true)
+  created_at                                               DateTime @default(now()) @db.Timestamptz(6)
+  updated_at                                               DateTime @default(now()) @db.Timestamptz(6)
+  school_id                                                BigInt
+  schools                                                  schools  @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_teacher_subjects_school")
+  subjects_teacher_subjects_subject_idTosubjects           subjects @relation("teacher_subjects_subject_idTosubjects", fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_subjects_subject")
+  subjects_teacher_subjects_subject_id_school_idTosubjects subjects @relation("teacher_subjects_subject_id_school_idTosubjects", fields: [subject_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_subjects_subject_id_same_school")
+  teachers_teacher_subjects_teacher_idToteachers           teachers @relation("teacher_subjects_teacher_idToteachers", fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_subjects_teacher")
+  teachers_teacher_subjects_teacher_id_school_idToteachers teachers @relation("teacher_subjects_teacher_id_school_idToteachers", fields: [teacher_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teacher_subjects_teacher_id_same_school")
+
+  @@unique([teacher_id, subject_id])
+  @@unique([school_id, teacher_id, subject_id], map: "uq_teacher_subjects_school_teacher_subject")
+  @@index([school_id], map: "idx_teacher_subjects_school_id")
+  @@index([school_id, subject_id], map: "idx_teacher_subjects_school_subject")
+  @@index([school_id, teacher_id], map: "idx_teacher_subjects_school_teacher")
+  @@index([subject_id], map: "idx_teacher_subjects_subject")
+  @@index([teacher_id], map: "idx_teacher_subjects_teacher")
+}
+
+model teachers {
+  id                                                                               Int                              @id @default(autoincrement())
+  user_id                                                                          Int?                             @unique
+  full_name                                                                        String                           @db.VarChar(150)
+  phone                                                                            String?                          @db.VarChar(30)
+  is_active                                                                        Boolean                          @default(true)
+  created_at                                                                       DateTime                         @default(now()) @db.Timestamptz(6)
+  updated_at                                                                       DateTime                         @default(now()) @db.Timestamptz(6)
+  school_id                                                                        BigInt
+  attendance_sessions                                                              attendance_sessions[]
+  employees                                                                        employees?
+  exam_entries                                                                     exam_entries[]
+  lesson_substitutions_lesson_substitutions_absent_teacher_idToteachers            lesson_substitutions[]           @relation("lesson_substitutions_absent_teacher_idToteachers")
+  lesson_substitutions_lesson_substitutions_substitute_teacher_idToteachers        lesson_substitutions[]           @relation("lesson_substitutions_substitute_teacher_idToteachers")
+  permission_request_recipients                                                    permission_request_recipients[]
+  section_advisors                                                                 section_advisors[]
+  section_subject_teachers_section_subject_teachers_teacher_idToteachers           section_subject_teachers[]       @relation("section_subject_teachers_teacher_idToteachers")
+  section_subject_teachers_section_subject_teachers_teacher_id_school_idToteachers section_subject_teachers[]       @relation("section_subject_teachers_teacher_id_school_idToteachers")
+  teacher_assignments                                                              teacher_assignments[]
+  teacher_attendance_corrections                                                   teacher_attendance_corrections[]
+  teacher_attendance_entries                                                       teacher_attendance_entries[]
+  teacher_attendance_scan_events                                                   teacher_attendance_scan_events[]
+  teacher_barcode_tokens                                                           teacher_barcode_tokens?
+  teacher_cards                                                                    teacher_cards?
+  teacher_lesson_presence_teacher_lesson_presence_teacher_id_school_idToteachers   teacher_lesson_presence[]        @relation("teacher_lesson_presence_teacher_id_school_idToteachers")
+  teacher_lesson_presence_teacher_lesson_presence_teacher_idToteachers             teacher_lesson_presence[]        @relation("teacher_lesson_presence_teacher_idToteachers")
+  teacher_permission_requests                                                      teacher_permission_requests[]
+  teacher_subjects_teacher_subjects_teacher_idToteachers                           teacher_subjects[]               @relation("teacher_subjects_teacher_idToteachers")
+  teacher_subjects_teacher_subjects_teacher_id_school_idToteachers                 teacher_subjects[]               @relation("teacher_subjects_teacher_id_school_idToteachers")
+  schools                                                                          schools                          @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_teachers_school")
+  users                                                                            users?                           @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_teachers_user")
+  timetable_entries_timetable_entries_teacher_idToteachers                         timetable_entries[]              @relation("timetable_entries_teacher_idToteachers")
+  timetable_entries_timetable_entries_teacher_id_school_idToteachers               timetable_entries[]              @relation("timetable_entries_teacher_id_school_idToteachers")
+  timetable_overrides                                                              timetable_overrides[]
+
+  @@unique([id, school_id], map: "uq_teachers_id_school_id")
+  @@unique([school_id, user_id], map: "uq_teachers_school_user")
+  @@index([school_id, is_active], map: "idx_teachers_school_active")
+  @@index([school_id], map: "idx_teachers_school_id")
+  @@index([school_id, user_id], map: "idx_teachers_school_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model timetable_entries {
+  id                                                                                                                Int                                @id @default(autoincrement())
+  timetable_id                                                                                                      Int
+  day_of_week                                                                                                       Int                                @db.SmallInt
+  period_id                                                                                                         Int
+  subject_id                                                                                                        Int
+  teacher_id                                                                                                        Int
+  room                                                                                                              String?                            @db.VarChar(50)
+  notes                                                                                                             String?
+  created_at                                                                                                        DateTime                           @default(now()) @db.Timestamptz(6)
+  updated_at                                                                                                        DateTime                           @default(now()) @db.Timestamptz(6)
+  school_id                                                                                                         BigInt
+  lesson_substitutions                                                                                              lesson_substitutions[]
+  teacher_lesson_presence_teacher_lesson_presence_timetable_entry_id_school_idTotimetable_entries                   teacher_lesson_presence[]          @relation("teacher_lesson_presence_timetable_entry_id_school_idTotimetable_entries")
+  teacher_lesson_presence_teacher_lesson_presence_timetable_entry_idTotimetable_entries                             teacher_lesson_presence[]          @relation("teacher_lesson_presence_timetable_entry_idTotimetable_entries")
+  teacher_permission_request_slots_teacher_permission_request_slots_timetable_entry_idTotimetable_entries           teacher_permission_request_slots[] @relation("teacher_permission_request_slots_timetable_entry_idTotimetable_entries")
+  teacher_permission_request_slots_teacher_permission_request_slots_timetable_entry_id_school_idTotimetable_entries teacher_permission_request_slots[] @relation("teacher_permission_request_slots_timetable_entry_id_school_idTotimetable_entries")
+  periods_timetable_entries_period_idToperiods                                                                      periods                            @relation("timetable_entries_period_idToperiods", fields: [period_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_entries_period")
+  periods_timetable_entries_period_id_school_idToperiods                                                            periods                            @relation("timetable_entries_period_id_school_idToperiods", fields: [period_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_entries_period_id_same_school")
+  schools                                                                                                           schools                            @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_timetable_entries_school")
+  subjects_timetable_entries_subject_idTosubjects                                                                   subjects                           @relation("timetable_entries_subject_idTosubjects", fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_entries_subject")
+  subjects_timetable_entries_subject_id_school_idTosubjects                                                         subjects                           @relation("timetable_entries_subject_id_school_idTosubjects", fields: [subject_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_entries_subject_id_same_school")
+  teachers_timetable_entries_teacher_idToteachers                                                                   teachers                           @relation("timetable_entries_teacher_idToteachers", fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_entries_teacher")
+  teachers_timetable_entries_teacher_id_school_idToteachers                                                         teachers                           @relation("timetable_entries_teacher_id_school_idToteachers", fields: [teacher_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_entries_teacher_id_same_school")
+  timetables_timetable_entries_timetable_idTotimetables                                                             timetables                         @relation("timetable_entries_timetable_idTotimetables", fields: [timetable_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_entries_timetable")
+  timetables_timetable_entries_timetable_id_school_idTotimetables                                                   timetables                         @relation("timetable_entries_timetable_id_school_idTotimetables", fields: [timetable_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetable_entries_timetable_id_same_school")
+
+  @@unique([timetable_id, day_of_week, period_id])
+  @@unique([id, school_id], map: "uq_timetable_entries_id_school_id")
+  @@unique([school_id, timetable_id, day_of_week, period_id], map: "uq_timetable_entries_school_slot")
+  @@unique([timetable_id, day_of_week, period_id], map: "uq_timetable_entries_slot")
+  @@index([teacher_id, day_of_week, period_id], map: "idx_te_teacher_slot")
+  @@index([timetable_id], map: "idx_te_timetable")
+  @@index([school_id], map: "idx_timetable_entries_school_id")
+  @@index([school_id, period_id], map: "idx_timetable_entries_school_period")
+  @@index([school_id, subject_id], map: "idx_timetable_entries_school_subject")
+  @@index([school_id, teacher_id], map: "idx_timetable_entries_school_teacher")
+  @@index([school_id, timetable_id], map: "idx_timetable_entries_school_timetable")
+  @@index([timetable_id], map: "idx_timetable_entries_timetable")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model timetable_overrides {
+  id           BigInt     @id @default(autoincrement())
+  timetable_id Int
+  date         DateTime   @db.Date
+  day_of_week  Int        @db.SmallInt
+  period_id    Int
+  type         String
+  subject_id   Int?
+  teacher_id   Int?
+  room         String?
+  notes        String?
+  exam_title   String?
+  exam_kind    String?
+  exam_total   Int?
+  created_at   DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime   @default(now()) @db.Timestamptz(6)
+  status       String     @default("draft")
+  school_id    BigInt
+  schools      schools    @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_timetable_overrides_school")
+  periods      periods    @relation(fields: [period_id], references: [id], onUpdate: NoAction)
+  subjects     subjects?  @relation(fields: [subject_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  teachers     teachers?  @relation(fields: [teacher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  timetables   timetables @relation(fields: [timetable_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([timetable_id, date, period_id])
+  @@unique([timetable_id, date, period_id], map: "timetable_overrides_unique")
+  @@unique([school_id, timetable_id, date, period_id], map: "uq_timetable_overrides_school_date_slot")
+  @@index([school_id, date], map: "idx_timetable_overrides_school_date")
+  @@index([school_id], map: "idx_timetable_overrides_school_id")
+  @@index([school_id, period_id], map: "idx_timetable_overrides_school_period")
+  @@index([school_id, timetable_id], map: "idx_timetable_overrides_school_timetable")
+  @@index([timetable_id, date], map: "idx_tto_tt_date")
+  @@index([timetable_id, date, status], map: "idx_tto_tt_date_status")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model timetables {
+  id                                                                     Int                   @id @default(autoincrement())
+  academic_year_id                                                       Int
+  stage_id                                                               Int
+  grade_id                                                               Int
+  section_id                                                             Int
+  term                                                                   Int                   @default(1) @db.SmallInt
+  status                                                                 String                @default("draft") @db.VarChar(12)
+  created_by                                                             Int?
+  created_at                                                             DateTime              @default(now()) @db.Timestamptz(6)
+  updated_at                                                             DateTime              @default(now()) @db.Timestamptz(6)
+  school_id                                                              BigInt
+  timetable_entries_timetable_entries_timetable_idTotimetables           timetable_entries[]   @relation("timetable_entries_timetable_idTotimetables")
+  timetable_entries_timetable_entries_timetable_id_school_idTotimetables timetable_entries[]   @relation("timetable_entries_timetable_id_school_idTotimetables")
+  timetable_overrides                                                    timetable_overrides[]
+  academic_years_timetables_academic_year_idToacademic_years             academic_years        @relation("timetables_academic_year_idToacademic_years", fields: [academic_year_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetables_academic_year")
+  academic_years_timetables_academic_year_id_school_idToacademic_years   academic_years        @relation("timetables_academic_year_id_school_idToacademic_years", fields: [academic_year_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetables_academic_year_id_same_school")
+  grades_timetables_grade_idTogrades                                     grades                @relation("timetables_grade_idTogrades", fields: [grade_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetables_grade")
+  grades_timetables_grade_id_school_idTogrades                           grades                @relation("timetables_grade_id_school_idTogrades", fields: [grade_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetables_grade_id_same_school")
+  schools                                                                schools               @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_timetables_school")
+  sections_timetables_section_idTosections                               sections              @relation("timetables_section_idTosections", fields: [section_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetables_section")
+  sections_timetables_section_id_school_idTosections                     sections              @relation("timetables_section_id_school_idTosections", fields: [section_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetables_section_id_same_school")
+  stages_timetables_stage_idTostages                                     stages                @relation("timetables_stage_idTostages", fields: [stage_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetables_stage")
+  stages_timetables_stage_id_school_idTostages                           stages                @relation("timetables_stage_id_school_idTostages", fields: [stage_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_timetables_stage_id_same_school")
+  users                                                                  users?                @relation(fields: [created_by], references: [id], onUpdate: NoAction)
+
+  @@unique([academic_year_id, stage_id, grade_id, section_id, term])
+  @@unique([id, school_id], map: "uq_timetables_id_school_id")
+  @@unique([school_id, academic_year_id, term, section_id], map: "uq_timetables_school_year_term_section")
+  @@unique([academic_year_id, term, section_id], map: "uq_timetables_year_term_section")
+  @@index([academic_year_id, stage_id, grade_id, section_id, term], map: "idx_timetables_lookup")
+  @@index([school_id], map: "idx_timetables_school_id")
+  @@index([school_id, section_id], map: "idx_timetables_school_section")
+  @@index([school_id, academic_year_id], map: "idx_timetables_school_year")
+  @@index([academic_year_id, term, status], map: "idx_tt_year_term_status")
+}
+
+model user_roles {
+  id                                        Int     @id @default(autoincrement())
+  user_id                                   Int
+  role_id                                   Int
+  school_id                                 BigInt
+  roles_user_roles_role_idToroles           roles   @relation("user_roles_role_idToroles", fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_roles_role")
+  roles_user_roles_role_id_school_idToroles roles   @relation("user_roles_role_id_school_idToroles", fields: [role_id, school_id], references: [id, school_id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_roles_role_id_same_school")
+  schools                                   schools @relation(fields: [school_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_roles_school")
+  users                                     users   @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_user_roles_user")
+
+  @@unique([school_id, user_id, role_id], map: "uq_user_roles_school_user_role", where: raw("(school_id IS NOT NULL)"))
+  @@index([school_id], map: "idx_user_roles_school_id")
+  @@index([user_id], map: "idx_user_roles_user_id")
+}
+
+/// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
+model users {
+  id                                                                                Int                              @id @default(autoincrement())
+  name                                                                              String                           @db.VarChar(100)
+  email                                                                             String                           @db.VarChar(150)
+  username                                                                          String                           @db.VarChar(100)
+  phone                                                                             String?                          @db.VarChar(20)
+  password_hash                                                                     String
+  status                                                                            String?                          @default("active") @db.VarChar(20)
+  created_at                                                                        DateTime?                        @default(now()) @db.Timestamp(6)
+  updated_at                                                                        DateTime?                        @default(now()) @db.Timestamp(6)
+  token_version                                                                     Int?                             @default(1)
+  school_id                                                                         BigInt
+  assessment_reopen_requests_assessment_reopen_requests_decided_by_user_idTousers   assessment_reopen_requests[]     @relation("assessment_reopen_requests_decided_by_user_idTousers")
+  assessment_reopen_requests_assessment_reopen_requests_requested_by_user_idTousers assessment_reopen_requests[]     @relation("assessment_reopen_requests_requested_by_user_idTousers")
+  attendance_entry_corrections                                                      attendance_entry_corrections[]
+  attendance_sessions_attendance_sessions_created_byTousers                         attendance_sessions[]            @relation("attendance_sessions_created_byTousers")
+  attendance_sessions_attendance_sessions_locked_byTousers                          attendance_sessions[]            @relation("attendance_sessions_locked_byTousers")
+  continuing_batches                                                                continuing_batches[]
+  employees                                                                         employees?
+  exam_schedules                                                                    exam_schedules[]
+  exam_timetables                                                                   exam_timetables[]
+  fee_payments                                                                      fee_payments[]
+  guardians                                                                         guardians?
+  lesson_substitutions                                                              lesson_substitutions[]
+  notification_recipients                                                           notification_recipients[]
+  notifications                                                                     notifications[]
+  section_advisors                                                                  section_advisors[]
+  section_subject_teachers                                                          section_subject_teachers[]
+  student_year_results_student_year_results_decided_byTousers                       student_year_results[]           @relation("student_year_results_decided_byTousers")
+  student_year_results_student_year_results_updated_byTousers                       student_year_results[]           @relation("student_year_results_updated_byTousers")
+  students                                                                          students?
+  teacher_attendance_corrections                                                    teacher_attendance_corrections[]
+  teacher_attendance_days_teacher_attendance_days_created_by_user_idTousers         teacher_attendance_days[]        @relation("teacher_attendance_days_created_by_user_idTousers")
+  teacher_attendance_days_teacher_attendance_days_locked_by_user_idTousers          teacher_attendance_days[]        @relation("teacher_attendance_days_locked_by_user_idTousers")
+  teacher_attendance_entries                                                        teacher_attendance_entries[]
+  teacher_attendance_scan_events                                                    teacher_attendance_scan_events[]
+  teacher_attendance_settings                                                       teacher_attendance_settings[]
+  teacher_permission_requests                                                       teacher_permission_requests[]
+  teachers                                                                          teachers?
+  timetables                                                                        timetables[]
+  user_roles                                                                        user_roles[]
+  schools                                                                           schools                          @relation(fields: [school_id], references: [id], onUpdate: NoAction, map: "fk_users_school")
+
+  @@index([school_id], map: "idx_users_school_id")
+}

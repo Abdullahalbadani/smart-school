@@ -1,0 +1,680 @@
+/* =========================================
+   Global Tokens (from main parent file)
+   ========================================= */
+
+
+/* =========================================
+   School Settings Styles
+   ========================================= */
+
+.ss-page {
+  padding: 18px;
+  color: var(--text-main);
+}
+
+.ss-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.ss-top-left {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.ss-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: var(--primary-soft);
+  border: 1px solid var(--border-soft);
+  color: var(--primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.ss-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 900;
+}
+.ss-sub {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.ss-layout {
+  display: grid;
+  grid-template-columns: 310px 1fr;
+  gap: 14px;
+}
+
+.ss-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ss-side-card {
+  border-radius: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  padding: 12px;
+  box-shadow: var(--shadow-soft);
+}
+.ss-side-title {
+  font-weight: 900;
+  margin-bottom: 10px;
+  color: var(--text-main);
+}
+
+.ss-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.ss-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  cursor: pointer;
+  color: inherit;
+  font-weight: 850;
+  transition: 0.15s ease;
+}
+.ss-nav-item:hover {
+  transform: translateY(-1px);
+}
+.ss-nav-item i {
+  opacity: 0.9;
+  font-size: 18px;
+  margin-left: 8px;
+  color: var(--text-muted);
+}
+.ss-nav-item.is-active {
+  background: color-mix(in srgb, var(--primary) 14%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--primary) 30%, var(--border-soft));
+}
+.ss-nav-item span:nth-child(2) {
+  flex: 1;
+  text-align: right;
+}
+
+.ss-count {
+  min-width: 34px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  font-size: 12px;
+  text-align: center;
+  color: var(--text-muted);
+}
+.ss-count--accent {
+  background: color-mix(in srgb, var(--primary) 10%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--primary) 26%, var(--border-soft));
+  color: var(--primary);
+}
+
+.ss-tips {
+  margin: 0;
+  padding: 0 18px 0 0;
+  color: var(--text-muted);
+  line-height: 1.7;
+}
+.ss-tips li {
+  margin: 6px 0;
+}
+
+.ss-main {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ss-summary {
+  border-radius: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+.ss-panels {
+  display: block;
+}
+.ss-panel {
+  display: none;
+}
+.ss-panel.is-active {
+  display: block;
+}
+
+.ss-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  margin-bottom: 10px;
+  box-shadow: var(--shadow-soft);
+}
+.ss-panel-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+}
+.ss-panel-head p {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+}
+
+.ss-panel-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.ss-btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 10px 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 900;
+  transition: 0.15s ease;
+}
+.ss-btn:hover {
+  transform: translateY(-1px);
+}
+.ss-btn[disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+.ss-btn-ghost {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+}
+.ss-btn-primary {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: var(--shadow-soft);
+}
+
+.ss-field-inline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ss-field-inline label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.ss-field-inline select,
+.ss-field-inline input {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  outline: none;
+  min-width: 220px;
+}
+
+.ss-tableWrap {
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+  box-shadow: var(--shadow-soft);
+}
+.ss-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ss-table thead th {
+  padding: 12px;
+  text-align: right;
+  background: var(--bg-panel-soft);
+  font-size: 13px;
+  color: var(--text-main);
+}
+.ss-table tbody td {
+  padding: 10px 12px;
+  border-top: 1px solid var(--border-soft);
+  vertical-align: middle;
+  color: var(--text-main);
+}
+
+.ss-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 12px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+}
+.ss-pill--ok {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border-soft));
+  color: color-mix(in srgb, var(--accent) 85%, var(--text-main));
+}
+.ss-pill--off {
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--danger) 24%, var(--border-soft));
+  color: color-mix(in srgb, var(--danger) 85%, var(--text-main));
+}
+
+.ss-row-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.ss-miniBtn {
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 900;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  color: var(--text-main);
+  transition: 0.15s ease;
+}
+.ss-miniBtn:hover {
+  transform: translateY(-1px);
+}
+.ss-miniBtn--danger {
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--danger) 24%, var(--border-soft));
+  color: color-mix(in srgb, var(--danger) 85%, var(--text-main));
+}
+.ss-miniBtn--accent {
+  background: color-mix(in srgb, var(--primary) 10%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--primary) 24%, var(--border-soft));
+  color: var(--primary);
+}
+
+.ss-curr {
+  border-radius: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  padding: 12px 14px;
+  box-shadow: var(--shadow-soft);
+}
+
+/* ✅ جعل الفلاتر قابلة للتخصيص حسب البانل */
+.ss-curr-filters {
+  display: grid;
+  gap: 10px;
+  align-items: end;
+}
+
+/* منهج الصفوف = 3 أعمدة */
+.ss-panel[data-panel="curriculum"] .ss-curr-filters {
+  grid-template-columns: 220px 260px 1fr;
+}
+
+/* تأهيل المدرسين = 4 أعمدة */
+.ss-panel[data-panel="qualifications"] .ss-curr-filters {
+  grid-template-columns: 200px 240px 240px 1fr;
+}
+
+.ss-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ss-field label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.ss-field select,
+.ss-field input {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  outline: none;
+}
+.ss-field-wide {
+  grid-column: span 1;
+}
+
+.ss-curr-body {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.ss-mini {
+  border-radius: 16px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  padding: 12px;
+}
+.ss-mini-title {
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+.ss-mini-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.ss-mini-row:last-child {
+  border-bottom: 0;
+}
+.ss-mini-hint {
+  margin-top: 10px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.ss-subjectGrid {
+  border-radius: 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px;
+  min-height: 220px;
+  box-shadow: var(--shadow-soft);
+}
+.ss-subjectItem {
+  border-radius: 14px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  padding: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.ss-empty {
+  grid-column: 1 / -1;
+  color: var(--text-muted);
+  padding: 18px;
+  text-align: center;
+}
+
+.ss-toggle {
+  width: 46px;
+  height: 26px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border-soft) 70%, var(--bg-panel));
+  border: 1px solid var(--border-soft);
+  position: relative;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.ss-toggle::after {
+  content: "";
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 3px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  transition: 0.2s ease;
+}
+.ss-toggle.is-on {
+  background: color-mix(in srgb, var(--primary) 18%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--primary) 28%, var(--border-soft));
+}
+.ss-toggle.is-on::after {
+  right: 23px;
+  background: var(--primary);
+  border-color: color-mix(in srgb, var(--primary) 60%, var(--border-soft));
+}
+
+.ss-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 9999;
+}
+.ss-modal.is-open {
+  display: flex;
+}
+.ss-modal-dialog {
+  width: min(560px, 100%);
+  border-radius: 18px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.ss-modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  background: var(--bg-panel-soft);
+  border-bottom: 1px solid var(--border-soft);
+}
+.ss-modal-head h3 {
+  margin: 0;
+  font-weight: 900;
+}
+.ss-icon {
+  border: 0;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  width: 40px;
+  height: 36px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-main);
+  font-size: 18px;
+}
+.ss-modal-body {
+  padding: 14px;
+}
+.ss-modal-foot {
+  padding: 12px 14px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+}
+.ss-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.ss-form .full {
+  grid-column: 1 / -1;
+}
+.ss-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.ss-form input,
+.ss-form select {
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  outline: none;
+}
+
+@media (max-width: 1100px) {
+  .ss-layout {
+    grid-template-columns: 1fr;
+  }
+  .ss-curr-body {
+    grid-template-columns: 1fr;
+  }
+  .ss-subjectGrid {
+    grid-template-columns: repeat(2, minmax(160px, 1fr));
+  }
+
+  /* ✅ الفلاتر تصبح سطرين */
+  .ss-panel[data-panel="curriculum"] .ss-curr-filters,
+  .ss-panel[data-panel="qualifications"] .ss-curr-filters {
+    grid-template-columns: 1fr 1fr;
+  }
+  .ss-field-wide {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 650px) {
+  .ss-subjectGrid {
+    grid-template-columns: 1fr;
+  }
+  .ss-form {
+    grid-template-columns: 1fr;
+  }
+  .ss-field-inline select,
+  .ss-field-inline input {
+    min-width: 160px;
+  }
+
+  /* ✅ الفلاتر عمود واحد */
+  .ss-panel[data-panel="curriculum"] .ss-curr-filters,
+  .ss-panel[data-panel="qualifications"] .ss-curr-filters {
+    grid-template-columns: 1fr;
+  }
+}
+
+  /* تصميم بسيط لأزرار الأيام لتبدو احترافية */
+  .day-check {
+    cursor: pointer;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 8px 15px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+  }
+  .day-check:hover { background: rgba(255,255,255,0.1); }
+  .day-check input { width: auto; cursor: pointer; }
+  .day-check input:checked + span { color: var(--accent); font-weight: bold; }
+/* =========================================
+   Academic grading settings layout fix
+   ========================================= */
+
+.ss-panel[data-panel="academic"] * {
+  box-sizing: border-box;
+}
+
+.ss-panel[data-panel="academic"] .ss-grade-settings,
+.ss-panel[data-panel="academic"] .academic-grade-settings,
+.ss-panel[data-panel="academic"] .grading-settings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.ss-panel[data-panel="academic"] .ss-grade-card,
+.ss-panel[data-panel="academic"] .academic-grade-card,
+.ss-panel[data-panel="academic"] .grading-card {
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 16px;
+  background: var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+  padding: 18px;
+}
+
+.ss-panel[data-panel="academic"] .ss-grade-card h4,
+.ss-panel[data-panel="academic"] .academic-grade-card h4,
+.ss-panel[data-panel="academic"] .grading-card h4 {
+  margin: 0 0 18px;
+  font-size: 16px;
+  font-weight: 900;
+  color: var(--text-main);
+}
+
+.ss-panel[data-panel="academic"] .ss-grade-grid,
+.ss-panel[data-panel="academic"] .academic-grade-grid,
+.ss-panel[data-panel="academic"] .grading-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.ss-panel[data-panel="academic"] .ss-field {
+  min-width: 0;
+}
+
+.ss-panel[data-panel="academic"] .ss-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: normal;
+}
+
+.ss-panel[data-panel="academic"] input,
+.ss-panel[data-panel="academic"] select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: 44px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.ss-panel[data-panel="academic"] .full,
+.ss-panel[data-panel="academic"] .ss-field.full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1250px) {
+  .ss-panel[data-panel="academic"] .ss-grade-settings,
+  .ss-panel[data-panel="academic"] .academic-grade-settings,
+  .ss-panel[data-panel="academic"] .grading-settings {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .ss-panel[data-panel="academic"] .ss-grade-grid,
+  .ss-panel[data-panel="academic"] .academic-grade-grid,
+  .ss-panel[data-panel="academic"] .grading-grid {
+    grid-template-columns: 1fr;
+  }
+}

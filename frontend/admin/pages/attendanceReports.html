@@ -1,0 +1,501 @@
+<section class="tp-panel attendance-reports-page" dir="rtl" lang="ar">
+
+  <div class="tp-head">
+    <div>
+      <h2 class="tp-title"><i class="ri-bar-chart-box-line"></i> تقارير الحضور والغياب</h2>
+      <p class="tp-sub">تحليل انضباط الطلاب والمعلمين مع تصدير وطباعة وتفاصيل وتصحيحات.</p>
+    </div>
+
+    <div class="attendance-tabs" id="attendance-main-tabs" role="tablist" aria-label="تبويبات تقارير الحضور">
+      <button class="tab-link" id="tab-students" role="tab" aria-selected="true" aria-controls="students-rep-tab" tabindex="0" data-tab="students-rep-tab">
+        <i class="ri-user-smile-line"></i> تقارير الطلاب
+      </button>
+      <button class="tab-link" id="tab-teachers" role="tab" aria-selected="false" aria-controls="teachers-rep-tab" tabindex="-1" data-tab="teachers-rep-tab">
+        <i class="ri-presentation-line"></i> تقارير المعلمين
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================= Students Reports ======================= -->
+  <div class="attendance-tab-content active" id="students-rep-tab" role="tabpanel" aria-labelledby="tab-students">
+
+    <!-- Filters -->
+    <div class="tp-filters">
+      <div class="ta-field">
+        <label>العام الدراسي</label>
+        <select class="ta-select" id="filter-stu-year">
+          <option value="">الكل</option>
+        </select>
+      </div>
+
+      <div class="ta-field">
+        <label>الترم</label>
+        <select class="ta-select" id="filter-stu-term">
+          <option value="">الكل</option>
+          <option value="1">الترم الأول</option>
+          <option value="2">الترم الثاني</option>
+        </select>
+      </div>
+
+      <div class="ta-field">
+        <label>من تاريخ</label>
+        <input type="date" class="ta-input" id="filter-stu-from" />
+      </div>
+
+      <div class="ta-field">
+        <label>إلى تاريخ</label>
+        <input type="date" class="ta-input" id="filter-stu-to" />
+      </div>
+
+      <div class="ta-field">
+        <label>المرحلة</label>
+        <select class="ta-select" id="filter-stu-stage">
+          <option value="">كل المراحل</option>
+        </select>
+      </div>
+
+      <div class="ta-field">
+        <label>الصف</label>
+        <select class="ta-select" id="filter-stu-grade">
+          <option value="">كل الصفوف</option>
+        </select>
+      </div>
+
+      <div class="ta-field">
+        <label>الشعبة</label>
+        <select class="ta-select" id="filter-stu-section">
+          <option value="">كل الشعب</option>
+        </select>
+      </div>
+<div class="ta-field">
+        <label>الطريقة</label>
+        <select class="ta-select" id="filter-stu-method">
+          <option value="">الكل</option>
+          <option value="scan">بصمة/مسح</option>
+          <option value="manual">يدوي</option>
+        </select>
+      </div>
+
+
+
+      <div class="ta-field wide">
+        <label>بحث سريع</label>
+        <input class="ta-input" id="filter-stu-search" placeholder="ابحث باسم الطالب أو الكود..." />
+      </div>
+
+      <div class="tp-actions">
+        <button type="button" class="tp-btn tp-btn--pri" id="btn-refresh-students">
+          <i class="ri-search-line"></i><span>عرض التقرير</span>
+        </button>
+        <button type="button" class="tp-btn tp-btn--ghost" id="btn-reset-students">
+          <i class="ri-refresh-line"></i><span>إعادة ضبط</span>
+        </button>
+        <button type="button" class="tp-btn" id="btn-export-students-csv" data-export="students">
+          <i class="ri-file-download-line"></i><span>تصدير CSV</span>
+        </button>
+        <button type="button" class="tp-btn" id="btn-print-students">
+          <i class="ri-printer-line"></i><span>طباعة</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="students-kpis">
+      <div class="kpi info">
+        <p class="k">عدد الطلاب</p>
+        <p class="v" id="stu-kpi-students">—</p>
+      </div>
+      <div class="kpi">
+        <p class="k">إجمالي الحصص</p>
+        <p class="v" id="stu-kpi-total">—</p>
+      </div>
+      <div class="kpi danger">
+        <p class="k">غياب (بدون عذر)</p>
+        <p class="v" id="stu-kpi-absent-total">—</p>
+      </div>
+      <div class="kpi warn">
+        <p class="k">تأخير (مرات)</p>
+        <p class="v" id="stu-kpi-late-total">—</p>
+      </div>
+      <div class="kpi info">
+        <p class="k">بعذر</p>
+        <p class="v" id="stu-kpi-excused-total">—</p>
+      </div>
+      <div class="kpi success">
+        <p class="k">متوسط نسبة الحضور</p>
+        <p class="v" id="stu-kpi-att-pct">—</p>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <d  iv class="toolbar">
+      <div class="chip" id="students-last-refresh">آخر تحديث: —</div>
+      <div class="chip" id="students-results-count">نتائج: —</div>
+      <div class="spacer"></div>
+
+      <div class="pager">
+        <div class="ta-field" style="min-width: 180px;">
+          <label>فرز</label>
+          <select class="ta-select" id="stu-sort">
+            <option value="name_asc">الاسم (أ-ي)</option>
+            <option value="absent_desc">الأكثر غيابًا</option>
+            <option value="late_desc">الأكثر تأخيرًا</option>
+            <option value="pct_asc">أقل نسبة حضور</option>
+            <option value="total_desc">أكثر حصص</option>
+          </select>
+        </div>
+
+   
+
+        <button class="tp-btn" type="button" id="stu-prev"><i class="ri-arrow-right-s-line"></i> السابق</button>
+        <span class="chip" id="stu-page">صفحة —</span>
+        <button class="tp-btn" type="button" id="stu-next">التالي <i class="ri-arrow-left-s-line"></i></button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+      <table class="tp-table" id="students-report-table">
+        <thead>
+          <tr>
+            <th>اسم الطالب</th>
+            <th>الكود</th>
+            <th>الصف / الشعبة</th>
+            <th class="center">إجمالي الحصص</th>
+            <th class="center">حاضر</th>
+            <th class="center">🔴 غياب</th>
+            <th class="center">🟠 تأخير</th>
+            <th class="center">🔵 بعذر</th>
+            <th class="center">دقائق التأخير</th>
+            <th class="center">نسبة الحضور %</th>
+            <th class="center">الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="students-reports-table-body">
+          <tr><td colspan="12" class="center muted">حدد الفلاتر ثم اضغط عرض التقرير</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======================= Teachers Reports ======================= -->
+  <div class="attendance-tab-content" id="teachers-rep-tab" role="tabpanel" aria-labelledby="tab-teachers">
+
+    <!-- Filters -->
+    <div class="tp-filters">
+      <div class="ta-field">
+        <label>العام الدراسي</label>
+        <select class="ta-select" id="filter-tch-year">
+          <option value="">الكل</option>
+        </select>
+      </div>
+
+      <div class="ta-field">
+        <label>الشهر (اختصار)</label>
+        <input type="month" class="ta-input" id="filter-tch-month" />
+      </div>
+
+      <div class="ta-field">
+        <label>من تاريخ</label>
+        <input type="date" class="ta-input" id="filter-tch-from" />
+      </div>
+
+      <div class="ta-field">
+        <label>إلى تاريخ</label>
+        <input type="date" class="ta-input" id="filter-tch-to" />
+      </div>
+
+      <div class="ta-field">
+        <label>المعلم</label>
+        <select class="ta-select" id="filter-tch-teacher">
+          <option value="">الكل</option>
+        </select>
+      </div>
+
+   
+
+      <div class="ta-field">
+        <label>الطريقة</label>
+        <select class="ta-select" id="filter-tch-method">
+          <option value="">الكل</option>
+          <option value="scan">بصمة/مسح</option>
+          <option value="manual">يدوي</option>
+        </select>
+      </div>
+
+     
+
+      <div class="ta-field wide">
+        <label>بحث سريع</label>
+        <input class="ta-input" id="filter-tch-search" placeholder="ابحث باسم المعلم..." />
+      </div>
+
+      <div class="tp-actions">
+        <button type="button" class="tp-btn tp-btn--pri" id="btn-refresh-teachers">
+          <i class="ri-search-line"></i><span>عرض التقرير</span>
+        </button>
+        <button type="button" class="tp-btn tp-btn--ghost" id="btn-reset-teachers">
+          <i class="ri-refresh-line"></i><span>إعادة ضبط</span>
+        </button>
+        <button type="button" class="tp-btn" id="btn-export-teachers-csv" data-export="teachers">
+          <i class="ri-file-download-line"></i><span>تصدير CSV</span>
+        </button>
+        <button type="button" class="tp-btn" id="btn-print-teachers">
+          <i class="ri-printer-line"></i><span>طباعة</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="kpi-grid" id="teachers-kpis">
+      <div class="kpi info">
+        <p class="k">عدد المعلمين</p>
+        <p class="v" id="tch-kpi-teachers">—</p>
+      </div>
+      <div class="kpi">
+        <p class="k">إجمالي الأيام</p>
+        <p class="v" id="tch-kpi-total-days">—</p>
+      </div>
+      <div class="kpi danger">
+        <p class="k">أيام الغياب</p>
+        <p class="v" id="tch-kpi-absent-days">—</p>
+      </div>
+      <div class="kpi warn">
+        <p class="k">أيام التأخير</p>
+        <p class="v" id="tch-kpi-late-days">—</p>
+      </div>
+      <div class="kpi success">
+        <p class="k">أيام الحضور</p>
+        <p class="v" id="tch-kpi-present-days">—</p>
+      </div>
+      <div class="kpi success">
+        <p class="k">نسبة الالتزام %</p>
+        <p class="v" id="tch-kpi-presence-pct">—</p>
+      </div>
+    </div>
+
+    <!-- Toolbar -->
+    <div class="toolbar">
+      <div class="chip" id="teachers-last-refresh">آخر تحديث: —</div>
+      <div class="chip" id="teachers-results-count">نتائج: —</div>
+      <div class="spacer"></div>
+
+      <div class="pager">
+        <div class="ta-field" style="min-width: 180px;">
+          <label>فرز</label>
+          <select class="ta-select" id="tch-sort">
+            <option value="name_asc">الاسم (أ-ي)</option>
+            <option value="absent_desc">الأكثر غيابًا</option>
+            <option value="late_desc">الأكثر تأخيرًا</option>
+            <option value="pct_asc">أقل التزام</option>
+            <option value="total_desc">أكثر أيام</option>
+          </select>
+        </div>
+
+
+        <button class="tp-btn" type="button" id="tch-prev"><i class="ri-arrow-right-s-line"></i> السابق</button>
+        <span class="chip" id="tch-page">صفحة —</span>
+        <button class="tp-btn" type="button" id="tch-next">التالي <i class="ri-arrow-left-s-line"></i></button>
+      </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+      <table class="tp-table" id="teachers-report-table">
+        <thead>
+          <tr>
+            <th>اسم المعلم</th>
+            <th class="center">إجمالي الأيام</th>
+            <th class="center">حاضر</th>
+            <th class="center">🔴 غائب</th>
+            <th class="center">🟠 متأخر</th>
+            <th class="center">طريقة التسجيل</th>
+            <th class="center">نسبة الالتزام %</th>
+            <th class="center">الإجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="teachers-reports-table-body">
+          <tr><td colspan="10" class="center muted">حدد الفلاتر ثم اضغط عرض التقرير</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ======================= Student Dashboard Modal ======================= -->
+  <div class="tp-modal" id="student-dashboard-modal" aria-hidden="true" aria-modal="true" role="dialog" aria-labelledby="stu-modal-title">
+    <div class="tp-modal-box modal-lg">
+      <div class="tp-modal-head">
+        <h3 id="stu-modal-title"><i class="ri-dashboard-line"></i> السجل الشامل للطالب</h3>
+        <button class="tp-close" id="close-stu-modal" type="button" aria-label="إغلاق"><i class="ri-close-line"></i></button>
+      </div>
+
+      <div class="tp-modal-body">
+
+        <div class="dash-header">
+          <div class="dash-meta" id="stu-dash-header">
+            <span class="chip">—</span>
+          </div>
+          <div class="dash-actions">
+            <button type="button" class="tp-btn" id="btn-stu-export-csv"><i class="ri-file-download-line"></i> تصدير CSV</button>
+            <button type="button" class="tp-btn" id="btn-stu-print"><i class="ri-printer-line"></i> طباعة</button>
+          </div>
+        </div>
+
+        <div class="dash-kpis">
+          <div class="kpi danger">
+            <p class="k">إجمالي الغياب</p>
+            <p class="v" id="stu-kpi-absent">0</p>
+          </div>
+          <div class="kpi warn">
+            <p class="k">مرات التأخير</p>
+            <p class="v" id="stu-kpi-late">0</p>
+          </div>
+          <div class="kpi info">
+            <p class="k">بعذر</p>
+            <p class="v" id="stu-kpi-excused">0</p>
+          </div>
+          <div class="kpi">
+            <p class="k">إجمالي الحصص</p>
+            <p class="v" id="stu-kpi-total">0</p>
+          </div>
+          <div class="kpi success">
+            <p class="k">نسبة الحضور %</p>
+            <p class="v" id="stu-kpi-pct">0</p>
+          </div>
+        </div>
+
+        <div class="tp-card" style="padding: 12px; margin-bottom: 12px;">
+          <div class="muted" style="margin-bottom: 10px;"><i class="ri-bar-chart-line"></i> توزيع الحالات خلال الفترة</div>
+          <div style="height: 260px;">
+            <canvas id="studentAttendanceChart"></canvas>
+          </div>
+        </div>
+
+        <div class="tp-card" style="padding: 12px;">
+          <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom: 10px;">
+            <div><i class="ri-list-check"></i> السجل الزمني للتفاصيل</div>
+            <div class="dash-actions">
+              <select class="ta-select" id="stu-log-filter" style="min-width: 220px;">
+                <option value="">كل السجلات</option>
+                <option value="absent">غياب فقط</option>
+                <option value="late">تأخير فقط</option>
+                <option value="excused">بعذر فقط</option>
+                <option value="present">حضور فقط</option>
+                <option value="corrected">مُصحح فقط</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="log-wrap">
+            <table class="tp-table table-sm" id="stu-log-table">
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th class="center">الحصة</th>
+                  <th>المادة</th>
+                  <th>المعلم</th>
+                  <th class="center">الحالة</th>
+                  <th>السبب</th>
+                  <th class="center">دقائق التأخير</th>
+                  <th>الملاحظات</th>
+                  <th class="center">تصحيح</th>
+                </tr>
+              </thead>
+              <tbody id="stu-log-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= Teacher Dashboard Modal ======================= -->
+  <div class="tp-modal" id="teacher-dashboard-modal" aria-hidden="true" aria-modal="true" role="dialog" aria-labelledby="tch-modal-title">
+    <div class="tp-modal-box modal-lg">
+      <div class="tp-modal-head">
+        <h3 id="tch-modal-title"><i class="ri-dashboard-line"></i> كشف انضباط المعلم</h3>
+        <button class="tp-close" id="close-tch-modal" type="button" aria-label="إغلاق"><i class="ri-close-line"></i></button>
+      </div>
+
+      <div class="tp-modal-body">
+
+        <div class="dash-header">
+          <div class="dash-meta" id="tch-dash-header">
+            <span class="chip">—</span>
+          </div>
+          <div class="dash-actions">
+            <button type="button" class="tp-btn" id="btn-tch-export-csv"><i class="ri-file-download-line"></i> تصدير CSV</button>
+            <button type="button" class="tp-btn" id="btn-tch-print"><i class="ri-printer-line"></i> طباعة</button>
+          </div>
+        </div>
+
+        <div class="dash-kpis">
+          <div class="kpi">
+            <p class="k">إجمالي الأيام</p>
+            <p class="v" id="tch-kpi-total">0</p>
+          </div>
+          <div class="kpi success">
+            <p class="k">أيام الحضور</p>
+            <p class="v" id="tch-kpi-present">0</p>
+          </div>
+          <div class="kpi danger">
+            <p class="k">أيام الغياب</p>
+            <p class="v" id="tch-kpi-absent">0</p>
+          </div>
+          <div class="kpi warn">
+            <p class="k">أيام التأخير</p>
+            <p class="v" id="tch-kpi-late">0</p>
+          </div>
+          <div class="kpi success">
+            <p class="k">نسبة الالتزام %</p>
+            <p class="v" id="tch-kpi-pct">0</p>
+          </div>
+        </div>
+
+        <div class="tp-card" style="padding: 12px;">
+          <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; margin-bottom: 10px;">
+            <div><i class="ri-list-check"></i> السجل الزمني للتفاصيل</div>
+            <div class="dash-actions">
+              <select class="ta-select" id="tch-log-filter" style="min-width: 220px;">
+                <option value="">كل السجلات</option>
+                <option value="present">حضور</option>
+                <option value="absent">غياب</option>
+                <option value="late">تأخير</option>
+                <option value="manual">يدوي</option>
+                <option value="scan">بصمة/مسح</option>
+                <option value="corrected">مُصحح فقط</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="log-wrap">
+            <table class="tp-table table-sm" id="tch-log-table">
+              <thead>
+                <tr>
+                  <th>التاريخ</th>
+                  <th class="center">الحالة</th>
+                  <th class="center">الطريقة</th>
+                  <th>ملاحظات</th>
+                  <th class="center">تصحيح</th>
+                </tr>
+              </thead>
+              <tbody id="tch-log-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= Light hooks for JS (no scripts here) ======================= -->
+  <div hidden>
+    <!-- Data endpoints placeholders (optional) -->
+    <span id="endpoint-students-report" data-url="/reports/attendance/students"></span>
+    <span id="endpoint-students-details" data-url="/reports/attendance/students/{id}/details"></span>
+    <span id="endpoint-teachers-report" data-url="/reports/attendance/teachers"></span>
+    <span id="endpoint-teachers-details" data-url="/reports/attendance/teachers/{id}/details"></span>
+  </div>
+
+</section>

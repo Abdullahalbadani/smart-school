@@ -1,0 +1,716 @@
+<section
+  id="schoolSettingsPage"
+  class="ss-page"
+  data-permission="school.manage_settings"
+>
+  <div class="ss-top">
+    <div class="ss-top-left">
+      <div class="ss-badge"><i class="ri-settings-3-line"></i></div>
+      <div>
+        <h2 class="ss-title">إعدادات المدرسة</h2>
+        <p class="ss-sub">
+          لوحة تحكم موحّدة لإدارة: هوية المدرسة، السنوات، المراحل، الصفوف، الشعب، المواد،
+          الفترات، وتأهيل المدرسين.
+        </p>
+      </div>
+    </div>
+
+    <div class="ss-top-right">
+      <button class="ss-btn ss-btn-ghost" id="ssRefresh">
+        <i class="ri-refresh-line"></i> تحديث
+      </button>
+    </div>
+  </div>
+
+  <div class="ss-layout">
+    <aside class="ss-side">
+      <div class="ss-side-card">
+        <div class="ss-side-title">الأقسام</div>
+
+        <div class="ss-nav">
+          <button class="ss-nav-item is-active" data-target="profile">
+            <i class="ri-building-4-line"></i>
+            <span>هوية المدرسة</span>
+            <span class="ss-count" style="background: transparent; color: var(--accent);"><i class="ri-information-line"></i></span>
+          </button>
+<button class="ss-nav-item" data-target="academic">
+  <i class="ri-book-open-line"></i>
+  <span>الإعدادات الأكاديمية</span>
+  <span class="ss-count" style="background: transparent; color: var(--accent);"><i class="ri-ruler-2-line"></i></span>
+</button>
+<button class="ss-nav-item" data-target="system_finance">
+  <i class="ri-refund-2-line"></i>
+  <span>النظام والمالية</span>
+  <span class="ss-count" style="background: transparent; color: var(--accent);"><i class="ri-money-dollar-circle-line"></i></span>
+</button>
+<button class="ss-nav-item" data-target="portals">
+  <i class="ri-door-lock-line"></i>
+  <span>بوابات الدخول</span>
+  <span class="ss-count" style="background: transparent; color: var(--accent);"><i class="ri-toggle-fill"></i></span>
+</button>
+          <button class="ss-nav-item" data-target="years">
+            <i class="ri-calendar-2-line"></i>
+            <span>السنوات الدراسية</span>
+            <span class="ss-count" id="cntYears">0</span>
+          </button>
+
+          <button class="ss-nav-item" data-target="stages">
+            <i class="ri-stack-line"></i>
+            <span>المراحل</span>
+            <span class="ss-count" id="cntStages">0</span>
+          </button>
+
+          <button class="ss-nav-item" data-target="grades">
+            <i class="ri-list-check-2"></i>
+            <span>الصفوف</span>
+            <span class="ss-count" id="cntGrades">0</span>
+          </button>
+
+          <button class="ss-nav-item" data-target="sections">
+            <i class="ri-grid-line"></i>
+            <span>الشعب</span>
+            <span class="ss-count" id="cntSections">0</span>
+          </button>
+
+          <button class="ss-nav-item" data-target="subjects">
+            <i class="ri-book-2-line"></i>
+            <span>المواد</span>
+            <span class="ss-count" id="cntSubjects">0</span>
+          </button>
+
+          <button class="ss-nav-item" data-target="qualifications">
+            <i class="ri-user-star-line"></i>
+            <span>تأهيل المدرسين</span>
+            <span class="ss-count" id="cntQual">0</span>
+          </button>
+
+          <button class="ss-nav-item" data-target="periods">
+            <i class="ri-time-line"></i>
+            <span>الفترات</span>
+            <span class="ss-count" id="cntPeriods">0</span>
+          </button>
+
+          <button class="ss-nav-item" data-target="curriculum">
+            <i class="ri-node-tree"></i>
+            <span>منهج الصفوف</span>
+            <span class="ss-count ss-count--accent" id="cntCurr">•</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="ss-side-card ss-side-help">
+        <div class="ss-side-title">ملاحظات سريعة</div>
+        <ul class="ss-tips">
+          <li>تغيير رابط المدرسة (Slug) غير مسموح لحماية النظام.</li>
+          <li>التعطيل للسنوات والمواد لا يحذف البيانات القديمة.</li>
+          <li>منهج الصفوف يحدد المواد التي تظهر في “تعيين المدرسين”.</li>
+        </ul>
+      </div>
+    </aside>
+
+    <main class="ss-main">
+      <div class="ss-summary" id="ssSummary">جاهز ✅ — اختر قسمًا من اليسار.</div>
+
+      <div class="ss-panels">
+        
+        <section class="ss-panel is-active" data-panel="profile">
+          <div class="ss-panel-head">
+            <div>
+              <h3>هوية المدرسة والبيانات الأساسية</h3>
+              <p>تحديث الشعار، الاسم، ومعلومات التواصل الخاصة بمدرستك.</p>
+            </div>
+            <button class="ss-btn ss-btn-primary" id="btnSaveProfile">
+              <i class="ri-save-3-line"></i> حفظ التعديلات
+            </button>
+          </div>
+
+          <div style="padding: 20px;">
+            <form id="schoolProfileForm" style="display: flex; flex-direction: column; gap: 25px; max-width: 800px;">
+              
+              <div style="display: flex; align-items: center; gap: 20px; background: rgba(0,0,0,0.15); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+                <div style="width: 80px; height: 80px; border-radius: 50%; background: var(--primary-color, #2563eb); overflow: hidden; display: flex; align-items: center; justify-content: center; border: 2px solid rgba(255,255,255,0.1);">
+                   <img id="profileLogoPreview" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" alt="شعار المدرسة">
+                   <span id="profileLogoText" style="font-size: 2rem; color: #fff; font-weight: bold;">S</span>
+                </div>
+                <div class="ss-field" style="flex: 1; margin: 0;">
+                  <label>تغيير الشعار (Logo)</label>
+                  <input type="file" id="profileLogoInput" accept="image/png, image/jpeg, image/jpg" style="padding: 10px; border: 1px dashed rgba(255,255,255,0.2); background: transparent; color: inherit; cursor: pointer; width: 100%; border-radius: 6px;">
+                  <span style="font-size: 0.8rem; color: #888; margin-top: 5px; display: block;">الصيغ المدعومة: JPG, PNG. الحجم المفضل: 512x512 بكسل.</span>
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+                <div class="ss-field">
+                  <label>اسم المدرسة (بالعربي) *</label>
+                  <input type="text" id="profileNameAr" placeholder="مثال: مدرسة النهضة الأهلية" required>
+                </div>
+                <div class="ss-field">
+                  <label>اسم المدرسة (بالإنجليزي)</label>
+                  <input type="text" id="profileNameEn" placeholder="مثال: Al-Nahda School">
+                </div>
+                <div class="ss-field">
+                  <label>رقم الهاتف</label>
+                  <input type="text" id="profilePhone" placeholder="أرقام التواصل" dir="ltr" style="text-align: right;">
+                </div>
+                <div class="ss-field">
+                  <label>البريد الإلكتروني</label>
+                  <input type="email" id="profileEmail" placeholder="info@school.com" dir="ltr" style="text-align: right;">
+                </div>
+                <div class="ss-field" style="grid-column: 1 / -1;">
+                  <label>العنوان والتفاصيل</label>
+                  <input type="text" id="profileAddress" placeholder="المدينة، الحي، الشارع...">
+                </div>
+              </div>
+
+              <div style="background: rgba(239, 68, 68, 0.05); padding: 15px 20px; border-radius: 12px; border: 1px solid rgba(239, 68, 68, 0.2);">
+                 <div class="ss-field" style="margin: 0;">
+                  <label style="color: #ef4444; font-weight: bold;"><i class="ri-alert-line"></i> معرف الرابط (Slug) - غير قابل للتعديل</label>
+                  <div style="display: flex; gap: 10px; margin-top: 8px;">
+                      <input type="text" id="profileSlug" readonly value="smart-school" style="background: rgba(255,255,255,0.05); color: #888; cursor: not-allowed; width: 100%; border-color: rgba(255,255,255,0.1);" dir="ltr">
+                      <button type="button" class="ss-btn ss-btn-ghost" onclick="alert('تغيير الرابط سيؤدي إلى توقف حسابات جميع المعلمين والطلاب. لتغييره للضرورة القصوى يرجى التواصل مع الدعم الفني.')" style="white-space: nowrap; border: 1px solid rgba(239,68,68,0.3); color: #ef4444;">طلب تغيير</button>
+                  </div>
+                </div>
+              </div>
+
+            </form>
+          </div>
+        </section>
+
+        <section class="ss-panel" data-panel="years">
+          <div class="ss-panel-head">
+            <div>
+              <h3>السنوات الدراسية</h3>
+              <p>إضافة وتفعيل/تعطيل السنوات الدراسية.</p>
+            </div>
+            <button class="ss-btn ss-btn-primary" id="btnAddYear">
+              <i class="ri-add-line"></i> إضافة سنة
+            </button>
+          </div>
+
+          <div class="ss-tableWrap">
+            <table class="ss-table">
+              <thead>
+                <tr>
+                  <th style="width: 70px">ID</th>
+                  <th>الاسم</th>
+                  <th style="width: 140px">الفترة</th>
+                  <th style="width: 120px">الحالة</th>
+                  <th style="width: 170px">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="tbYears"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ss-panel" data-panel="stages">
+          <div class="ss-panel-head">
+            <div>
+              <h3>المراحل</h3>
+              <p>مثل: ابتدائي / متوسط / ثانوي…</p>
+            </div>
+            <button class="ss-btn ss-btn-primary" id="btnAddStage">
+              <i class="ri-add-line"></i> إضافة مرحلة
+            </button>
+          </div>
+
+          <div class="ss-tableWrap">
+            <table class="ss-table">
+              <thead>
+                <tr>
+                  <th style="width: 70px">ID</th>
+                  <th>الاسم</th>
+                  <th style="width: 120px">ترتيب</th>
+                  <th style="width: 120px">الحالة</th>
+                  <th style="width: 170px">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="tbStages"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ss-panel" data-panel="grades">
+          <div class="ss-panel-head">
+            <div>
+              <h3>الصفوف</h3>
+              <p>إدارة الصفوف وربطها بالمراحل.</p>
+            </div>
+            <div class="ss-panel-actions">
+              <div class="ss-field-inline">
+                <label>فلتر المرحلة</label>
+                <select id="fltStageForGrades"></select>
+              </div>
+              <button class="ss-btn ss-btn-primary" id="btnAddGrade">
+                <i class="ri-add-line"></i> إضافة صف
+              </button>
+            </div>
+          </div>
+
+          <div class="ss-tableWrap">
+            <table class="ss-table">
+              <thead>
+                <tr>
+                  <th style="width: 70px">ID</th>
+                  <th>الصف</th>
+                  <th>المرحلة</th>
+                  <th style="width: 120px">ترتيب</th>
+                  <th style="width: 120px">الحالة</th>
+                  <th style="width: 170px">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="tbGrades"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ss-panel" data-panel="sections">
+          <div class="ss-panel-head">
+            <div>
+              <h3>الشعب</h3>
+              <p>إدارة شعب الصفوف (أ/ب/ج…)</p>
+            </div>
+
+            <div class="ss-panel-actions">
+              <div class="ss-field-inline">
+                <label>فلتر الصف</label>
+                <select id="fltGradeForSections"></select>
+              </div>
+              <button class="ss-btn ss-btn-primary" id="btnAddSection">
+                <i class="ri-add-line"></i> إضافة شعبة
+              </button>
+            </div>
+          </div>
+
+          <div class="ss-tableWrap">
+            <table class="ss-table">
+              <thead>
+                <tr>
+                  <th style="width: 70px">ID</th>
+                  <th>الشعبة</th>
+                  <th>الصف</th>
+                  <th style="width: 120px">السعة</th>
+                  <th style="width: 120px">الحالة</th>
+                  <th style="width: 170px">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="tbSections"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ss-panel" data-panel="subjects">
+          <div class="ss-panel-head">
+            <div>
+              <h3>المواد</h3>
+              <p>إضافة/تعديل/تعطيل المواد.</p>
+            </div>
+            <div class="ss-panel-actions">
+              <div class="ss-field-inline">
+                <label>بحث</label>
+                <input id="searchSubjects" placeholder="اكتب اسم مادة..." />
+              </div>
+              <button class="ss-btn ss-btn-primary" id="btnAddSubject">
+                <i class="ri-add-line"></i> إضافة مادة
+              </button>
+            </div>
+          </div>
+
+          <div class="ss-tableWrap">
+            <table class="ss-table">
+              <thead>
+                <tr>
+                  <th style="width: 70px">ID</th>
+                  <th>المادة</th>
+                  <th style="width: 120px">الحالة</th>
+                  <th style="width: 170px">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="tbSubjects"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ss-panel" data-panel="qualifications">
+          <div class="ss-panel-head">
+            <div>
+              <h3>تأهيل المدرسين (مواد المدرس)</h3>
+              <p>
+                هنا تتحكم في: <strong>أي مدرس يحق له تدريس أي مادة</strong>.
+                هذا هو الذي يحدد من يظهر داخل سيلكت “تعيين المدرسين”.
+              </p>
+            </div>
+            <button class="ss-btn ss-btn-primary" id="btnSaveQual" disabled>
+              <i class="ri-save-3-line"></i> حفظ التأهيل
+            </button>
+          </div>
+
+          <div class="ss-curr">
+            <div class="ss-curr-filters">
+              <div class="ss-field">
+                <label>المرحلة</label>
+                <select id="qualStage"></select>
+              </div>
+
+              <div class="ss-field">
+                <label>الصف</label>
+                <select id="qualGrade"></select>
+              </div>
+
+              <div class="ss-field">
+                <label>المادة</label>
+                <select id="qualSubject"></select>
+              </div>
+
+              <div class="ss-field ss-field-wide">
+                <label>بحث مدرس</label>
+                <input id="qualSearch" placeholder="ابحث باسم المدرس..." />
+              </div>
+            </div>
+
+            <div class="ss-curr-body">
+              <div class="ss-curr-left">
+                <div class="ss-mini">
+                  <div class="ss-mini-title">ملخص</div>
+                  <div class="ss-mini-row">
+                    <span>العناصر المفعلة</span>
+                    <strong id="qualCount">0</strong>
+                  </div>
+                  <div class="ss-mini-row">
+                    <span>إجمالي العناصر</span>
+                    <strong id="qualTotal">0</strong>
+                  </div>
+                  <div class="ss-mini-hint">
+                    ✅ فعِّل التأهيل ليظهر المدرس داخل سيلكت تعيين المدرسين.
+                  </div>
+                </div>
+              </div>
+
+              <div class="ss-curr-right">
+                <div id="qualTeachersBox" class="ss-subjectGrid">
+                  <div class="ss-empty">اختر مرحلة ثم صف ثم مادة…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="ss-panel" data-panel="periods">
+          <div class="ss-panel-head">
+            <div>
+              <h3>الفترات (الحصص)</h3>
+              <p>إدارة الفترات اليومية المستخدمة في الجداول.</p>
+            </div>
+            <button class="ss-btn ss-btn-primary" id="btnAddPeriod">
+              <i class="ri-add-line"></i> إضافة فترة
+            </button>
+          </div>
+
+          <div class="ss-tableWrap">
+            <table class="ss-table">
+              <thead>
+                <tr>
+                  <th style="width: 70px">ID</th>
+                  <th>اسم الفترة</th>
+                  <th style="width: 160px">الوقت</th>
+                  <th style="width: 120px">الترتيب</th>
+                  <th style="width: 170px">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="tbPeriods"></tbody>
+            </table>
+          </div>
+        </section>
+
+        <section class="ss-panel" data-panel="curriculum">
+          <div class="ss-panel-head">
+            <div>
+              <h3>منهج الصفوف (مواد كل صف)</h3>
+              <p>
+                اختر مرحلة ثم صف ثم فعّل المواد لهذا الصف. هذه المواد هي التي
+                تظهر في “تعيين المدرسين”.
+              </p>
+            </div>
+            <button class="ss-btn ss-btn-primary" id="btnSaveCurr" disabled>
+              <i class="ri-save-3-line"></i> حفظ منهج الصف
+            </button>
+          </div>
+
+          <div class="ss-curr">
+            <div class="ss-curr-filters">
+              <div class="ss-field">
+                <label>المرحلة</label>
+                <select id="curStage"></select>
+              </div>
+
+              <div class="ss-field">
+                <label>الصف</label>
+                <select id="curGrade"></select>
+              </div>
+
+              <div class="ss-field ss-field-wide">
+                <label>بحث مادة</label>
+                <input id="curSearch" placeholder="اكتب اسم المادة..." />
+              </div>
+            </div>
+
+            <div class="ss-curr-body">
+              <div class="ss-curr-left">
+                <div class="ss-mini">
+                  <div class="ss-mini-title">ملخص</div>
+                  <div class="ss-mini-row">
+                    <span>مواد الصف المفعلة</span>
+                    <strong id="curCount">0</strong>
+                  </div>
+                  <div class="ss-mini-row">
+                    <span>إجمالي المواد</span>
+                    <strong id="curTotal">0</strong>
+                  </div>
+                  <div class="ss-mini-hint">
+                    ✅ فعّل المواد المطلوبة فقط لتظهر في “تعيين المدرسين”.
+                  </div>
+                </div>
+              </div>
+
+              <div class="ss-curr-right">
+                <div id="curSubjectsBox" class="ss-subjectGrid">
+                  <div class="ss-empty">اختر مرحلة ثم صف…</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+<section class="ss-panel" data-panel="academic">
+  <div class="ss-panel-head">
+    <div>
+      <h3>الإعدادات الأكاديمية ونظام الدراسة</h3>
+      <p>تحديد أيام العمل الرسمية وسياسة رصد الدرجات والنجاح.</p>
+    </div>
+    <button class="ss-btn ss-btn-primary" id="btnSaveAcademic">
+      <i class="ri-save-3-line"></i> حفظ الإعدادات الأكاديمية
+    </button>
+  </div>
+
+  <div style="padding: 20px; display: flex; flex-direction: column; gap: 30px;">
+    
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+      <h4 style="margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+        <i class="ri-calendar-event-line"></i> نظام التقويم الدراسي
+      </h4>
+      
+      <div class="ss-field" style="max-width: 300px;">
+        <label>بداية الأسبوع الدراسي</label>
+        <select id="acadWeekStart">
+          <option value="saturday">السبت</option>
+          <option value="sunday">الأحد</option>
+          <option value="monday">الإثنين</option>
+        </select>
+      </div>
+
+      <div class="ss-field">
+        <label>أيام الدراسة الفعلية (أيام العمل)</label>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px;">
+          <label class="day-check"><input type="checkbox" name="workDays" value="sat" checked> <span>السبت</span></label>
+          <label class="day-check"><input type="checkbox" name="workDays" value="sun" checked> <span>الأحد</span></label>
+          <label class="day-check"><input type="checkbox" name="workDays" value="mon" checked> <span>الإثنين</span></label>
+          <label class="day-check"><input type="checkbox" name="workDays" value="tue" checked> <span>الثلاثاء</span></label>
+          <label class="day-check"><input type="checkbox" name="workDays" value="wed" checked> <span>الأربعاء</span></label>
+          <label class="day-check"><input type="checkbox" name="workDays" value="thu"> <span>الخميس</span></label>
+          <label class="day-check"><input type="checkbox" name="workDays" value="fri"> <span>الجمعة</span></label>
+        </div>
+      </div>
+    </div>
+
+   <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+  <h4 style="margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+    <i class="ri-numbers-line"></i> نظام رصد الدرجات والنجاح
+  </h4>
+
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+    <div style="padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+      <h5 style="margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+        الاختبارات الشهرية
+      </h5>
+
+      <div class="ss-field">
+        <label>درجة الاختبار الشهري الافتراضية</label>
+        <input type="number" id="acadMonthlyExamMax" value="20" min="1" step="1" placeholder="20">
+        <small style="color:#888;">تستخدم إذا لم تحدد الإدارة درجة خاصة للاختبار الشهري في الجدول.</small>
+      </div>
+    </div>
+
+    <div style="padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+      <h5 style="margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+        نصف العام الدراسي
+      </h5>
+
+      <div style="display: flex; gap: 15px;">
+        <div class="ss-field" style="flex: 1;">
+          <label>اختبار نصفي</label>
+          <input type="number" id="acadMidtermExamMax" value="30" min="1" step="1" placeholder="30">
+        </div>
+
+        <div class="ss-field" style="flex: 1;">
+          <label>محصلة نصفي</label>
+          <input type="number" id="acadMidtermMuhassalaMax" value="20" min="1" step="1" placeholder="20">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 15px;">
+        <div class="ss-field" style="flex: 1;">
+          <label>مجموع النصف</label>
+          <input type="number" id="acadMidMax" value="50" readonly>
+        </div>
+
+        <div class="ss-field" style="flex: 1;">
+          <label>درجة النجاح في النصف</label>
+          <input type="number" id="acadMidPass" value="20" min="0" step="1" placeholder="20">
+        </div>
+      </div>
+    </div>
+
+    <div style="padding: 15px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+      <h5 style="margin-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">
+        نهاية العام الدراسي
+      </h5>
+
+      <div style="display: flex; gap: 15px;">
+        <div class="ss-field" style="flex: 1;">
+          <label>اختبار نهائي</label>
+          <input type="number" id="acadFinalExamMax" value="30" min="1" step="1" placeholder="30">
+        </div>
+
+        <div class="ss-field" style="flex: 1;">
+          <label>محصلة نهائي</label>
+          <input type="number" id="acadFinalMuhassalaMax" value="20" min="1" step="1" placeholder="20">
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 15px;">
+        <div class="ss-field" style="flex: 1;">
+          <label>مجموع النهائي</label>
+          <input type="number" id="acadFinalTermMax" value="50" readonly>
+        </div>
+
+        <div class="ss-field" style="flex: 1;">
+          <label>المجموع الكلي</label>
+          <input type="number" id="acadFinalMax" value="100" readonly>
+        </div>
+      </div>
+
+      <div class="ss-field">
+        <label>درجة النجاح النهائية</label>
+        <input type="number" id="acadFinalPass" value="50" min="0" step="1" placeholder="50">
+      </div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</section>
+
+<section class="ss-panel" data-panel="system_finance">
+  <div class="ss-panel-head">
+    <div>
+      <h3>إعدادات النظام والمالية</h3>
+      <p>ضبط العملة الافتراضية، وتنسيق أرقام الفواتير وأكواد الطلاب.</p>
+    </div>
+    <button class="ss-btn ss-btn-primary" id="btnSaveFinance">
+      <i class="ri-save-3-line"></i> حفظ الإعدادات المالية
+    </button>
+  </div>
+
+  <div style="padding: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+    
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+      <h4 style="margin-bottom: 20px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+        <i class="ri-bank-card-line"></i> الإعدادات المالية
+      </h4>
+      
+      <div class="ss-field">
+        <label>العملة الافتراضية للمدرسة</label>
+        <select id="setCurrency">
+          <option value="YER">الريال اليمني (YER)</option>
+          <option value="SAR">الريال السعودي (SAR)</option>
+          <option value="USD">الدولار الأمريكي (USD)</option>
+        </select>
+      </div>
+
+      <div class="ss-field">
+        <label>بادئة أرقام الفواتير (Invoice Prefix)</label>
+        <input type="text" id="setInvoicePrefix" placeholder="مثلاً: INV-2026-" dir="ltr">
+        <small style="color: #888;">مثال: INV-2026-001</small>
+      </div>
+    </div>
+
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+      <h4 style="margin-bottom: 20px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+        <i class="ri-user-settings-line"></i> أكواد الطلاب والنظام
+      </h4>
+
+      <div class="ss-field">
+        <label>بادئة أكواد الطلاب (Student Prefix)</label>
+        <input type="text" id="setStudentPrefix" placeholder="مثلاً: STD-" dir="ltr">
+        <small style="color: #888;">سيظهر قبل رقم الطالب (مثلاً: STD-1001)</small>
+      </div>
+
+      <div class="ss-field">
+        <label>اللغة الافتراضية للتقارير</label>
+        <select id="setLanguage">
+          <option value="ar">العربية</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+    </div>
+
+  </div>
+</section>
+<section class="ss-panel" data-panel="portals">
+  <div class="ss-panel-head">
+    <div>
+      <h3>صلاحيات الدخول لبوابات النظام</h3>
+      <p>تفعيل أو إيقاف وصول المعلمين وأولياء الأمور للنظام مؤقتاً.</p>
+    </div>
+    <button class="ss-btn ss-btn-primary" id="btnSavePortals">
+      <i class="ri-save-3-line"></i> حفظ الصلاحيات
+    </button>
+  </div>
+
+  <div style="padding: 20px; max-width: 600px;">
+    
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
+        <div>
+          <h4 style="margin: 0 0 5px 0; color: #fff;"><i class="ri-presentation-line"></i> بوابة المعلمين</h4>
+          <p style="margin: 0; font-size: 13px; color: #888;">السماح للمعلمين بتسجيل الدخول لرصد الدرجات والغياب.</p>
+        </div>
+        <div class="ss-toggle is-on" role="switch" aria-checked="true" id="toggleTeacherPortal"></div>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <h4 style="margin: 0 0 5px 0; color: #fff;"><i class="ri-parent-line"></i> بوابة أولياء الأمور</h4>
+          <p style="margin: 0; font-size: 13px; color: #888;">السماح للآباء بالدخول لمتابعة أبنائهم والنتائج المالية.</p>
+        </div>
+        <div class="ss-toggle is-on" role="switch" aria-checked="true" id="toggleParentPortal"></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+      </div>
+    </main>
+  </div>
+
+  <div class="ss-modal" id="ssModal" aria-hidden="true">
+    <div class="ss-modal-dialog">
+      <div class="ss-modal-head">
+        <h3 id="ssModalTitle">نموذج</h3>
+        <button class="ss-icon" id="ssModalClose">×</button>
+      </div>
+      <div class="ss-modal-body" id="ssModalBody"></div>
+      <div class="ss-modal-foot" id="ssModalFoot"></div>
+    </div>
+  </div>
+</section>

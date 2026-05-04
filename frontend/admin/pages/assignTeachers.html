@@ -1,0 +1,77 @@
+<section id="assignTeachersPage" class="at-page">
+  <div class="at-header">
+    <div>
+      <h2 class="at-title">تعيين المدرسين</h2>
+      <p class="at-sub">اختر السنة/الترم/الشعبة ثم عيّن مدرس لكل مادة.</p>
+    </div>
+
+    <div class="at-actions">
+      <button id="atReload" class="at-btn at-btn-ghost">
+        <i class="ri-refresh-line"></i> تحديث
+      </button>
+      <button id="atSave" class="at-btn at-btn-primary" disabled>
+        <i class="ri-save-3-line"></i> حفظ التعيينات
+      </button>
+    </div>
+  </div>
+
+  <div class="at-filters">
+    <div class="at-field">
+      <label>السنة الدراسية</label>
+      <select id="atYear"></select>
+    </div>
+
+    <div class="at-field">
+      <label>الترم</label>
+      <select id="atTerm">
+        <option value="1">الترم الأول</option>
+        <option value="2">الترم الثاني</option>
+      </select>
+    </div>
+
+    <div class="at-field">
+      <label>المرحلة</label>
+      <select id="atStage"></select>
+    </div>
+
+    <div class="at-field">
+      <label>الصف</label>
+      <select id="atGrade"></select>
+    </div>
+
+    <div class="at-field">
+      <label>الشعبة</label>
+      <select id="atSection"></select>
+    </div>
+
+    <div class="at-field at-field-wide">
+      <label>بحث مادة</label>
+      <input id="atSearch" type="text" placeholder="اكتب اسم المادة..." />
+    </div>
+  </div>
+
+  <div class="at-summary" id="atSummary">
+    اختر السنة/الترم/الشعبة لعرض التعيينات.
+  </div>
+
+  <div class="at-tableWrap">
+    <table class="at-table">
+      <thead>
+        <tr>
+          <th style="width: 44px">#</th>
+          <th>المادة</th>
+          <th>المدرس المعيّن</th>
+          <th style="width: 120px">الحالة</th>
+        </tr>
+      </thead>
+      <tbody id="atTbody">
+        <tr><td colspan="4" class="at-empty">لا توجد بيانات بعد</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="at-note">
+    <i class="ri-information-line"></i>
+    ملاحظة: النظام يمنع حفظ مدرس غير مؤهل للمادة أو مدرس موقوف.
+  </div>
+</section>

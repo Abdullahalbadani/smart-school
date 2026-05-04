@@ -1,0 +1,1500 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart School - مركز إدارة المدرسة</title>
+
+    <!-- خط عربي -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css"
+    />
+    <!-- ملف الـ CSS -->
+    <link rel="stylesheet" href="css/admin.css" />
+    <link rel="stylesheet" href="css/rbac.css" />
+    <link rel="stylesheet" href="css/viewstudent.css" />
+    <link rel="stylesheet" href="css/studentRenew.css" />
+    <link rel="stylesheet" href="css/fess-page.css" />
+    <link rel="stylesheet" href="css/weeklySchedule.css" />
+    <link rel="stylesheet" href="css/examSchedule.css" />
+    <link rel="stylesheet" href="css/staffRegister.css" />
+    <link rel="stylesheet" href="css/assignTeachers.css" />
+    <link rel="stylesheet" href="css/schoolSettings.css" />
+    <link rel="stylesheet" href="css/inbox.css" />
+    <link rel="stylesheet" href="css/notifications-log.css" />
+    <link rel="stylesheet" href="css/notifications-send.css" />
+  </head>
+  <body>
+    <div class="shell">
+      <!-- 🔷 الشريط العلوي -->
+      <header class="topbar">
+      <div class="brand">
+  <div class="brand-logo" style="overflow: hidden; display: flex; justify-content: center; align-items: center;">
+    <span id="default-logo-text">S</span>
+    
+    <img id="real-school-logo" src="" style="display: none; width: 100%; height: 100%; object-fit: cover;" alt="شعار المدرسة">
+  </div>
+  
+  <div class="brand-text">
+    <h1 id="real-school-name">Smart School</h1>
+    <span>مركز إدارة المدرسة</span>
+  </div>
+</div>
+
+        <!-- مركز الأوامر / البحث -->
+        <div class="command-center">
+          <span class="command-key">⌘K</span>
+          <input
+            type="text"
+            id="command-input"
+            placeholder="ابحث أو اكتب أمرًا: غياب اليوم، رسوم متأخرة، تقارير الطلاب..."
+          />
+        </div>
+
+        <!-- ساعة ديناميكية -->
+        <div class="live-clock">
+          <span id="clock-time">--:--:--</span>
+          <span id="clock-date">-- / -- / ----</span>
+        </div>
+
+        <div class="top-actions">
+          <!-- تبديل الثيم -->
+          <button
+            class="icon-btn"
+            id="theme-toggle"
+            title="الوضع الليلي / النهاري"
+          >
+            <i class="ri-moon-line" aria-hidden="true"></i>
+          </button>
+
+          <!-- إشعارات (شكل فقط) -->
+     <!-- إشعارات (عداد فقط + فتح صندوق الوارد) -->
+<button
+  class="icon-btn icon-btn--notify"
+  id="navbar-notifications-btn"
+  title="صندوق الوارد"
+  type="button"
+  data-permission="notify.inbox"
+  aria-label="صندوق الوارد"
+>
+  <i class="ri-notification-3-line" aria-hidden="true"></i>
+
+  <!-- عداد الإشعارات غير المقروءة -->
+  <span
+    id="navbar-notifications-badge"
+    class="notify-badge"
+    aria-hidden="true"
+  >0</span>
+</button>
+
+          <!-- حساب المستخدم -->
+          <div class="account-wrapper">
+            <button
+              class="user-pill"
+              id="account-menu-toggle"
+              title="حساب المستخدم"
+            >
+              <span class="avatar" id="navbar-avatar-letter">م</span>
+              <span class="user-info">
+                <strong id="navbar-username">أ. مدير المدرسة</strong>
+                <small id="navbar-role">مدير عام المدرسة</small>
+              </span>
+              <span class="user-arrow">▾</span>
+            </button>
+
+            <!-- منيو الحساب -->
+            <div class="account-dropdown" id="account-dropdown">
+              <button class="account-item" id="open-profile-modal">
+                <i class="ri-user-3-line" aria-hidden="true"></i>
+                الملف الشخصي
+              </button>
+              <button class="account-item" id="open-change-password-modal">
+                <i class="ri-lock-password-line" aria-hidden="true"></i>
+                تغيير كلمة المرور
+              </button>
+              <button class="account-item" id="open-change-email-modal">
+                <i class="ri-mail-line" aria-hidden="true"></i>
+                تغيير البريد الإلكتروني
+              </button>
+              <hr />
+              <button class="account-item account-item--logout" id="logout-btn">
+                <i class="ri-logout-box-r-line" aria-hidden="true"></i>
+                تسجيل الخروج
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- 🟣 الهيرو (لوحة الداشبورد الرئيسية – ثابتة) -->
+      <section class="hero" id="home-hero">
+        <div class="hero-main">
+          <div class="hero-text">
+            <p class="hero-kicker" id="hero-day-label">الملخص التنفيذي لليوم</p>
+            <p class="hero-sub">
+              صباح الخير <i class="ri-hand-heart-line" aria-hidden="true"></i>،
+              أمامك ملخص تنفيذي لليوم الدراسي الحالي في مدرسة النور الأهلية:
+              الحضور، الرسوم، والملفات التي تحتاج إلى متابعتك المباشرة على مستوى
+              المدرسة.
+            </p>
+
+            <div class="hero-chips">
+              <div class="chip">
+                <span class="chip-label">نسبة الحضور حتى الآن</span>
+                <span class="chip-value" id="chip-attendance">96٪</span>
+              </div>
+              <div class="chip">
+                <span class="chip-label">إجمالي الرسوم المتأخرة</span>
+                <span class="chip-value chip-danger" id="chip-fees"
+                  >84,500 ر.س</span
+                >
+              </div>
+              <div class="chip">
+                <span class="chip-label">ملفات بانتظار اعتمادك</span>
+                <span class="chip-value chip-warn" id="chip-requests">5</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- دائرة المراقبة -->
+          <div class="hero-orbit">
+            <div class="orbit-main">
+              <div class="orbit-number" id="orbit-students">...</div>
+              <div class="orbit-label">طالب مسجَّل هذا الفصل</div>
+            </div>
+            <div class="orbit-pill orbit-pill--green">
+              <span class="orbit-pill-label">عدد المعلمين</span>
+              <span class="orbit-pill-value" id="orbit-teachers">...</span>
+            </div>
+            <div class="orbit-pill orbit-pill--amber">
+              <span class="orbit-pill-label">عدد الفصول الدراسية</span>
+              <span class="orbit-pill-value" id="orbit-classes">...</span>
+            </div>
+            <div class="orbit-glow"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 🧩 الشاشات (Dashboard + الأقسام الرئيسية) -->
+      <main class="screens">
+        <!-- 🏠 شاشة الداشبورد -->
+        <section id="screen-dashboard" class="screen is-active">
+          <div class="grid">
+            <!-- مؤشرات اليوم -->
+            <section class="panel panel-kpis">
+              <div class="panel-header">
+                <h3>مؤشرات اليوم للمدير</h3>
+                <span class="panel-tag">Real-time</span>
+              </div>
+              <div class="kpis">
+                <div class="kpi">
+                  <div class="kpi-header">
+                    <span class="kpi-label">الطلاب المتغيبون اليوم</span>
+                    <span class="kpi-trend kpi-trend--up">+8%</span>
+                  </div>
+                  <div class="kpi-value">62 طالب</div>
+                  <div class="kpi-bar">
+                    <div class="kpi-bar-fill" style="width: 65%"></div>
+                  </div>
+                  <p class="kpi-sub">
+                    أعلى غياب: الصف 3/أ · 11 طالب متغيب يحتاجون متابعة.
+                  </p>
+                </div>
+
+                <div class="kpi">
+                  <div class="kpi-header">
+                    <span class="kpi-label">إنهاء إدخال الدرجات</span>
+                    <span class="kpi-trend kpi-trend--ok">+5%</span>
+                  </div>
+                  <div class="kpi-value">82٪</div>
+                  <div class="kpi-bar">
+                    <div class="kpi-bar-fill" style="width: 82%"></div>
+                  </div>
+                  <p class="kpi-sub">بقيت 4 مواد لم يكتمل إدخال درجاتها.</p>
+                </div>
+
+                <div class="kpi">
+                  <div class="kpi-header">
+                    <span class="kpi-label">سداد الرسوم لهذا الشهر</span>
+                    <span class="kpi-trend kpi-trend--ok">+6%</span>
+                  </div>
+                  <div class="kpi-value">74٪</div>
+                  <div class="kpi-bar">
+                    <div class="kpi-bar-fill" style="width: 74%"></div>
+                  </div>
+                  <p class="kpi-sub">
+                    تم سداد الرسوم لـ 31 طالب خلال الأسبوع الحالي.
+                  </p>
+                </div>
+
+                <div class="kpi">
+                  <div class="kpi-header">
+                    <span class="kpi-label">طلبات أولياء الأمور المفتوحة</span>
+                    <span class="kpi-trend kpi-trend--up">+2</span>
+                  </div>
+                  <div class="kpi-value">11 طلب</div>
+                  <div class="kpi-bar">
+                    <div
+                      class="kpi-bar-fill kpi-bar-fill--danger"
+                      style="width: 55%"
+                    ></div>
+                  </div>
+                  <p class="kpi-sub">
+                    4 طلبات تحتاج قرارك النهائي اليوم قبل الساعة 2 ظهرًا.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <!-- الخط الزمني -->
+     <section class="panel panel-timeline">
+  <div class="panel-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+    
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <h3 style="margin: 0;">سجل النشاطات المباشر</h3>
+      
+      <input type="date" id="activity-date-filter" 
+             style="border-radius: 8px; border: 1px solid var(--border-soft); background: var(--bg-panel-soft); color: var(--text-main); padding: 4px 10px; font-size: 11.5px; outline: none; cursor: pointer;">
+    </div>
+
+    <button class="text-btn" onclick="window.location.href='/admin/activity-logs.html'">
+      عرض السجل الكامل
+    </button>
+    
+  </div>
+  
+  <div class="timeline" id="live-activity-timeline">
+    <div style="text-align: center; padding: 20px; color: #888;">
+      <i class="fas fa-spinner fa-spin"></i> جاري جلب النشاطات...
+    </div>
+  </div>
+</section>
+
+            <!-- كانبان -->
+            <section class="panel panel-kanban">
+              <div class="panel-header">
+                <h3>مهام تحتاج قرار المدير</h3>
+                <span class="panel-tag panel-tag--amber">Focus</span>
+              </div>
+              <div class="kanban">
+                <div class="kanban-column">
+                  <h4>عاجلة</h4>
+                  <div class="task task--danger">
+                    <span class="task-title">
+                      ولي أمر يطلب مقابلة عاجلة بخصوص سلوك طالب في الصف 2/ج.
+                    </span>
+                    <span class="task-meta"
+                      >الإرشاد الطلابي · اليوم 10:30 ص</span
+                    >
+                  </div>
+                  <div class="task task--danger">
+                    <span class="task-title">
+                      اعتماد إيقاف مؤقت لطالبة بسبب تجاوز لائحة السلوك (اقتراح
+                      من لجنة السلوك).
+                    </span>
+                    <span class="task-meta">لجنة السلوك · بانتظار توقيعك</span>
+                  </div>
+                </div>
+                <div class="kanban-column">
+                  <h4>قيد المتابعة</h4>
+                  <div class="task task--warn">
+                    <span class="task-title">
+                      طلب تحويل طالب من المسار العام إلى المسار الدولي بداية
+                      الفصل القادم.
+                    </span>
+                    <span class="task-meta"
+                      >ولي الأمر · بانتظار قرار المدير</span
+                    >
+                  </div>
+                  <div class="task task--warn">
+                    <span class="task-title">
+                      مراجعة خطة الدعم الأكاديمي لطلاب منخفضي التحصيل في
+                      الرياضيات بالمرحلة المتوسطة.
+                    </span>
+                    <span class="task-meta">وكيل الشؤون التعليمية</span>
+                  </div>
+                </div>
+                <div class="kanban-column">
+                  <h4>اكتملت</h4>
+                  <div class="task task--ok">
+                    <span class="task-title">
+                      اعتماد نتائج منتصف الفصل لجميع المراحل الدراسية.
+                    </span>
+                    <span class="task-meta">تم الاعتماد · أمس 03:15 م</span>
+                  </div>
+                  <div class="task task--ok">
+                    <span class="task-title">
+                      إغلاق بلاغ تعطل معملي الحاسب الآلي بعد إتمام الصيانة.
+                    </span>
+                    <span class="task-meta">قسم التقنية · تم التنفيذ</span>
+                  </div>
+                </div>
+              </div>
+            </section>
+<!-- ✅ أذونات اليوم (مرئي في الرئيسية) -->
+<section class="panel panel-permissions" id="admPermWidget">
+  <div class="panel-header">
+    <h3>أذونات اليوم</h3>
+
+    <div class="admPermControls">
+      <input type="date" id="admPermDate" class="admPermInput" />
+      <select id="admPermFilter" class="admPermInput">
+        <option value="PENDING">بانتظار</option>
+        <option value="APPROVED">مقبول</option>
+        <option value="REJECTED">مرفوض</option>
+        <option value="ALL">الكل</option>
+      </select>
+
+      <button type="button" class="text-btn" id="admPermRefresh">
+        تحديث
+      </button>
+    </div>
+  </div>
+
+  <div class="admPermStats" id="admPermStats"></div>
+
+  <div class="admPermBody">
+    <div class="admPermEmpty" id="admPermEmpty" style="display:none;">
+      <i class="ri-inbox-2-line" aria-hidden="true"></i>
+      <div>
+        <strong>لا توجد طلبات</strong>
+        <div class="meta">غيّر التاريخ أو الفلتر.</div>
+      </div>
+    </div>
+
+    <div class="admPermTableWrap">
+      <table class="admPermTable">
+        <thead>
+          <tr>
+            <th>الطالب</th>
+            <th>التاريخ</th>
+            <th>النوع</th>
+            <th>السبب</th>
+            <th>الحالة</th>
+            <th>إجراء</th>
+          </tr>
+        </thead>
+        <tbody id="admPermTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+            <!-- خريطة نبض المدرسة -->
+            <section class="panel panel-heat">
+              <div class="panel-header">
+                <h3>خريطة سريعة لنبض المدرسة</h3>
+                <button
+                  class="text-btn"
+                  onclick="Dashboard.switchScreen('screen-reports')"
+                >
+                  عرض التقارير العامة
+                </button>
+              </div>
+              <div class="heat-body">
+                <div class="heat-legend">
+                  <p>
+                    كل نقطة تمثل صفًا دراسيًا اليوم، واللون يوضح الحالة العامة
+                    للصف من حيث الحضور والدرجات والسلوك:
+                  </p>
+                  <ul>
+                    <li>
+                      <span class="pill pill--ok"></span>
+                      وضع مستقر (حضور جيد ودرجات ضمن المعدل).
+                    </li>
+                    <li>
+                      <span class="pill pill--warn"></span>
+                      ارتفاع ملحوظ في الغياب أو وجود ملاحظات سلوكية.
+                    </li>
+                    <li>
+                      <span class="pill pill--danger"></span>
+                      حاجة لتدخل إداري (انخفاض درجات أو غياب متكرر).
+                    </li>
+                  </ul>
+                </div>
+                <div class="heat-map">
+                  <span class="heat-dot heat-dot--ok"></span>
+                  <span class="heat-dot heat-dot--warn"></span>
+                  <span class="heat-dot heat-dot--danger"></span>
+                  <span class="heat-dot heat-dot--ok"></span>
+                  <span class="heat-dot heat-dot--warn"></span>
+                  <span class="heat-dot heat-dot--danger"></span>
+                  <span class="heat-dot heat-dot--ok"></span>
+                  <span class="heat-dot heat-dot--ok"></span>
+                  <span class="heat-dot heat-dot--warn"></span>
+                  <span class="heat-dot heat-dot--danger"></span>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- 👨‍🎓 التسجيل والقبول -->
+        <section
+          id="screen-admission"
+          class="screen"
+          data-any-permission="admission.view_students,admission.create_student,admission.renew_student"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>التسجيل والقبول</h3>
+            </div>
+            <div class="modules-grid">
+              <article
+                class="module-card"
+                data-permission="admission.view_students"
+              >
+                <div class="module-icon">
+                  <i class="ri-team-line" aria-hidden="true"></i>
+                </div>
+                <h3>عرض الطلاب</h3>
+                <p>عرض جميع الطلاب في جميع الاقسام</p>
+
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('studentsList','عرض الطلاب')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="admission.create_student"
+              >
+                <div class="module-icon">
+                  <i class="ri-user-add-line" aria-hidden="true"></i>
+                </div>
+                <h3>تسجيل طالب جديد</h3>
+                <p>إضافة طالب جديد مع جميع بياناته الأكاديمية والشخصية.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('studentRegister','تسجيل طالب جديد')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="admission.renew_student"
+              >
+                <div class="module-icon">
+                  <i class="ri-refresh-line" aria-hidden="true"></i>
+                </div>
+                <h3>تسجيل المستمرين</h3>
+                <p>تجديد تسجيل الطلاب المستمرين للعام أو الفصل الجديد.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('studentRenew','تسجيل المستمرين')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 👨‍💼 الموظفون -->
+        <section
+          id="screen-staff"
+          class="screen"
+          data-any-permission="staff.create_employee,staff.assign_teacher,staff.view_employees,staff.update_employee,staff.delete_employee"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>الموظفون</h3>
+            </div>
+            <div class="modules-grid">
+              <article
+                class="module-card"
+                data-permission="staff.create_employee"
+              >
+                <div class="module-icon">
+                  <i class="ri-briefcase-line" aria-hidden="true"></i>
+                </div>
+                <h3>تسجيل الموظفين</h3>
+                <p>إضافة وتحديث بيانات جميع الموظفين في المدرسة.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('staffRegister','تسجيل الموظفين')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="staff.assign_teacher"
+              >
+                <div class="module-icon">
+                  <i class="ri-user-star-line" aria-hidden="true"></i>
+                </div>
+                <h3>تعيين المدرسين</h3>
+                <p>توزيع وتعيين المعلمين على الفصول والمواد.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('assignTeachers','تعيين المدرسين')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 📅 جداول المدرسة -->
+        <section
+          id="screen-timetable"
+          class="screen"
+          data-any-permission="timetable.view,timetable.manage,timetable.delete"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>جداول المدرسة</h3>
+            </div>
+            <div class="modules-grid">
+              <article class="module-card" data-permission="timetable.view">
+                <div class="module-icon">
+                  <i class="ri-calendar-schedule-line" aria-hidden="true"></i>
+                </div>
+                <h3>جداول الحصص الأسبوعية</h3>
+                <p>إدارة جداول الحصص لجميع الصفوف.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('weeklySchedule','جداول الحصص الأسبوعية')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="timetable.manage">
+                <div class="module-icon">
+                  <i class="ri-file-list-3-line" aria-hidden="true"></i>
+                </div>
+                <h3>جداول الامتحانات</h3>
+                <p>ضبط جداول الاختبارات لجميع المراحل.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('examSchedule','جداول الامتحانات')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- ✅ الحضور والغياب -->
+        <section
+          id="screen-attendance"
+          class="screen"
+          data-any-permission="attendance.barcode,attendance.manual,attendance.reports"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>الحضور والغياب</h3>
+            </div>
+            <div class="modules-grid">
+              <article class="module-card" data-permission="attendance.barcode">
+                <div class="module-icon">
+                  <i class="ri-qr-scan-2-line" aria-hidden="true"></i>
+                </div>
+                <h3>تسجيل الحضور </h3>
+                <p>  لتسجيل حضور المعلمين .</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('barcodeAttendance','تسجيل الحضور باركود')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="attendance.manual">
+                <div class="module-icon">
+                  <i class="ri-edit-line" aria-hidden="true"></i>
+                </div>
+                <h3>  اذونات المعلمين</h3>
+                <p>  ادارة الاذونات   .</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('manualAttendance','تسجيل الحضور يدويًا')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="attendance.reports">
+                <div class="module-icon">
+                  <i class="ri-bar-chart-2-line" aria-hidden="true"></i>
+                </div>
+                <h3>تقارير الحضور</h3>
+                <p>عرض تقارير تفصيلية عن الحضور والغياب.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('attendanceReports','تقارير الحضور')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 🔔 الإشعارات -->
+        <section
+          id="screen-notify"
+          class="screen"
+          data-any-permission="notify.create,notify.view_log"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>الإشعارات</h3>
+            </div>
+            <div class="modules-grid">
+              <article class="module-card" data-permission="notify.create">
+                <div class="module-icon">
+                  <i class="ri-notification-3-line" aria-hidden="true"></i>
+                </div>
+                <h3>إنشاء إشعار</h3>
+                <p>إرسال إشعارات للطلاب وأولياء الأمور والمعلمين.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('createNotify','إنشاء إشعار')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="notify.view_log">
+                <div class="module-icon">
+                  <i class="ri-history-line" aria-hidden="true"></i>
+                </div>
+                <h3>سجل الإشعارات</h3>
+                <p>متابعة الإشعارات التي تم إرسالها.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('notifyLog','سجل الإشعارات')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="notify.inbox">
+                <div class="module-icon">
+                  <i class="ri-inbox-line" aria-hidden="true"></i>
+                </div>
+                <h3>صندوق الوارد</h3>
+                <p>استعراض رسائل الوارد من النظام.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('inbox','صندوق الوارد')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 💰 الرسوم -->
+        <section
+          id="screen-fees"
+          class="screen"
+          data-any-permission="fees.pay,fees.reports"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>الرسوم الدراسية</h3>
+            </div>
+            <div class="modules-grid">
+              <article class="module-card" data-permission="fees.pay">
+                <div class="module-icon">
+                  <i class="ri-bank-card-line" aria-hidden="true"></i>
+                </div>
+                <h3>سداد الرسوم</h3>
+                <p>تسجيل مدفوعات الطلاب وإدارتها.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('feesPay','سداد الرسوم')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="fees.reports">
+                <div class="module-icon">
+                  <i class="ri-line-chart-line" aria-hidden="true"></i>
+                </div>
+                <h3>تقارير الرسوم</h3>
+                <p>عرض تقارير مفصلة عن الرسوم والمدفوعات والمتأخرات.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('feesReports','تقارير الرسوم')"
+                >
+                  فتح
+                </button>
+              </article>
+              <article class="module-card" data-permission="Graphics-settings">
+                <div class="module-icon">
+                  <i class="ri-line-chart-line" aria-hidden="true"></i>
+                </div>
+                <h3>اعدادات الرسوم</h3>
+                <p>تحديد وعرض الاقساط وتحديد الرسوم</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('feesSettings','تقارير الرسوم')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 📊 التقارير العامة -->
+        <section
+          id="screen-reports"
+          class="screen"
+          data-any-permission="reports.student_data,reports.staff_data,reports.term_grades,reports.final_grades,reports.student_stats"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>التقارير العامة</h3>
+            </div>
+            <div class="modules-grid">
+              <article
+                class="module-card"
+                data-permission="reports.student_data"
+              >
+                <div class="module-icon">
+                  <i class="ri-graduation-cap-line" aria-hidden="true"></i>
+                </div>
+                <h3>بيانات الطلاب</h3>
+                <p>تصدير وعرض بيانات الطلاب حسب الصف أو المرحلة.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('studentData','بيانات الطلاب')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="reports.staff_data">
+                <div class="module-icon">
+                  <i class="ri-user-settings-line" aria-hidden="true"></i>
+                </div>
+                <h3>بيانات الموظفين</h3>
+                <p>عرض بيانات المعلمين والموظفين.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('staffData','بيانات الموظفين')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="reports.term_grades"
+              >
+                <div class="module-icon">
+                  <i class="ri-line-chart-line" aria-hidden="true"></i>
+                </div>
+                <h3>تقارير الدرجات الفصلية</h3>
+                <p>تقارير الدرجات الفصلية حسب المادة والصف.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('termGrades','تقارير الدرجات الفصلية')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="reports.final_grades"
+              >
+                <div class="module-icon">
+                  <i class="ri-medal-2-line" aria-hidden="true"></i>
+                </div>
+                <h3>تقارير الدرجات النهائية</h3>
+                <p>نتائج نهاية العام الدراسي.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('finalGrades','تقارير الدرجات النهائية')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="reports.student_stats"
+              >
+                <div class="module-icon">
+                  <i class="ri-pie-chart-2-line" aria-hidden="true"></i>
+                </div>
+                <h3>إحصائيات الطلاب</h3>
+                <p>ملخصات وإحصائيات عامة عن أداء وحضور الطلاب.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('studentStats','إحصائيات الطلاب')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 🧮 الكنترول -->
+        <section
+          id="screen-control"
+          class="screen"
+          data-any-permission="control.monthly_work,control.term_work,control.print_certificates,control.final_grades"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>الكنترول</h3>
+            </div>
+            <div class="modules-grid">
+              <article
+                class="module-card"
+                data-permission="control.monthly_work"
+              >
+                <div class="module-icon">
+                  <i class="ri-calculator-line" aria-hidden="true"></i>
+                </div>
+                <h3>تسجيل الأعمال الشهرية</h3>
+                <p>إدخال وتحديث الأعمال الشهرية للطلاب.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('monthlyWork','تسجيل الأعمال الشهرية')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="control.term_work">
+                <div class="module-icon">
+                  <i class="ri-file-text-line" aria-hidden="true"></i>
+                </div>
+                <h3>تسجيل الأعمال الفصلية</h3>
+                <p>إدخال درجات الأعمال الفصلية للمواد.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('monthlyReports','تسجيل الأعمال الفصلية')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="control.print_certificates"
+              >
+                <div class="module-icon">
+                  <i class="ri-award-line" aria-hidden="true"></i>
+                </div>
+                <h3>شهادات شهرية</h3>
+                <p>إصدار شهادات أعمال شهرية للطلاب.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('termWork','شهادات شهرية')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="control.print_certificates"
+              >
+                <div class="module-icon">
+                  <i class="ri-award-line" aria-hidden="true"></i>
+                </div>
+                <h3>شهادات فصلية</h3>
+                <p>إخراج شهادات درجات نهاية الفصل.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('termReports','شهادات فصلية')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="control.final_grades"
+              >
+                <div class="module-icon">
+                  <i class="ri-trophy-line" aria-hidden="true"></i>
+                </div>
+                <h3>نتائج نهاية الفصل</h3>
+                <p>عرض واعتماد نتائج نهاية الفصل الدراسي.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('termResults','نتائج نهاية الفصل')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="control.final_grades"
+              >
+                <div class="module-icon">
+                  <i class="ri-vip-crown-line" aria-hidden="true"></i>
+                </div>
+                <h3>نتائج نهاية العام</h3>
+                <p>عرض واعتماد النتائج النهائية للعام الدراسي.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('yearResults','نتائج نهاية العام')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 🛡 RBAC -->
+        <section
+          id="screen-rbac"
+          class="screen"
+          data-any-permission="rbac.manage_users,rbac.manage_roles,rbac.manage_permissions,rbac.manage_modules"
+        >
+          <div class="panel">
+            <div class="panel-header">
+              <h3>إدارة المستخدمين والصلاحيات</h3>
+            </div>
+            <div class="modules-grid">
+              <article class="module-card" data-permission="rbac.manage_users">
+                <div class="module-icon">
+                  <i class="ri-user-3-line" aria-hidden="true"></i>
+                </div>
+                <h3>المستخدمون</h3>
+                <p>إدارة حسابات المستخدمين وصلاحيات الدخول.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('rbac-users','المستخدمون')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card" data-permission="rbac.manage_roles">
+                <div class="module-icon">
+                  <i class="ri-shield-line" aria-hidden="true"></i>
+                </div>
+                <h3>الأدوار</h3>
+                <p>إنشاء وتعديل الأدوار وربطها بالصلاحيات.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('rbac-roles','الأدوار')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="rbac.manage_permissions"
+              >
+                <div class="module-icon">
+                  <i class="ri-lock-2-line" aria-hidden="true"></i>
+                </div>
+                <h3>الصلاحيات</h3>
+                <p>التحكم بالصلاحيات لكل دور في النظام.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('rbac-permissions','الصلاحيات')"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article
+                class="module-card"
+                data-permission="rbac.manage_modules"
+              >
+                <div class="module-icon">
+                  <i class="ri-apps-line" aria-hidden="true"></i>
+                </div>
+                <h3>الوحدات (Modules)</h3>
+                <p>تنظيم وحدات النظام وربطها بالأدوار والصلاحيات.</p>
+                <button
+                  class="primary-btn"
+                  onclick="Dashboard.openPage('rbac-modules','الوحدات (Modules)')"
+                >
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 👤 إعدادات الحساب -->
+        <section id="screen-account" class="screen">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>إعدادات الحساب</h3>
+            </div>
+            <div class="modules-grid">
+              <article class="module-card">
+                <div class="module-icon">
+                  <i class="ri-user-3-line" aria-hidden="true"></i>
+                </div>
+                <h3>الملف الشخصي</h3>
+                <p>عرض بيانات حسابك الحالي.</p>
+                <button class="primary-btn" id="open-profile-modal-card">
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card">
+                <div class="module-icon">
+                  <i class="ri-lock-password-line" aria-hidden="true"></i>
+                </div>
+                <h3>تغيير كلمة المرور</h3>
+                <p>تعديل كلمة المرور لتأمين حسابك.</p>
+                <button
+                  class="primary-btn"
+                  id="open-change-password-modal-card"
+                >
+                  فتح
+                </button>
+              </article>
+
+              <article class="module-card">
+                <div class="module-icon">
+                  <i class="ri-mail-line" aria-hidden="true"></i>
+                </div>
+                <h3>تغيير البريد الإلكتروني</h3>
+                <p>تحديث البريد المرتبط بحسابك.</p>
+                <button class="primary-btn" id="open-change-email-modal-card">
+                  فتح
+                </button>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <!-- 🌐 إعدادات الموقع -->
+        <section id="screen-site" class="screen">
+          <div class="panel">
+            <div class="panel-header">
+              <h3>إعدادات الموقع</h3>
+            </div>
+            <div class="modules-grid">
+              <article class="module-card">
+                <div class="module-icon">
+                  <i class="ri-contrast-2-line" aria-hidden="true"></i>
+                </div>
+                <h3>الوضع الليلي / النهاري</h3>
+                <p>تبديل مظهر النظام بين الوضع الليلي والنهاري.</p>
+                <button class="primary-btn" id="theme-toggle-card">
+                  تبديل الوضع
+                </button>
+              </article>
+
+         <article class="module-card" data-permission="Settings.School-Settings">
+  <div class="module-icon">
+    <i class="ri-global-line" aria-hidden="true"></i>
+  </div>
+  <h3>إعدادات المدرسة</h3>
+  <p>التحكم بالسنوات، المراحل، الصفوف، الشعب، المواد، ومنهج الصفوف.</p>
+  <button
+    class="primary-btn"
+    onclick="Dashboard.openPage('schoolSettings','إعدادات المدرسة')"
+  >
+    فتح
+  </button>
+</article>
+
+            </div>
+          </div>
+        </section>
+
+        <!-- 🧩 شاشة محتوى الصفحات التفصيلية -->
+        <section id="screen-page" class="screen">
+          <div class="panel">
+            <div class="panel-header">
+              <button class="text-btn" id="screen-page-back">← العودة</button>
+              <h3 id="screen-page-title">تفاصيل</h3>
+            </div>
+            <div
+              id="screen-page-content"
+              class="panel-body panel-body-page"
+            ></div>
+          </div>
+        </section>
+      </main>
+
+      <!-- 🔻 الشريط السفلي (القوائم الرئيسية + زر منيو للباقي) -->
+      <nav class="bottom-nav">
+        <button
+          class="bottom-item bottom-item--active"
+          data-target="screen-dashboard"
+        >
+          <span><i class="ri-home-5-line" aria-hidden="true"></i></span>
+          <span>الرئيسية</span>
+        </button>
+        <button
+          class="bottom-item"
+          data-target="screen-admission"
+          data-any-permission="admission.view_students,admission.create_student,admission.renew_student"
+        >
+          <span><i class="ri-user-add-line" aria-hidden="true"></i></span>
+          <span>التسجيل</span>
+        </button>
+        <button
+          class="bottom-item"
+          data-target="screen-timetable"
+          data-any-permission="timetable.view,timetable.manage,timetable.delete"
+        >
+          <span
+            ><i class="ri-calendar-schedule-line" aria-hidden="true"></i
+          ></span>
+          <span>اليوم الدراسي</span>
+        </button>
+        <button
+          class="bottom-item"
+          data-target="screen-fees"
+          data-any-permission="fees.pay,fees.reports"
+        >
+          <span><i class="ri-wallet-3-line" aria-hidden="true"></i></span>
+          <span>الرسوم</span>
+        </button>
+        <!-- زر المنيو لباقي القوائم الرئيسية -->
+        <button class="bottom-item bottom-item--menu" id="main-menu-button">
+          <span><i class="ri-menu-2-line" aria-hidden="true"></i></span>
+          <span>القائمة</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- 🧾 شيت القائمة الرئيسية -->
+    <div class="main-menu-sheet" id="main-menu-sheet">
+      <div class="main-menu-sheet-inner">
+        <div class="sheet-header">
+          <h3>العناصر الرئيسية</h3>
+          <button class="sheet-close" id="main-menu-close">×</button>
+        </div>
+        <div class="sheet-grid">
+          <button class="sheet-item" data-target="screen-dashboard">
+            <i class="ri-home-5-line" aria-hidden="true"></i> الرئيسية
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-admission"
+            data-any-permission="admission.view_students,admission.create_student,admission.renew_student"
+          >
+            <i class="ri-user-add-line" aria-hidden="true"></i> التسجيل والقبول
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-staff"
+            data-any-permission="staff.create_employee,staff.assign_teacher,staff.view_employees,staff.update_employee,staff.delete_employee"
+          >
+            <i class="ri-briefcase-line" aria-hidden="true"></i> الموظفون
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-timetable"
+            data-any-permission="timetable.view,timetable.manage,timetable.delete"
+          >
+            <i class="ri-calendar-schedule-line" aria-hidden="true"></i> جداول
+            المدرسة
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-attendance"
+            data-any-permission="attendance.barcode,attendance.manual,attendance.reports"
+          >
+            <i class="ri-checkbox-circle-line" aria-hidden="true"></i> الحضور
+            والغياب
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-notify"
+            data-any-permission="notify.create,notify.view_log"
+          >
+            <i class="ri-notification-3-line" aria-hidden="true"></i> الإشعارات
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-control"
+            data-any-permission="control.monthly_work,control.term_work,control.print_certificates,control.final_grades"
+          >
+            <i class="ri-calculator-line" aria-hidden="true"></i> الكنترول
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-fees"
+            data-any-permission="fees.pay,fees.reports"
+          >
+            <i class="ri-wallet-3-line" aria-hidden="true"></i> الرسوم الدراسية
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-reports"
+            data-any-permission="reports.student_data,reports.staff_data,reports.term_grades,reports.final_grades,reports.student_stats"
+          >
+            <i class="ri-bar-chart-2-line" aria-hidden="true"></i> التقارير
+            العامة
+          </button>
+          <button
+            class="sheet-item"
+            data-target="screen-rbac"
+            data-any-permission="rbac.manage_users,rbac.manage_roles,rbac.manage_permissions,rbac.manage_modules"
+          >
+            <i class="ri-shield-line" aria-hidden="true"></i> المستخدمون
+            والصلاحيات
+          </button>
+          <button class="sheet-item" data-target="screen-account">
+            <i class="ri-user-3-line" aria-hidden="true"></i> إعدادات الحساب
+          </button>
+          <button class="sheet-item" data-target="screen-site">
+            <i class="ri-settings-3-line" aria-hidden="true"></i> إعدادات الموقع
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ مودال عام (Overlay) -->
+    <div id="modal-overlay" class="modal-overlay"></div>
+
+    <!-- 👤 مودال الملف الشخصي -->
+    <div class="modal" id="profile-modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-user-3-line" aria-hidden="true"></i> الملف الشخصي
+          </h3>
+          <button class="modal-close" data-close-modal>×</button>
+        </div>
+        <div class="modal-body">
+          <p>
+            <strong>الاسم:</strong>
+            <span id="profile-name">أ. مدير المدرسة</span>
+          </p>
+          <p>
+            <strong>البريد الإلكتروني:</strong>
+            <span id="profile-email">principal@school.edu</span>
+          </p>
+          <p>
+            <strong>الدور:</strong>
+            <span id="profile-role">مدير عام المدرسة</span>
+          </p>
+        </div>
+        <div class="modal-footer">
+          <button class="primary-btn" data-close-modal>إغلاق</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔒 مودال تغيير كلمة المرور -->
+    <div class="modal" id="change-password-modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-lock-password-line" aria-hidden="true"></i> تغيير كلمة
+            المرور
+          </h3>
+          <button class="modal-close" data-close-modal>×</button>
+        </div>
+        <div class="modal-body">
+          <form id="changePasswordForm" class="form-card">
+            <label>
+              <span>كلمة المرور الحالية</span>
+              <input type="password" id="currentPassword" required />
+            </label>
+            <label>
+              <span>كلمة المرور الجديدة</span>
+              <input type="password" id="newPassword" required />
+            </label>
+            <label>
+              <span>تأكيد كلمة المرور الجديدة</span>
+              <input type="password" id="confirmNewPassword" required />
+            </label>
+            <button type="submit" class="primary-btn">حفظ التغييرات</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- 📧 مودال تغيير البريد -->
+    <div class="modal" id="change-email-modal">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <h3>
+            <i class="ri-mail-line" aria-hidden="true"></i> تغيير البريد
+            الإلكتروني
+          </h3>
+          <button class="modal-close" data-close-modal>×</button>
+        </div>
+        <div class="modal-body">
+          <form id="changeEmailForm" class="form-card">
+            <label>
+              <span>البريد الحالي</span>
+              <input
+                type="email"
+                id="currentEmail"
+                value="principal@school.edu"
+                disabled
+              />
+            </label>
+            <label>
+              <span>البريد الجديد</span>
+              <input type="email" id="newEmail" required />
+            </label>
+            <button type="submit" class="primary-btn">حفظ البريد الجديد</button>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ أيقونة المساعد -->
+    <!-- زر فتح المساعد الذكي -->
+    <div id="ai-assistant-button" title="المساعد الذكي">
+      <span class="ai-assistant-icon">
+        <i class="ri-message-3-line" aria-hidden="true"></i>
+      </span>
+    </div>
+
+    <!-- نافذة المساعد الذكي -->
+    <div id="ai-assistant-chat" dir="rtl">
+      <div class="ai-chat-header">
+        <div class="ai-chat-header-left">
+          <div class="ai-avatar">
+            <span>ذ</span>
+          </div>
+          <div>
+            <div class="ai-title">المساعد الذكي</div>
+            <div class="ai-status">
+              <span class="ai-status-dot"></span>
+              متصل الآن
+            </div>
+          </div>
+        </div>
+        <div class="ai-chat-header-actions">
+          <button id="ai-chat-clear" title="مسح المحادثة">
+            <i class="ri-delete-bin-6-line" aria-hidden="true"></i>
+          </button>
+          <button id="ai-chat-close" title="إغلاق">
+            <i class="ri-close-line" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="ai-chat-messages" id="ai-chat-messages">
+        <div class="ai-system-msg">
+          <i class="ri-hand-heart-line" aria-hidden="true"></i> أهلاً بك في
+          <strong>المساعد الذكي</strong>، اسألني عن دراستك أو أي شيء عام.
+        </div>
+      </div>
+
+      <div class="ai-chat-footer">
+        <button
+          id="ai-chat-copy"
+          class="ai-secondary-btn"
+          title="نسخ آخر إجابة"
+        >
+          نسخ آخر إجابة
+        </button>
+        <div class="ai-chat-input">
+          <input
+            type="text"
+            id="ai-chat-input-text"
+            placeholder="اكتب سؤالك هنا..."
+            autocomplete="off"
+          />
+          <button id="ai-chat-send">إرسال</button>
+        </div>
+      </div>
+    </div>
+<!-- <script src="http://127.0.0.1:5000/socket.io/socket.io.js"></script> -->
+    <script src="js/admin.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/users-permissions.js"></script>
+    <script src="js/student-register.js?v=20251218"></script>
+
+    <script src="js/viewstudent.js"></script>
+    <script src="js/studentRenew.js"></script>
+    <!-- <script src="js/fees-pages.js"></script> -->
+    <script src="js/weeklySchedule.js"></script>
+    <script src="js/examSchedule.js"></script>
+    <script src="js/staffRegister.js?v=999"></script>
+    <script src="js/assignTeachers.js"></script>
+    <script src="js/schoolSettings.js"></script>
+<script src="js/permissionsWidget.js"></script>
+<script src="js/adminTeacherAttendance.js"></script>
+<script src="js/adminTeacherPermits.js"></script>
+<script src="js/attendanceReports.js"></script>
+<script src="js/inbox.js"></script>
+<script src="js/notificationsSend.js"></script>
+<script src="js/notificationsLog.js"></script>
+<script src="js/navbarNotificationsBell.js"></script>
+<script src="js/feespay.js"></script>
+<script src="js/feesReports.js"></script>
+<script src="js/fees-settings.js"></script>
+<script src="js/monthlyWork.js"></script>
+<script src="js/monthlyReports.js"></script>
+    <script src="/frontend/shared/profile-account.js" defer></script>
+
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
+    ></script>
+    <script
+      defer
+      src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"
+    ></script>
+    <script src="http://127.0.0.1:5000/socket.io/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  // الاستماع الفوري للإشعارات للإدارة
+  document.addEventListener("DOMContentLoaded", () => {
+    if (typeof io !== "undefined") {
+      const adminSocket = io("http://127.0.0.1:5000");
+      
+      adminSocket.on("connect", () => {
+        console.log("🟢 [Socket] الإدارة متصلة بالسيرفر الحي بنجاح!");
+      });
+
+      // 1. عند رفض المعلم
+      adminSocket.on("substitute_rejected", (data) => {
+        console.log("🚨 [Socket] تم استلام رفض من المعلم:", data?.teacherName);
+        if (typeof window.showToast === "function") {
+          window.showToast(`تحذير: الأستاذ (${data?.teacherName || 'المعلم'}) اعتذر عن التغطية!`, "error");
+        }
+        // تحديث الصندوق الأحمر فوراً بدون ريفريش!
+        if (typeof window.refreshEagleEye === "function") window.refreshEagleEye();
+      });
+
+      // 2. عند قبول المعلم
+      adminSocket.on("substitute_accepted", (data) => {
+        if (typeof window.showToast === "function") {
+          window.showToast(`ممتاز: الأستاذ (${data?.teacherName || 'المعلم'}) وافق على التغطية.`, "success");
+        }
+      });
+
+      // 3. تحديث قائمة الأذونات لو كانت مفتوحة أمام المدير
+      adminSocket.on("refresh_admin_permits", () => {
+        const refreshBtn = document.getElementById("tp-refresh");
+        if (refreshBtn) refreshBtn.click();
+      });
+    }
+  });
+</script>
+  </body>
+</html>

@@ -1,0 +1,188 @@
+<section id="feesSettingsPage" class="fs-page" dir="rtl">
+  <div class="fs-header">
+    <div>
+      <h2 class="fs-title">إعدادات الرسوم</h2>
+      <p class="fs-sub">إدارة قواعد الرسوم + استثناءات الطلاب + معاينة القاعدة المطبقة</p>
+    </div>
+
+    <div class="fs-actions">
+      <select id="fsYear" class="fs-select"></select>
+      <button id="fsRefresh" class="fs-btn">تحديث</button>
+    </div>
+  </div>
+
+  <div class="fs-tabs">
+    <button class="fs-tab is-active" data-tab="rules">قواعد الرسوم</button>
+    <button class="fs-tab" data-tab="students">الطلاب والاستثناءات</button>
+  </div>
+
+  <!-- ===== Rules Tab ===== -->
+  <div class="fs-panel" data-panel="rules">
+    <div class="fs-grid">
+      <div class="fs-card">
+        <h3 class="fs-card-title">إضافة / تعديل قاعدة</h3>
+
+        <form id="fsRuleForm" class="fs-form">
+          <input type="hidden" id="fsRuleId" value="">
+
+          <label class="fs-label">نوع القاعدة</label>
+          <select id="fsScope" class="fs-select" required>
+            <option value="">اختر</option>
+            <option value="DEFAULT">عامة للسنة (DEFAULT)</option>
+            <option value="STAGE">حسب المرحلة</option>
+            <option value="GRADE">حسب الصف</option>
+            <option value="SECTION">حسب الشعبة</option>
+            <option value="STUDENT">استثناء لطالب</option>
+          </select>
+
+          <div id="fsTargets" class="fs-targets">
+            <div class="fs-row">
+              <div class="fs-col">
+                <label class="fs-label">المرحلة</label>
+                <select id="fsStage" class="fs-select"></select>
+              </div>
+              <div class="fs-col">
+                <label class="fs-label">الصف</label>
+                <select id="fsGrade" class="fs-select" disabled></select>
+              </div>
+            </div>
+
+            <div class="fs-row">
+              <div class="fs-col">
+                <label class="fs-label">الشعبة</label>
+                <select id="fsSection" class="fs-select" disabled></select>
+              </div>
+              <div class="fs-col">
+                <label class="fs-label">طالب (بحث سريع)</label>
+                <input id="fsStudentSearch" class="fs-input" placeholder="اكتب اسم/كود الطالب للبحث...">
+                <input type="hidden" id="fsStudentId" value="">
+                <div id="fsStudentResults" class="fs-results" hidden></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="fs-row">
+            <div class="fs-col">
+              <label class="fs-label">الرسوم السنوية</label>
+              <input id="fsAnnual" class="fs-input" type="number" min="1" required>
+            </div>
+            <div class="fs-col">
+              <label class="fs-label">عدد الأقساط</label>
+              <input id="fsInstallments" class="fs-input" type="number" min="1" required>
+            </div>
+          </div>
+
+          <div class="fs-row">
+            <div class="fs-col">
+              <label class="fs-label">أول تاريخ استحقاق</label>
+              <input id="fsFirstDue" class="fs-input" type="date" required>
+            </div>
+            <div class="fs-col">
+              <label class="fs-label">كل كم شهر؟</label>
+              <input id="fsInterval" class="fs-input" type="number" min="1" value="1" required>
+            </div>
+          </div>
+
+          <div class="fs-row">
+            <div class="fs-col">
+              <label class="fs-label">سبب/كود (اختياري)</label>
+              <input id="fsReason" class="fs-input" placeholder="discount | scholarship | financial_aid ...">
+            </div>
+            <div class="fs-col fs-col-inline">
+              <label class="fs-check">
+                <input type="checkbox" id="fsIsActive" checked>
+                <span>مفعّل</span>
+              </label>
+            </div>
+          </div>
+
+          <label class="fs-label">ملاحظات (اختياري)</label>
+          <textarea id="fsNotes" class="fs-textarea" rows="3" placeholder="ملاحظات داخلية..."></textarea>
+
+          <div class="fs-form-actions">
+            <button type="submit" class="fs-btn fs-btn-primary">حفظ</button>
+            <button type="button" id="fsClear" class="fs-btn">تفريغ</button>
+          </div>
+
+          <div id="fsMsg" class="fs-msg" hidden></div>
+        </form>
+      </div>
+
+      <div class="fs-card">
+        <h3 class="fs-card-title">القواعد الحالية</h3>
+        <div class="fs-table-wrap">
+          <table class="fs-table">
+            <thead>
+              <tr>
+                <th>النوع</th>
+                <th>الهدف</th>
+                <th>الرسوم</th>
+                <th>الأقساط</th>
+                <th>أول استحقاق</th>
+                <th>مفعّل</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="fsRulesBody">
+              <tr><td colspan="7" class="fs-empty">جاري التحميل...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== Students Tab ===== -->
+  <div class="fs-panel" data-panel="students" hidden>
+    <div class="fs-card">
+      <h3 class="fs-card-title">فلترة الطلاب + معاينة القاعدة المطبقة</h3>
+
+      <div class="fs-filters">
+        <input id="fsQ" class="fs-input" placeholder="بحث (اسم/كود)">
+
+        <select id="fsFStage" class="fs-select"></select>
+        <select id="fsFGrade" class="fs-select" disabled></select>
+        <select id="fsFSection" class="fs-select" disabled></select>
+
+        <label class="fs-check">
+          <input type="checkbox" id="fsOnlyExceptions">
+          <span>فقط الاستثناءات</span>
+        </label>
+
+        <label class="fs-check">
+          <input type="checkbox" id="fsOnlyMissingContracts">
+          <span>بدون عقد رسوم</span>
+        </label>
+
+        <button id="fsSearch" class="fs-btn fs-btn-primary">بحث</button>
+      </div>
+
+      <div class="fs-table-wrap">
+        <table class="fs-table">
+          <thead>
+            <tr>
+              <th>الطالب</th>
+              <th>المرحلة/الصف/الشعبة</th>
+              <th>العقد</th>
+              <th>القاعدة المطبقة</th>
+              <th>الرسوم</th>
+              <th>الأقساط</th>
+              <th>أول استحقاق</th>
+              <th>استثناء؟</th>
+            </tr>
+          </thead>
+          <tbody id="fsStudentsBody">
+            <tr><td colspan="8" class="fs-empty">استخدم الفلاتر ثم اضغط بحث</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="fs-pager">
+        <button id="fsPrev" class="fs-btn">السابق</button>
+        <span id="fsPageInfo" class="fs-pageinfo">—</span>
+        <button id="fsNext" class="fs-btn">التالي</button>
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,652 @@
+<section class="students-page" id="studentsPage" aria-label="صفحة عرض الطلاب">
+  <!-- عنوان + أزرار -->
+  <div class="stu-head">
+    <div class="stu-head__title">
+      <div class="stu-icon">
+        <i class="ri-team-line"></i>
+      </div>
+      <div>
+        <h2 class="stu-h2">عرض الطلاب</h2>
+        <p class="stu-sub">
+          فلترة سريعة + عرض مرتب + تفاصيل في درج جانبي (Drawer) + QR/Barcode
+        </p>
+      </div>
+    </div>
+
+    <div class="stu-head__actions">
+      <button
+        class="stu-btn stu-btn--soft"
+        type="button"
+        id="stuRefreshBtn"
+        title="تحديث"
+      >
+        <i class="ri-refresh-line"></i><span>تحديث</span>
+      </button>
+      <button
+        class="stu-btn stu-btn--soft"
+        type="button"
+        id="stuExportBtn"
+        title="تصدير CSV"
+      >
+        <i class="ri-download-2-line"></i><span>تصدير</span>
+      </button>
+      <button
+        class="stu-btn stu-btn--soft"
+        type="button"
+        id="stuPrintBtn"
+        title="طباعة بطاقات"
+      >
+        <i class="ri-printer-line"></i><span>طباعة</span>
+      </button>
+      <a 
+        class="stu-btn stu-btn--primary"
+        href="#/students/create"
+        title="إضافة طالب"
+        onclick="RBAC_tabs.open(this, 'studentRegister')"
+      >
+        >
+        <i class="ri-user-add-line"></i><span>إضافة طالب</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- بطاقات إحصائيات -->
+  <div class="stu-stats" role="group" aria-label="ملخص سريع">
+    <div class="stu-stat">
+      <div class="stu-stat__icon"><i class="ri-group-line"></i></div>
+      <div class="stu-stat__meta">
+        <div class="stu-stat__label">إجمالي (ضمن الصفحة)</div>
+        <div class="stu-stat__value" id="stuStatTotal">—</div>
+      </div>
+    </div>
+    <div class="stu-stat">
+      <div class="stu-stat__icon"><i class="ri-shield-check-line"></i></div>
+      <div class="stu-stat__meta">
+        <div class="stu-stat__label">النشط</div>
+        <div class="stu-stat__value" id="stuStatActive">—</div>
+      </div>
+    </div>
+    <div class="stu-stat">
+      <div class="stu-stat__icon"><i class="ri-user-unfollow-line"></i></div>
+      <div class="stu-stat__meta">
+        <div class="stu-stat__label">غير نشط</div>
+        <div class="stu-stat__value" id="stuStatInactive">—</div>
+      </div>
+    </div>
+    <div class="stu-stat">
+      <div class="stu-stat__icon"><i class="ri-filter-3-line"></i></div>
+      <div class="stu-stat__meta">
+        <div class="stu-stat__label">المعروض الآن</div>
+        <div class="stu-stat__value" id="stuStatVisible">—</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- شريط الفلاتر -->
+  <div class="stu-filters" aria-label="فلترة الطلاب">
+    <div class="stu-field">
+      <label class="stu-label" for="stuStage"
+        ><i class="ri-building-4-line"></i> المرحلة</label
+      >
+      <select class="stu-select" id="stuStage">
+        <option value="">الكل</option>
+      </select>
+    </div>
+
+    <div class="stu-field">
+      <label class="stu-label" for="stuGrade"
+        ><i class="ri-stack-line"></i> الصف</label
+      >
+      <select class="stu-select" id="stuGrade" disabled>
+        <option value="">الكل</option>
+      </select>
+    </div>
+
+    <div class="stu-field">
+      <label class="stu-label" for="stuSection"
+        ><i class="ri-layout-grid-line"></i> الشعبة</label
+      >
+      <select class="stu-select" id="stuSection" disabled>
+        <option value="">الكل</option>
+      </select>
+    </div>
+
+    <div class="stu-field stu-field--search">
+      <label class="stu-label" for="stuSearch"
+        ><i class="ri-search-2-line"></i> بحث</label
+      >
+      <div class="stu-search">
+        <i class="ri-search-2-line"></i>
+        <input
+          class="stu-input"
+          id="stuSearch"
+          type="search"
+          placeholder="ابحث بالاسم، رقم الطالب، الهاتف، رقم الهوية..."
+          autocomplete="off"
+        />
+        <button
+          class="stu-iconbtn"
+          type="button"
+          id="stuClearSearch"
+          title="مسح البحث"
+        >
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+    </div>
+
+    <div class="stu-field stu-field--toggle">
+      <label class="stu-toggle">
+        <input type="checkbox" id="stuOnlyActive" />
+        <span class="stu-toggle__ui"></span>
+        <span class="stu-toggle__text"
+          ><i class="ri-shield-check-line"></i> النشط فقط</span
+        >
+      </label>
+    </div>
+
+    <div class="stu-field stu-field--actions">
+      <button class="stu-btn stu-btn--soft" type="button" id="stuReset">
+        <i class="ri-restart-line"></i><span>إعادة ضبط</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- جدول (Desktop) -->
+  <div class="stu-panel">
+    <div class="stu-panel__head">
+      <div class="stu-panel__title">
+        <i class="ri-table-line"></i>
+        <span>قائمة الطلاب</span>
+      </div>
+      <div class="stu-panel__hint">
+        <i class="ri-lightbulb-flash-line"></i>
+        انقر على <b>عرض</b> لفتح تفاصيل الطالب داخل درج جانبي
+      </div>
+    </div>
+
+    <div class="stu-tablewrap" aria-label="جدول الطلاب">
+      <table class="stu-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>الطالب</th>
+            <th>المرحلة</th>
+            <th>الصف</th>
+            <th>الشعبة</th>
+            <th>ولي الأمر</th>
+            <th>الحالة</th>
+            <th>إجراءات</th>
+          </tr>
+        </thead>
+        <tbody id="stuTbody">
+          <tr>
+            <td colspan="8" style="padding: 16px; color: var(--text-muted)">
+              جاري التحميل...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- حالة فارغة -->
+    <div class="stu-empty" id="stuEmpty" hidden>
+      <div class="stu-empty__icon"><i class="ri-inbox-2-line"></i></div>
+      <div class="stu-empty__title">لا توجد نتائج</div>
+      <div class="stu-empty__sub">جرّب تغيير الفلاتر أو امسح البحث.</div>
+      <button class="stu-btn stu-btn--soft" type="button" id="stuEmptyReset">
+        <i class="ri-restart-line"></i><span>إعادة ضبط</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Cards (Mobile) -->
+  <div class="stu-cards" id="stuCards" aria-label="عرض بطاقات للهواتف"></div>
+
+  <!-- Drawer تفاصيل الطالب -->
+  <div class="stu-drawer" id="stuDrawer" aria-hidden="true">
+    <div class="stu-drawer__overlay" data-stu-close></div>
+    <aside
+      class="stu-drawer__panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label="تفاصيل الطالب"
+    >
+      <div class="stu-drawer__head">
+        <div class="stu-drawer__id">
+          <div class="stu-avatar stu-avatar--lg" id="stuD_Avatar">?</div>
+          <div>
+            <div class="stu-drawer__name" id="stuD_Name">—</div>
+            <div class="stu-drawer__meta">
+              <span class="stu-pill" id="stuD_Code"
+                ><i class="ri-hashtag"></i> —</span
+              >
+              <span class="stu-pill" id="stuD_Class"
+                ><i class="ri-school-line"></i> —</span
+              >
+              <span class="stu-pill" id="stuD_Status"
+                ><i class="ri-shield-check-line"></i> —</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <button
+          class="stu-iconbtn stu-iconbtn--close"
+          type="button"
+          data-stu-close
+          title="إغلاق"
+        >
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="stu-tabs" role="tablist" aria-label="تبويبات التفاصيل">
+        <button
+          class="stu-tab is-active"
+          type="button"
+          data-tab="personal"
+          role="tab"
+          aria-selected="true"
+        >
+          <i class="ri-user-3-line"></i><span>شخصية</span>
+        </button>
+        <button
+          class="stu-tab"
+          type="button"
+          data-tab="guardian"
+          role="tab"
+          aria-selected="false"
+        >
+          <i class="ri-parent-line"></i><span>ولي الأمر</span>
+        </button>
+        <button
+          class="stu-tab"
+          type="button"
+          data-tab="academic"
+          role="tab"
+          aria-selected="false"
+        >
+          <i class="ri-book-open-line"></i><span>أكاديمية</span>
+        </button>
+        <button
+          class="stu-tab"
+          type="button"
+          data-tab="barcode"
+          role="tab"
+          aria-selected="false"
+        >
+          <i class="ri-qr-code-line"></i><span>QR / Barcode</span>
+        </button>
+      </div>
+
+      <div class="stu-drawer__body">
+        <!-- Personal -->
+        <div class="stu-tabpane is-active" data-pane="personal" role="tabpanel">
+          <div class="stu-grid2">
+            <div class="stu-kv">
+              <span>الهاتف</span><b class="stu-mono" id="stuD_Phone">—</b>
+            </div>
+            <div class="stu-kv">
+              <span>رقم الهوية</span><b class="stu-mono" id="stuD_NID">—</b>
+            </div>
+            <div class="stu-kv">
+              <span>تاريخ الميلاد</span><b class="stu-mono" id="stuD_Dob">—</b>
+            </div>
+            <div class="stu-kv">
+              <span>الجنس</span><b id="stuD_Gender">—</b>
+            </div>
+            <div class="stu-kv stu-kv--full">
+              <span>العنوان</span><b id="stuD_Address">—</b>
+            </div>
+            <div class="stu-kv stu-kv--full">
+              <span>ملاحظات</span><b id="stuD_Notes">—</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- Guardian -->
+        <div class="stu-tabpane" data-pane="guardian" role="tabpanel">
+          <div class="stu-grid2">
+            <div class="stu-kv">
+              <span>اسم ولي الأمر</span><b id="stuD_GName">—</b>
+            </div>
+            <div class="stu-kv">
+              <span>هاتف ولي الأمر</span
+              ><b class="stu-mono" id="stuD_GPhone">—</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- Academic -->
+        <div class="stu-tabpane" data-pane="academic" role="tabpanel">
+          <div class="stu-grid2">
+            <div class="stu-kv">
+              <span>المرحلة</span><b id="stuD_Stage">—</b>
+            </div>
+            <div class="stu-kv"><span>الصف</span><b id="stuD_Grade">—</b></div>
+            <div class="stu-kv">
+              <span>الشعبة</span><b id="stuD_Section">—</b>
+            </div>
+            <div class="stu-kv">
+              <span>تاريخ الالتحاق</span
+              ><b class="stu-mono" id="stuD_Enroll">—</b>
+            </div>
+          </div>
+        </div>
+
+        <!-- QR / Barcode -->
+        <div class="stu-tabpane" data-pane="barcode" role="tabpanel">
+          <div class="stu-barcodeBox">
+            <div class="stu-barcodeBox__icon">
+              <i class="ri-qr-code-line"></i>
+            </div>
+            <div class="stu-barcodeBox__text">
+              <div class="stu-barcodeBox__title">QR + Barcode</div>
+              <div class="stu-barcodeBox__sub">
+                يتولد تلقائيًا من كود الطالب + رابط التفاصيل.
+              </div>
+            </div>
+            <button
+              class="stu-btn stu-btn--soft"
+              type="button"
+              id="stuCopyQRBtn"
+            >
+              <i class="ri-file-copy-line"></i><span>نسخ الرابط</span>
+            </button>
+          </div>
+
+          <div class="stu-qrGrid">
+            <div class="stu-qrCard">
+              <div class="stu-qrTitle">
+                <i class="ri-qr-code-line"></i> QR Code
+              </div>
+              <div class="stu-qrBox" id="stuQrBox"></div>
+              <div class="stu-qrFallback" id="stuQrFallback" hidden>—</div>
+            </div>
+
+            <div class="stu-qrCard">
+              <div class="stu-qrTitle">
+                <i class="ri-barcode-line"></i> Barcode
+              </div>
+              <svg id="stuBarcodeSvg" class="stu-barcodeSvg"></svg>
+              <div class="stu-qrFallback" id="stuBarcodeFallback" hidden>—</div>
+            </div>
+          </div>
+
+          <small class="stu-muted"
+            >إذا ما ظهرت الأكواد: تأكد أنك أضفت مكتبات QRCode و
+            JsBarcode.</small
+          >
+        </div>
+      </div>
+
+      <div class="stu-drawer__foot">
+        <button
+          class="stu-btn stu-btn--soft"
+          type="button"
+          data-stu-action="edit"
+        >
+          <i class="ri-edit-2-line"></i><span>تعديل</span>
+        </button>
+        <button
+          class="stu-btn stu-btn--soft stu-btn--danger"
+          type="button"
+          data-stu-action="delete"
+        >
+          <i class="ri-delete-bin-6-line"></i><span>حذف</span>
+        </button>
+        <button
+          class="stu-btn stu-btn--primary"
+          type="button"
+          data-stu-action="print"
+        >
+          <i class="ri-printer-line"></i><span>طباعة بطاقة</span>
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Edit Modal (تعديل الطالب) -->
+  <div class="stu-modal" id="stuEdit" aria-hidden="true">
+    <div class="stu-modal__overlay" data-edit-close></div>
+
+    <section
+      class="stu-modal__panel stu-modal__panel--edit"
+      role="dialog"
+      aria-modal="true"
+      aria-label="تعديل الطالب"
+    >
+      <div class="stu-modal__head">
+        <div class="stu-modal__title">
+          <i class="ri-edit-2-line"></i>
+          <span>تعديل الطالب</span>
+        </div>
+
+        <button
+          class="stu-iconbtn stu-iconbtn--close"
+          type="button"
+          data-edit-close
+          title="إغلاق"
+        >
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+
+      <div class="stu-modal__body">
+        <form class="stu-form" id="stuEditForm" autocomplete="off">
+          <div class="stu-form__grid">
+            <div class="stu-col stu-col--full">
+              <label class="stu-label" for="stuE_Name"
+                ><i class="ri-user-3-line"></i> اسم الطالب</label
+              >
+              <input
+                class="stu-input"
+                id="stuE_Name"
+                type="text"
+                placeholder="اسم الطالب بالكامل"
+                required
+              />
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Code"
+                ><i class="ri-hashtag"></i> كود الطالب</label
+              >
+              <input
+                class="stu-input stu-input--mono"
+                id="stuE_Code"
+                type="text"
+                placeholder="مثال: 1001"
+              />
+              <small class="stu-hint">إذا لا تريد تغييره اتركه كما هو.</small>
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Status"
+                ><i class="ri-shield-check-line"></i> الحالة</label
+              >
+              <select class="stu-select" id="stuE_Status">
+                <option value="active">نشط</option>
+                <option value="inactive">غير نشط</option>
+                <option value="graduated">متخرج</option>
+              </select>
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Phone"
+                ><i class="ri-phone-line"></i> هاتف الطالب</label
+              >
+              <input
+                class="stu-input stu-input--mono"
+                id="stuE_Phone"
+                type="text"
+                placeholder="7xxxxxxxx"
+              />
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_NID"
+                ><i class="ri-id-card-line"></i> رقم الهوية</label
+              >
+              <input
+                class="stu-input stu-input--mono"
+                id="stuE_NID"
+                type="text"
+                placeholder="xxxxxxxxxx"
+              />
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Gender"
+                ><i class="ri-men-line"></i> الجنس</label
+              >
+              <select class="stu-select" id="stuE_Gender">
+                <option value="male">ذكر</option>
+                <option value="female">أنثى</option>
+              </select>
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Dob"
+                ><i class="ri-cake-2-line"></i> تاريخ الميلاد</label
+              >
+              <input class="stu-input" id="stuE_Dob" type="date" />
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Stage"
+                ><i class="ri-building-4-line"></i> المرحلة</label
+              >
+              <select class="stu-select" id="stuE_Stage">
+                <option value="">—</option>
+              </select>
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Grade"
+                ><i class="ri-stack-line"></i> الصف</label
+              >
+              <select class="stu-select" id="stuE_Grade" disabled>
+                <option value="">—</option>
+              </select>
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Section"
+                ><i class="ri-layout-grid-line"></i> الشعبة</label
+              >
+              <select class="stu-select" id="stuE_Section" disabled>
+                <option value="">—</option>
+              </select>
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_Guardian"
+                ><i class="ri-parent-line"></i> اسم ولي الأمر</label
+              >
+              <input
+                class="stu-input"
+                id="stuE_Guardian"
+                type="text"
+                placeholder="اسم ولي الأمر"
+              />
+            </div>
+
+            <div class="stu-col">
+              <label class="stu-label" for="stuE_GuardianPhone"
+                ><i class="ri-phone-line"></i> هاتف ولي الأمر</label
+              >
+              <input
+                class="stu-input stu-input--mono"
+                id="stuE_GuardianPhone"
+                type="text"
+                placeholder="7xxxxxxxx"
+              />
+            </div>
+
+            <div class="stu-col stu-col--full">
+              <label class="stu-label" for="stuE_Address"
+                ><i class="ri-map-pin-line"></i> العنوان</label
+              >
+              <input
+                class="stu-input"
+                id="stuE_Address"
+                type="text"
+                placeholder="مثال: صنعاء - ..."
+              />
+            </div>
+
+            <div class="stu-col stu-col--full">
+              <label class="stu-label" for="stuE_Notes"
+                ><i class="ri-sticky-note-line"></i> ملاحظات</label
+              >
+              <textarea
+                class="stu-textarea"
+                id="stuE_Notes"
+                rows="3"
+                placeholder="أي ملاحظات..."
+              ></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="stu-modal__foot">
+        <button class="stu-btn stu-btn--soft" type="button" data-edit-close>
+          <i class="ri-close-line"></i><span>إلغاء</span>
+        </button>
+        <button
+          class="stu-btn stu-btn--primary"
+          type="button"
+          id="stuEditSaveBtn"
+        >
+          <i class="ri-save-3-line"></i><span>حفظ التعديل</span>
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <!-- نافذة تأكيد حذف -->
+  <div class="stu-modal" id="stuConfirm" aria-hidden="true">
+    <div class="stu-modal__overlay" data-confirm-close></div>
+    <section
+      class="stu-modal__panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label="تأكيد الحذف"
+    >
+      <div class="stu-modal__head">
+        <div class="stu-modal__title">
+          <i class="ri-alert-line"></i>
+          <span>تأكيد الحذف</span>
+        </div>
+        <button
+          class="stu-iconbtn stu-iconbtn--close"
+          type="button"
+          data-confirm-close
+          title="إغلاق"
+        >
+          <i class="ri-close-line"></i>
+        </button>
+      </div>
+      <div class="stu-modal__body">
+        هل أنت متأكد أنك تريد حذف الطالب:
+        <b id="stuConfirmName">—</b> ؟
+        <div class="stu-muted">سيتم الحذف فعليًا عبر API.</div>
+      </div>
+      <div class="stu-modal__foot">
+        <button class="stu-btn stu-btn--soft" type="button" data-confirm-close>
+          <i class="ri-close-line"></i><span>إلغاء</span>
+        </button>
+        <button
+          class="stu-btn stu-btn--danger"
+          type="button"
+          id="stuConfirmYes"
+        >
+          <i class="ri-delete-bin-6-line"></i><span>نعم، احذف</span>
+        </button>
+      </div>
+    </section>
+  </div>
+</section>

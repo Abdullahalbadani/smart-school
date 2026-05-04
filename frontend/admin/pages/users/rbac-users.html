@@ -1,0 +1,140 @@
+<nav class="rbac-tabs">
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-modules"
+     onclick="RBAC_tabs.open(this, 'rbac-modules')">
+    الوحدات
+  </a>
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-permissions"
+     onclick="RBAC_tabs.open(this, 'rbac-permissions')">
+    الصلاحيات
+  </a>
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-roles"
+     onclick="RBAC_tabs.open(this, 'rbac-roles')">
+    الأدوار
+  </a>
+  <a href="#"
+     class="tab-link active"
+     
+     data-tab="rbac-users"
+     onclick="RBAC_tabs.open(this, 'rbac-users')">
+    المستخدمون
+  </a>
+</nav>
+
+<section class="rbac-page rbac-page-users">
+
+  <!-- شريط العنوان -->
+  <div class="rbac-header">
+    <div>
+      <h1>إدارة المستخدمين</h1>
+      <p>إنشاء حسابات المستخدمين وربطهم بالأدوار والصلاحيات المناسبة.</p>
+    </div>
+
+    <button type="button" class="btn-primary-lg" onclick="UserUI.openCreate()">
+      <span>➕</span>
+      <span>مستخدم جديد</span>
+    </button>
+  </div>
+
+  <!-- شريط الأدوات -->
+  <div class="rbac-toolbar">
+    <div class="rbac-search-input">
+      <input
+        type="text"
+        id="user-search"
+        placeholder="بحث بالاسم، اسم المستخدم، البريد..."
+        oninput="UserUI.search(this.value)" />
+    </div>
+
+    <div class="rbac-meta">
+      <span class="badge-soft" id="users-count-badge">
+        لا يوجد مستخدمون
+      </span>
+    </div>
+  </div>
+
+  <!-- الكارد الأساسي للجدول -->
+  <div class="rbac-card rbac-table-card">
+    <div class="rbac-card-body">
+      <div class="table-wrapper">
+        <table class="rbac-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>الاسم الكامل</th>
+              <th>اسم المستخدم</th>
+              <th>البريد</th>
+              <th>الدور</th>
+              <th class="col-actions">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="rbac-users-tbody">
+            <!-- من users-permissions.js -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال إضافة / تعديل مستخدم -->
+  <div class="rbac-modal" id="user-modal">
+    <div class="rbac-modal__backdrop" onclick="UserUI.close()"></div>
+
+    <div class="rbac-modal__dialog">
+      <div class="rbac-modal__header">
+        <h3 id="user-modal-title">مستخدم جديد</h3>
+        <button type="button" class="icon-btn" onclick="UserUI.close()">✕</button>
+      </div>
+
+      <form id="rbac-user-form" class="rbac-form">
+        <input type="hidden" id="user-id" />
+
+        <div class="rbac-form__grid">
+          <label class="rbac-field">
+            <span>الاسم الكامل</span>
+            <input type="text" id="user-fullname" required />
+          </label>
+
+          <label class="rbac-field">
+            <span>اسم المستخدم</span>
+            <input type="text" id="user-username" required />
+          </label>
+
+          <label class="rbac-field">
+            <span>البريد الإلكتروني</span>
+            <input type="email" id="user-email" required />
+          </label>
+
+          <label class="rbac-field">
+            <span>رقم الجوال</span>
+            <input type="text" id="user-phone" />
+          </label>
+
+          <label class="rbac-field">
+            <span>كلمة المرور <small>(اتركها فارغة عند التعديل)</small></span>
+            <input type="password" id="user-password" />
+          </label>
+
+          <label class="rbac-field">
+            <span>الدور</span>
+            <select id="user-role" required></select>
+          </label>
+        </div>
+
+        <div class="rbac-modal__footer">
+          <button type="button" class="btn-ghost" onclick="UserUI.close()">
+            إلغاء
+          </button>
+          <button type="submit" class="btn-primary">
+            حفظ المستخدم
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>

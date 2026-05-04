@@ -1,0 +1,101 @@
+<nav class="rbac-tabs">
+  <a href="#"
+     class="tab-link active"
+     data-tab="rbac-modules"
+     onclick="RBAC_tabs.open(this, 'rbac-modules')">
+    الوحدات
+  </a>
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-permissions"
+     onclick="RBAC_tabs.open(this, 'rbac-permissions')">
+    الصلاحيات
+  </a>
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-roles"
+     onclick="RBAC_tabs.open(this, 'rbac-roles')">
+    الأدوار
+  </a>
+  <a href="#"
+  
+     class="tab-link"
+     data-tab="rbac-users"
+     onclick="RBAC_tabs.open(this, 'rbac-users')">
+    المستخدمون
+  </a>
+</nav>
+
+<section class="rbac-page rbac-page-modules">
+  <div class="rbac-card">
+    <div class="rbac-card-header">
+      <div>
+        <h2>الوحدات (Modules)</h2>
+        <p>إدارة الوحدات الرئيسية مثل التسجيل، الكنترول، الرسوم، الحضور، التقارير...</p>
+      </div>
+    </div>
+
+    <div class="rbac-card-body">
+
+      <!-- شريط الأدوات: بحث + عدّاد -->
+      <div class="rbac-toolbar">
+        <div class="rbac-search-input">
+          <input
+            type="text"
+            placeholder="بحث باسم الوحدة أو الكود..."
+            oninput="RBAC_filters.filter(this, 'rbac-modules-tbody')" />
+        </div>
+
+        <div class="rbac-meta">
+          <span class="badge-soft" id="modules-count-badge" data-label="وحدة">
+            0 وحدة
+          </span>
+        </div>
+      </div>
+
+      <!-- تخطيط: جدول + فورم -->
+      <div class="rbac-two-column">
+        <!-- العمود الرئيسي: جدول -->
+        <div class="column-main">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>اسم الوحدة</th>
+                  <th>الكود</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="rbac-modules-tbody">
+                <!-- تعبئة من users-permissions.js -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- العمود الجانبي: إضافة / تعديل -->
+        <div class="column-side">
+          <h3 style="margin-bottom:0.5rem;">إضافة وحدة جديدة</h3>
+          <form id="rbac-module-form" class="form-card">
+            <input type="hidden" id="module-id" />
+
+            <label>
+              <span>اسم الوحدة (مثال: التسجيل والقبول)</span>
+              <input type="text" id="module-name" required />
+            </label>
+
+            <label>
+              <span>الكود (مثال: ADMISSION)</span>
+              <input type="text" id="module-code" required />
+            </label>
+
+            <button type="submit" class="primary-btn">
+              حفظ الوحدة
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

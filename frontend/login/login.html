@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <title>MyLearning</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="css/login.css" />
+  
+
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<div class="phone">
+
+  <div class="screens" id="screens">
+
+    <!-- شاشة تسجيل الدخول (هي اللي فوق وتنزل) -->
+    <section class="screen login-screen">
+      <span class="back-arrow" id="back-arrow">⬅</span>
+
+      <div class="card login-card">
+
+        <img src="img/logo.png" class="login-illustration" />
+
+        <h1 class="title">منصتي التعليمية</h1>
+        <p class="sub">انضم إلى مجتمع التعلم الخاص بنا
+</p>
+<div class="input-group">
+  <input type="email" id="username" required />
+  <label for="username">اسم المستخدم</label>
+  <div class="error-msg" id="username-error"></div>
+</div>
+
+<div class="input-group">
+  <input type="password" id="password" required />
+  <label for="password">كلمة المرور</label>
+  <div class="error-msg" id="password-error"></div>
+</div>
+
+
+        <a class="forgot">هل نسيت كلمة المرور؟</a>
+
+<button type="submit" class="login-btn" id="login-btn">
+  <span class="btn-text">تسجيل الدخول</span>
+  <svg class="btn-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+  </svg>
+</button>
+
+
+
+        <p class="create">لا املك حساب ؟راسل الإدارة </p>
+      </div>
+    </section>
+
+    <!-- شاشة Hello Tom (هي اللي تحت) -->
+    <section class="screen hello-screen">
+      <div class="card hello-card">
+
+        <h1 class="hello-title">مرحباً بك! </h1>
+        <p class="hello-sub">  ابدأ رحلتك التعليمية الآن</p>
+
+        <img src="img/logo.png" class="hello-img" />
+
+        <div class="swipe" id="swipe">
+          <span class="swipe-arrow">⬆</span>
+          <span class="swipe-text">اسحب للأعلى</span>
+        </div>
+
+      </div>
+    </section>
+
+  </div>
+
+</div>
+<script src="/frontend/shared/js/config.js"></script>
+<script src="js/login.js?v=3"></script>
+<script src="js/script.js"></script>
+
+</body>
+</html>

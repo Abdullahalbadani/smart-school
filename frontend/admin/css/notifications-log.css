@@ -1,0 +1,384 @@
+/* frontend/admin/css/notifications-log.css */
+#adminNotificationsLogPage {
+  --nl-bg: #0b1630;
+  --nl-card: #121f3d;
+  --nl-card-2: #0f1b35;
+  --nl-border: rgba(255, 255, 255, 0.08);
+  --nl-text: #eaf1ff;
+  --nl-muted: #9fb0d2;
+  --nl-primary: #1f6bff;
+  --nl-success: #22c55e;
+  --nl-danger: #ef4444;
+  --nl-warning: #f59e0b;
+  --nl-input: #101c36;
+  --nl-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+
+  color: var(--nl-text);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#adminNotificationsLogPage * {
+  box-sizing: border-box;
+}
+
+#adminNotificationsLogPage .hidden {
+  display: none !important;
+}
+
+#adminNotificationsLogPage .page-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+#adminNotificationsLogPage .page-head h2 {
+  margin: 0;
+  font-size: 1.9rem;
+  line-height: 1.3;
+  color: var(--nl-text);
+  font-weight: 800;
+}
+
+#adminNotificationsLogPage .page-head p {
+  margin: 6px 0 0;
+  color: var(--nl-muted);
+  font-size: 0.95rem;
+}
+
+#adminNotificationsLogPage .card-box {
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)), var(--nl-card);
+  border: 1px solid var(--nl-border);
+  border-radius: 18px;
+  padding: 14px;
+  box-shadow: var(--nl-shadow);
+  margin-bottom: 14px;
+}
+
+#adminNotificationsLogPage .toolbar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) 180px 180px auto;
+  gap: 10px;
+  align-items: center;
+}
+
+#adminNotificationsLogPage input,
+#adminNotificationsLogPage select {
+  width: 100%;
+  border: 1px solid var(--nl-border);
+  background: var(--nl-input);
+  color: var(--nl-text);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#adminNotificationsLogPage input::placeholder {
+  color: #8193b8;
+}
+
+#adminNotificationsLogPage input:focus,
+#adminNotificationsLogPage select:focus {
+  border-color: rgba(31, 107, 255, 0.55);
+  box-shadow: 0 0 0 4px rgba(31, 107, 255, 0.15);
+}
+
+#adminNotificationsLogPage .btn {
+  appearance: none;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-height: 42px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  color: #fff;
+  transition: transform 0.05s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+#adminNotificationsLogPage .btn:active {
+  transform: translateY(1px);
+}
+
+#adminNotificationsLogPage .btn.btn-outline {
+  background: rgba(255,255,255,0.02);
+  border-color: var(--nl-border);
+  color: var(--nl-text);
+}
+
+#adminNotificationsLogPage .btn.btn-outline:hover {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.16);
+}
+
+#adminNotificationsLogPage .log-layout {
+  display: grid;
+  grid-template-columns: minmax(340px, 40%) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+#adminNotificationsLogPage .sent-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 70vh;
+  overflow: auto;
+  padding-inline-end: 2px;
+}
+
+#adminNotificationsLogPage .sent-log-list::-webkit-scrollbar {
+  width: 8px;
+}
+#adminNotificationsLogPage .sent-log-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+}
+
+#adminNotificationsLogPage .sent-log-item {
+  border: 1px solid var(--nl-border);
+  background: rgba(255,255,255,0.015);
+  border-radius: 14px;
+  padding: 12px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.08s ease;
+}
+
+#adminNotificationsLogPage .sent-log-item:hover {
+  border-color: rgba(255,255,255,0.16);
+  background: rgba(255,255,255,0.025);
+}
+
+#adminNotificationsLogPage .sent-log-item.is-selected {
+  border-color: rgba(31, 107, 255, 0.45);
+  background: rgba(31, 107, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(31, 107, 255, 0.15);
+}
+
+#adminNotificationsLogPage .sent-log-item .top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+#adminNotificationsLogPage .sent-log-item .top-row strong {
+  color: var(--nl-text);
+  font-size: 1rem;
+  line-height: 1.5;
+}
+
+#adminNotificationsLogPage .sent-log-item .top-row span {
+  color: var(--nl-muted);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+#adminNotificationsLogPage .chips-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+#adminNotificationsLogPage .chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 26px;
+  padding: 4px 10px;
+  border: 1px solid rgba(255,255,255,0.08);
+  background: rgba(255,255,255,0.03);
+  border-radius: 999px;
+  color: var(--nl-text);
+  font-size: 0.82rem;
+  line-height: 1;
+}
+
+#adminNotificationsLogPage .sent-log-item .snippet {
+  color: var(--nl-muted);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+#adminNotificationsLogPage .empty-box {
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 14px;
+  padding: 24px;
+  color: var(--nl-muted);
+  text-align: center;
+  background: rgba(255,255,255,0.01);
+}
+
+#adminNotificationsLogPage #sentLogDetailsPlaceholder {
+  min-height: 260px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  border: 1px dashed rgba(255,255,255,0.12);
+  border-radius: 14px;
+  color: var(--nl-muted);
+  background: rgba(255,255,255,0.01);
+  padding: 18px;
+}
+
+#adminNotificationsLogPage #sentLogDetailsCard h3 {
+  margin: 0 0 8px;
+  color: var(--nl-text);
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+#adminNotificationsLogPage .meta-lines {
+  display: grid;
+  gap: 6px;
+  color: var(--nl-muted);
+  font-size: 0.92rem;
+  margin-bottom: 10px;
+}
+
+#adminNotificationsLogPage .body-box {
+  border: 1px solid var(--nl-border);
+  border-radius: 12px;
+  background: rgba(255,255,255,0.015);
+  padding: 12px;
+  color: var(--nl-text);
+  min-height: 96px;
+  white-space: pre-wrap;
+  line-height: 1.7;
+}
+
+#adminNotificationsLogPage hr {
+  border: none;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  margin: 14px 0;
+}
+
+#adminNotificationsLogPage .stats-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+#adminNotificationsLogPage .stats-row > div {
+  border: 1px solid var(--nl-border);
+  background: rgba(255,255,255,0.015);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: var(--nl-muted);
+  font-size: 0.92rem;
+}
+
+#adminNotificationsLogPage .stats-row strong {
+  color: var(--nl-text);
+  font-size: 1.05rem;
+}
+
+#adminNotificationsLogPage .recipients-wrap h4 {
+  margin: 0 0 10px;
+  color: var(--nl-text);
+  font-size: 1rem;
+}
+
+#adminNotificationsLogPage .recipients-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 42vh;
+  overflow: auto;
+  padding-inline-end: 2px;
+}
+
+#adminNotificationsLogPage .recipients-list::-webkit-scrollbar {
+  width: 8px;
+}
+#adminNotificationsLogPage .recipients-list::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.12);
+  border-radius: 999px;
+}
+
+#adminNotificationsLogPage .recipient-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid var(--nl-border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: rgba(255,255,255,0.012);
+}
+
+#adminNotificationsLogPage .recipient-item.is-read {
+  border-color: rgba(34, 197, 94, 0.18);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+#adminNotificationsLogPage .recipient-item.is-unread {
+  border-color: rgba(245, 158, 11, 0.18);
+  background: rgba(245, 158, 11, 0.04);
+}
+
+#adminNotificationsLogPage .recipient-item strong {
+  color: var(--nl-text);
+  font-size: 0.95rem;
+}
+
+#adminNotificationsLogPage .recipient-item .small {
+  color: var(--nl-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+#adminNotificationsLogPage .recipient-item > div:last-child {
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  #adminNotificationsLogPage .toolbar-row {
+    grid-template-columns: 1fr 160px 160px auto;
+  }
+
+  #adminNotificationsLogPage .log-layout {
+    grid-template-columns: 1fr;
+  }
+
+  #adminNotificationsLogPage .sent-log-list {
+    max-height: 42vh;
+  }
+}
+
+@media (max-width: 768px) {
+  #adminNotificationsLogPage .page-head h2 {
+    font-size: 1.5rem;
+  }
+
+  #adminNotificationsLogPage .toolbar-row {
+    grid-template-columns: 1fr;
+  }
+
+  #adminNotificationsLogPage .toolbar-row .btn {
+    width: 100%;
+  }
+
+  #adminNotificationsLogPage .stats-row {
+    grid-template-columns: 1fr;
+  }
+
+  #adminNotificationsLogPage .recipient-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  #adminNotificationsLogPage .recipient-item > div:last-child {
+    text-align: right;
+    white-space: normal;
+  }
+}

@@ -1,0 +1,93 @@
+<section class="tp-panel" id="section-teacher-permits">
+  <div class="tp-head">
+    <div>
+      <h2 class="tp-title"><i class="ri-shield-user-line"></i> أذونات المعلمين</h2>
+      <p class="tp-sub">
+        راجع طلبات الإذن، ثم اقبل/ارفض مع ملاحظة القرار — ويُطبَّق كـ بعذر على حصص التاريخ المحدد.
+      </p>
+
+      <div class="tp-stats" id="tp-stats">
+        <span class="tp-stat"><i class="ri-time-line"></i> معلّق: <b id="tp-stat-pending">0</b></span>
+        <span class="tp-stat"><i class="ri-check-line"></i> مقبول: <b id="tp-stat-approved">0</b></span>
+        <span class="tp-stat"><i class="ri-close-line"></i> مرفوض: <b id="tp-stat-rejected">0</b></span>
+      </div>
+    </div>
+
+    <div class="tp-filters">
+      <div class="ta-field" style="min-width:180px;">
+        <label for="tp-status">الحالة</label>
+        <select class="ta-select" id="tp-status">
+          <option value="pending">معلّق</option>
+          <option value="approved">مقبول</option>
+          <option value="rejected">مرفوض</option>
+          <option value="">الكل</option>
+        </select>
+      </div>
+
+      <div class="ta-field" style="min-width:160px;">
+        <label for="tp-from">من تاريخ</label>
+        <input class="ta-input" type="date" id="tp-from" />
+      </div>
+
+      <div class="ta-field" style="min-width:160px;">
+        <label for="tp-to">إلى تاريخ</label>
+        <input class="ta-input" type="date" id="tp-to" />
+      </div>
+
+      <div class="ta-field" style="min-width:220px;">
+        <label for="tp-search">بحث</label>
+        <input class="ta-input" id="tp-search" placeholder="ابحث باسم المعلم..." />
+      </div>
+
+      <button type="button" class="tp-btn tp-btn--pri" id="tp-refresh">
+        <i class="ri-refresh-line"></i><span>تحديث</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="tp-grid" id="tp-list">
+    <!-- JS يملأ بطاقات الطلبات -->
+  </div>
+
+  <div class="ta-mini" id="tp-empty" style="display:none; margin-top:.8rem;">
+    لا توجد طلبات مطابقة للفلاتر الحالية.
+  </div>
+</section>
+
+<!-- Modal: تفاصيل الطلب -->
+<div class="tp-modal" id="tp-modal" aria-hidden="true">
+  <div class="tp-modal-box" role="dialog" aria-modal="true" aria-labelledby="tp-modal-title">
+    <div class="tp-modal-head">
+      <h3 id="tp-modal-title"><i class="ri-file-list-3-line"></i> تفاصيل طلب الإذن</h3>
+      <button class="tp-close" id="tp-modal-close" aria-label="إغلاق">
+        <i class="ri-close-line"></i>
+      </button>
+    </div>
+
+    <div class="tp-modal-body">
+      <div class="ta-last" id="tp-modal-summary">—</div>
+
+      <div class="tp-card" id="tp-modal-slots" style="display:none;">
+        <div class="tp-meta" style="margin-bottom:6px;"><strong>الحصص المشمولة:</strong></div>
+        <div id="tp-modal-slots-list" style="display:grid; gap:6px;"></div>
+      </div>
+
+      <label class="ta-field" style="min-width:100%;">
+        <span style="font-size:12px;color:var(--text-muted);font-weight:900;">ملاحظة قرار الإدارة</span>
+        <input class="tp-note" id="tp-decision-note" placeholder="اكتب سبب القبول/الرفض (اختياري)..." />
+      </label>
+
+      <div class="tp-actions">
+        <button type="button" class="tp-btn tp-btn--ok" id="tp-approve">
+          <i class="ri-check-line"></i><span>قبول</span>
+        </button>
+        <button type="button" class="tp-btn tp-btn--no" id="tp-reject">
+          <i class="ri-close-line"></i><span>رفض</span>
+        </button>
+        <button type="button" class="tp-btn" id="tp-modal-back">
+          <i class="ri-arrow-go-back-line"></i><span>رجوع</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

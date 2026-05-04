@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Smart School - بوابة وليّ الأمر</title>
+
+  <!-- تحسين تحميل الخط -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+  <!-- خط موحّد -->
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <!-- أيقونات Remix Icon -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" />
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="css/parent.css" />
+  <link rel="stylesheet" href="../shared/feesmodal.css" />
+</head>
+
+<body data-role="parent">
+<noscript style="display:block;padding:12px;margin:12px;border-radius:12px;background:#fff;color:#111;">
+  هذه الصفحة تحتاج JavaScript للعمل بشكل صحيح.
+</noscript>
+
+<div class="shell-parent">
+  <!-- NAVBAR -->
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-logo"><span>S</span></div>
+        <div class="brand-text">
+          <h1>Smart School</h1>
+          <small>بوابة وليّ الأمر</small>
+        </div>
+      </div>
+
+      <div class="command-center">
+        <i class="ri-search-2-line" aria-hidden="true"></i>
+        <input id="command-input" type="text"
+               placeholder="اكتب: درجات، جدول، الرسوم، إشعارات، ربط ابن..." />
+      </div>
+
+      <div class="top-actions">
+        <div class="live-clock">
+          <span id="clock-time">--:--</span>
+          <span id="clock-date">--/--/----</span>
+        </div>
+
+        <button class="icon-btn" id="theme-toggle" type="button" title="الوضع الليلي / النهاري">
+          <i class="ri-moon-clear-line"></i>
+        </button>
+
+        <button class="icon-btn" id="notifications-btn" type="button" title="الإشعارات">
+          <i class="ri-notification-3-line"></i>
+          <span id="notif-dot" class="badge-dot" hidden></span>
+        </button>
+
+        <div class="account-wrapper">
+          <button class="user-pill" id="account-menu-toggle" type="button" title="حساب وليّ الأمر">
+            <div class="avatar-circle">
+              <img id="parent-avatar-img" alt="avatar" hidden decoding="async" loading="lazy" />
+              <span id="parent-avatar-letter">و</span>
+            </div>
+            <div class="user-info">
+              <strong id="parent-name-pill">وليّ الأمر</strong>
+              <small id="parent-extra-pill">—</small>
+            </div>
+            <span class="user-arrow"><i class="ri-arrow-down-s-line"></i></span>
+          </button>
+
+          <div class="account-dropdown" id="account-dropdown" style="display:none;">
+            <button class="account-item" id="open-profile-modal" type="button">
+              <i class="ri-user-3-line"></i>
+              <span>الملف الشخصي</span>
+            </button>
+
+            <button class="account-item" id="open-change-email-modal" type="button">
+              <i class="ri-mail-settings-line"></i>
+              <span>تغيير البريد</span>
+            </button>
+            <button class="account-item" id="open-change-password-modal" type="button">
+              <i class="ri-lock-password-line"></i>
+              <span>تغيير كلمة المرور</span>
+            </button>
+            <div class="account-divider"></div>
+            <button class="account-item account-item--logout" id="logout-btn" type="button">
+              <i class="ri-logout-box-r-line"></i>
+              <span>تسجيل الخروج</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ملخص عام -->
+    <section class="hero-strip">
+      <div>
+        <p class="hero-title" id="hero-greeting">مرحبًا، وليّ الأمر 👋</p>
+        <p class="hero-sub" id="hero-sub">
+          من هنا تتابع أبناءك، الدرجات، الجدول، الإشعارات، والرسوم من مكان واحد.
+        </p>
+      </div>
+      <div class="hero-pill-row">
+        <span class="hero-pill" id="hero-children-pill">عدد الأبناء المرتبطين: 0</span>
+        <span class="hero-pill" id="hero-fees-pill">—</span>
+      </div>
+    </section>
+
+    <!-- اختيار الابن + أزرار سريعة -->
+    <section class="hero-strip">
+      <div>
+        <p class="hero-title">اختر الابن الذي تريد متابعته</p>
+        <p class="hero-sub" id="hero-active-child">—</p>
+      </div>
+      <div class="hero-actions">
+        <select id="selChild" class="hero-select" aria-label="اختر الابن">
+          <!-- يُملأ من السكربت -->
+        </select>
+
+        <button type="button" class="hero-action-btn primary" id="btn-child-card">
+          <i class="ri-id-card-line"></i>
+          <span>بطاقة الابن</span>
+        </button>
+
+<button type="button" class="hero-action-btn" id="btn-fees-quick" data-modal="modal-fees-parent">          <i class="ri-bank-card-2-line"></i>
+          <span>الرسوم</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== تقرير اليوم (خارج المودال) ===== -->
+    <section class="hero-strip" id="att-today-wrap">
+      <div>
+        <p class="hero-title">
+          تقرير اليوم للحضور — <span id="att-today-child">—</span>
+        </p>
+        <p class="hero-sub">
+          <span id="att-today-date">—</span>
+          <span class="muted" id="att-today-status">—</span>
+        </p>
+      </div>
+
+      <div class="hero-pill-row" style="flex-wrap:wrap; gap:0.5rem;">
+        <span class="hero-pill" id="att-today-present">حاضر: —</span>
+        <span class="hero-pill" id="att-today-absent">غائب: —</span>
+        <span class="hero-pill" id="att-today-late">متأخر: —</span>
+        <span class="hero-pill" id="att-today-excused">بعذر: —</span>
+        <span class="hero-pill" id="att-today-perm">أذونات اليوم: —</span>
+
+        <!-- ✅ نفس المودال يفتح من هنا -->
+        <button type="button" class="hero-action-btn primary"
+                id="btn-open-att-report" data-modal="modal-attendance-report">
+          <i class="ri-file-chart-line"></i>
+          <span>كشف الحضور</span>
+        </button>
+      </div>
+
+      <!-- رسالة/تنبيه فوقي (تظهر وتختفي من JS) -->
+      <div class="muted-box" id="att-today-banner" style="margin-top:0.8rem; display:none;">
+        <i class="ri-information-line"></i>
+        <span id="att-today-banner-text">—</span>
+      </div>
+    </section>
+
+    <!-- كروت رئيسية -->
+    <section class="cards-grid" id="cards-grid">
+      <article class="card" data-modal="modal-grades">
+        <div class="card-icon"><i class="ri-bar-chart-2-line"></i></div>
+        <div>
+          <h3>الدرجات</h3>
+          <p>عرض الدرجات لابنك المختار.</p>
+          <small>اختر نوع التقييم من داخل المودال.</small>
+        </div>
+        <span class="card-tag">نتائج</span>
+      </article>
+
+      <!-- ✅ كرت كشف الحضور -->
+      <article class="card" data-modal="modal-attendance-report" id="card-attendance-report">
+        <div class="card-icon"><i class="ri-file-chart-line"></i></div>
+        <div>
+          <h3>كشف الحضور</h3>
+          <p>ملخص أسبوعي لآخر 7 أيام (غياب/تأخر/بعذر) مع التفاصيل.</p>
+          <small>تقرير اليوم يظهر أعلى الصفحة — وهنا ملخص الأسبوع.</small>
+        </div>
+        <span class="card-tag card-tag-warn">حضور</span>
+      </article>
+
+      <!-- ✅ كرت الجداول -->
+      <article class="card" data-modal="modal-timetable">
+        <div class="card-icon"><i class="ri-calendar-schedule-line"></i></div>
+        <div>
+          <h3>الجداول</h3>
+          <p>عرض جدول الحصص الأسبوعي + جدول الامتحانات للابن المحدد.</p>
+          <small>اختر ابنًا ثم افتح الجداول.</small>
+        </div>
+        <span class="card-tag card-tag-info">الجدول</span>
+      </article>
+
+      <!-- ✅ كرت الأذونات -->
+      <article class="card" data-modal="modal-permissions">
+        <div class="card-icon"><i class="ri-file-list-3-line"></i></div>
+        <div>
+          <h3>الأذونات</h3>
+          <p>إرسال إذن (غياب/تأخر/انصراف) ومتابعة قرار الإدارة.</p>
+          <small>إذن واحد فقط لكل طالب في اليوم.</small>
+        </div>
+        <span class="card-tag card-tag-info">أذونات</span>
+      </article>
+
+      <article class="card" data-modal="modal-notifications">
+        <div class="card-icon"><i class="ri-notification-3-line"></i></div>
+        <div>
+          <h3>الإشعارات</h3>
+          <p>متابعة رسائل الإدارة والمعلمين المتعلقة بأبنائك.</p>
+          <small id="notif-small">—</small>
+        </div>
+        <span class="card-tag card-tag-info">رسائل</span>
+      </article>
+
+      <article class="card" data-modal="modal-activities">
+        <div class="card-icon"><i class="ri-book-open-line"></i></div>
+        <div>
+          <h3>الأنشطة والاختبارات</h3>
+          <p>متابعة الواجبات والاختبارات القادمة لأبنائك.</p>
+          <small>—</small>
+        </div>
+        <span class="card-tag card-tag-warn">مهام</span>
+      </article>
+      <!-- ✅ كرت الرسوم -->
+<article class="card" data-modal="modal-fees-parent" id="card-fees">
+  <div class="card-icon"><i class="ri-bank-card-2-line"></i></div>
+  <div>
+    <h3>الرسوم</h3>
+    <p>عرض ملخص الرسوم وإرسال تأكيد الدفع.</p>
+    <small>اختر الابن ثم افتح مودال الرسوم.</small>
+  </div>
+  <span class="card-tag card-tag-warn">دفع</span>
+</article>
+    </section>
+
+    <div class="footer">© المدرسة — بوابة وليّ الأمر</div>
+  </main>
+</div>
+
+<!-- Overlay مشترك -->
+<div id="modal-overlay" class="modal-overlay"></div>
+
+<!-- =========================================================
+========================================================= -->
+<!-- ===== ✅ مودال كشف الحضور (أسبوع/شهر/نطاق) ===== -->
+
+
+
+
+<!-- ===== ✅ مودال كشف الحضور (أسبوع/شهر/نطاق) ===== -->
+<div class="modal" id="modal-attendance-report">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-file-chart-line"></i> كشف الحضور</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- تنبيه ثابت -->
+      <div class="muted-box" style="margin-bottom:0.8rem;">
+        <i class="ri-information-line"></i>
+        <span>
+          التقرير يعرض بيانات <strong>قراءة فقط</strong> للابن المحدد. الأرقام محسوبة <strong>بالحِصص</strong> (وليس بالأيام).
+        </span>
+      </div>
+
+      <!-- ✅ تبويبات -->
+      <div class="ptt-tabs" id="att-tabs" style="margin-bottom:.8rem;">
+        <button type="button" class="ptt-tab active" id="att-tab-week">
+          <i class="ri-calendar-week-line"></i>
+          <span>هذا الأسبوع</span>
+        </button>
+
+        <button type="button" class="ptt-tab" id="att-tab-month">
+          <i class="ri-calendar-2-line"></i>
+          <span>هذا الشهر</span>
+        </button>
+
+        <button type="button" class="ptt-tab" id="att-tab-advanced">
+          <i class="ri-filter-3-line"></i>
+          <span>بحث متقدم</span>
+        </button>
+      </div>
+
+      <!-- ✅ شريط أدوات حسب التبويب -->
+      <section id="att-controls" class="form-card" style="margin-top:0; margin-bottom:.8rem;">
+        <!-- Week controls -->
+        <div id="att-week-controls" style="display:block;">
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:end;">
+            <button type="button" class="primary-btn" id="att-week-current">
+              <i class="ri-calendar-check-line"></i> هذا الأسبوع
+            </button>
+            <button type="button" class="primary-btn" id="att-week-prev" style="background:linear-gradient(120deg,#0f172a,#111827);box-shadow:none;">
+              <i class="ri-arrow-right-s-line"></i> الأسبوع الماضي
+            </button>
+          </div>
+        </div>
+
+        <!-- Month controls -->
+        <div id="att-month-controls" style="display:none;">
+          <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:end;">
+            <button type="button" class="primary-btn" id="att-month-current">
+              <i class="ri-calendar-check-line"></i> هذا الشهر
+            </button>
+            <button type="button" class="primary-btn" id="att-month-prev" style="background:linear-gradient(120deg,#0f172a,#111827);box-shadow:none;">
+              <i class="ri-arrow-right-s-line"></i> الشهر الماضي
+            </button>
+          </div>
+        </div>
+
+        <!-- Advanced controls -->
+        <div id="att-adv-controls" style="display:none; width:100%;">
+          <div class="form-card" style="margin-top:0;">
+            <label>
+              <span>من تاريخ</span>
+              <input type="date" id="att-from" />
+            </label>
+
+            <label>
+              <span>إلى تاريخ</span>
+              <input type="date" id="att-to" />
+            </label>
+
+            <label>
+              <span>السنة الدراسية (اختياري)</span>
+              <select id="att-year">
+                <option value="">تلقائي</option>
+              </select>
+            </label>
+
+            <label>
+              <span>الترم</span>
+              <select id="att-term">
+                <option value="1">الترم الأول</option>
+                <option value="2">الترم الثاني</option>
+              </select>
+            </label>
+
+            <div style="display:flex; align-items:flex-end;">
+              <button type="button" class="primary-btn" id="att-apply">
+                <i class="ri-search-2-line"></i> تطبيق
+              </button>
+            </div>
+          </div>
+
+          <div class="muted-box" style="margin-top:.4rem;">
+            <i class="ri-lightbulb-line"></i>
+            <span>استخدم “بحث متقدم” للحالات الخاصة فقط. الافتراضي: أسبوع المدرسة الحالي.</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ✅ شريط الملخص -->
+      <section class="hero-strip" style="margin:0; padding:0.9rem;">
+        <div>
+          <p class="hero-title" style="margin:0 0 0.25rem;">
+            ملخص — <span id="att7-child">—</span>
+          </p>
+          <p class="hero-sub" style="margin:0;">
+            <span id="att7-range">—</span>
+            <span class="muted" id="att7-note">—</span>
+          </p>
+        </div>
+
+        <div class="hero-pill-row" style="flex-wrap:wrap; gap:0.5rem;">
+          <span class="hero-pill" id="att7-present">حاضر (حصص): —</span>
+          <span class="hero-pill" id="att7-absent">غائب (حصص): —</span>
+          <span class="hero-pill" id="att7-late">متأخر (حصص): —</span>
+          <span class="hero-pill" id="att7-excused">بعذر (حصص): —</span>
+          <span class="hero-pill" id="att7-perm">أذونات (أيام): —</span>
+        </div>
+      </section>
+
+      <!-- ✅ جدول الأيام -->
+      <table class="data-table" style="margin-top:0.8rem;">
+        <thead>
+          <tr>
+            <th>التاريخ</th>
+            <th>اليوم</th>
+            <th>حاضر</th>
+            <th>غائب</th>
+            <th>متأخر</th>
+            <th>بعذر</th>
+            <th>أذونات</th>
+            <th>ملاحظات</th>
+          </tr>
+        </thead>
+        <tbody id="att7-body">
+          <!-- يُملأ من JS -->
+        </tbody>
+      </table>
+
+      <div class="muted-box" style="margin-top:0.8rem;">
+        <i class="ri-shield-check-line"></i>
+        <span>
+          ملاحظة: “الأذونات” هنا <strong>على مستوى اليوم</strong> (إذن يوم كامل) بينما الحضور محسوب <strong>على مستوى الحصص</strong>.
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ===== مودال الدرجات ===== -->
+<div class="modal" id="modal-grades">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-bar-chart-2-line"></i> درجات الابن</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <div class="modal-body">
+      <form class="form-card">
+        <label>
+          <span>نوع التقييم</span>
+          <select id="grType">
+            <option value="monthly">شهري</option>
+            <option value="exam">اختبار</option>
+            <option value="final">نهائي</option>
+          </select>
+        </label>
+        <label>
+          <span>الفصل الدراسي</span>
+          <select id="grTerm">
+            <option value="1">الترم الأول</option>
+            <option value="2">الترم الثاني</option>
+          </select>
+        </label>
+        <label>
+          <span>الشهر</span>
+          <select id="grMonth">
+            <option value="1">يناير</option>
+            <option value="2">فبراير</option>
+            <option value="3">مارس</option>
+            <option value="4">أبريل</option>
+            <option value="5">مايو</option>
+            <option value="6">يونيو</option>
+          </select>
+        </label>
+        <button type="button" class="primary-btn" id="btnGrLoad">عرض الدرجات</button>
+      </form>
+
+      <table class="data-table">
+        <thead>
+          <tr><th>المادة</th><th>الدرجة</th><th>من</th></tr>
+        </thead>
+        <tbody id="grBody"></tbody>
+      </table>
+
+      <div class="muted-box">
+        سيتم ربطه لاحقًا مع API (درجات ولي الأمر).
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ✅ مودال الجداول (أسبوعي + امتحانات) ===== -->
+<div class="modal" id="modal-timetable">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-calendar-schedule-line"></i> الجداول</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- ✅ تبويبات (مطابقة لـ parent.js) -->
+      <div class="ptt-tabs">
+        <button type="button" class="ptt-tab" id="ptt-tab-weekly">
+          <i class="ri-calendar-schedule-line"></i>
+          <span>الحصص الأسبوعية</span>
+        </button>
+        <button type="button" class="ptt-tab" id="ptt-tab-exams">
+          <i class="ri-file-list-3-line"></i>
+          <span>جداول الامتحانات</span>
+        </button>
+      </div>
+
+      <!-- VIEW: Weekly -->
+      <section id="ptt-view-weekly">
+        <div class="form-card" style="margin-top:0;">
+          <label>
+            <span>الفصل الدراسي</span>
+            <select id="ptt-term">
+              <option value="1">الترم الأول</option>
+              <option value="2">الترم الثاني</option>
+            </select>
+          </label>
+          <div style="display:flex;align-items:flex-end;">
+            <button type="button" class="primary-btn" id="ptt-refresh">تحديث الجدول</button>
+          </div>
+        </div>
+
+        <div id="ptt-empty" class="empty-state" style="display:none;"></div>
+
+        <table class="data-table timetable-table" id="parent-timetable" style="margin-top:0.8rem;">
+          <thead>
+            <tr id="ptt-head-row">
+              <th>اليوم</th>
+            </tr>
+          </thead>
+          <tbody id="ptt-body"></tbody>
+        </table>
+      </section>
+
+      <!-- VIEW: Exams -->
+      <section id="ptt-view-exams" style="display:none;">
+        <div class="form-card" style="margin-top:0;">
+          <label>
+            <span>نوع الامتحان</span>
+            <select id="pex-type">
+              <option value="monthly">شهري</option>
+              <option value="midyear">نصف العام</option>
+              <option value="final">آخر العام</option>
+            </select>
+          </label>
+
+          <label id="pex-month-wrap" style="display:none;">
+            <span>الشهر</span>
+            <select id="pex-month">
+              <option value="">كل الأشهر</option>
+            </select>
+          </label>
+
+          <label>
+            <span>المادة</span>
+            <select id="pex-subject">
+              <option value="">كل المواد</option>
+            </select>
+          </label>
+
+          <div style="display:flex;align-items:flex-end;">
+            <button type="button" class="primary-btn" id="pex-filter">
+              <i class="ri-filter-3-line"></i> تطبيق الفلاتر
+            </button>
+          </div>
+        </div>
+
+        <div id="pex-empty" class="empty-state" style="display:none;"></div>
+
+        <table class="data-table" style="margin-top:0.8rem;">
+          <thead>
+            <tr>
+              <th>التاريخ</th>
+              <th>اليوم</th>
+              <th>المادة</th>
+              <th>النوع</th>
+              <th>الوقت</th>
+              <th>القاعة</th>
+              <th>ملاحظات</th>
+            </tr>
+          </thead>
+          <tbody id="pex-body"></tbody>
+        </table>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ✅ مودال الأذونات (V2) ===== -->
+<div class="modal" id="modal-permissions">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-file-list-3-line"></i> أذونات الطالب</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+
+    <div class="modal-body">
+      <section class="permissions-page pp-v2" id="parent-permissions">
+        <div class="pp-header">
+          <div class="pp-header-title">
+            <i class="ri-shield-user-line"></i>
+            <div>
+              <strong>أذونات الطالب</strong>
+              <small>إذن واحد فقط لكل طالب في اليوم — يتم اعتماد/رفض الإذن من الإدارة</small>
+            </div>
+          </div>
+          <div class="pp-header-actions">
+            <button type="button" class="pp-btn ghost" id="pp-refresh">
+              <i class="ri-refresh-line"></i>
+              <span>تحديث</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="pp-layout">
+          <!-- ===== Right: Form ===== -->
+          <div class="pp-panel">
+            <div class="pp-panel-head">
+              <h3><i class="ri-add-circle-line"></i> إرسال إذن</h3>
+              <p class="muted" id="pp-hint">اختر الطالب والتاريخ ونوع الإذن ثم أرسله.</p>
+            </div>
+
+            <form id="pp-form" class="pp-form">
+              <div class="pp-grid">
+                <label class="pp-field">
+                  <span>الطالب</span>
+                  <select id="pp-student" class="pp-input"></select>
+                </label>
+
+                <label class="pp-field" id="pp-student-manual-wrap" style="display:none;">
+                  <span>studentId (يدوي)</span>
+                  <input id="pp-student-manual" class="pp-input" type="number" min="1" placeholder="مثال: 2" />
+                </label>
+
+                <label class="pp-field">
+                  <span>التاريخ</span>
+                  <input id="pp-date" class="pp-input" type="date" />
+                </label>
+
+                <label class="pp-field">
+                  <span>نوع الإذن</span>
+                  <select id="pp-type" class="pp-input">
+                    <option value="ABSENCE">غياب</option>
+                    <option value="LATE">تأخر</option>
+                    <option value="EARLY_LEAVE">انصراف مبكر</option>
+                  </select>
+                </label>
+
+                <label class="pp-field" id="pp-time-from-wrap" style="display:none;">
+                  <span>وقت الوصول المتوقع</span>
+                  <input id="pp-time-from" class="pp-input" type="time" />
+                </label>
+
+                <label class="pp-field" id="pp-time-to-wrap" style="display:none;">
+                  <span>وقت الانصراف المتوقع</span>
+                  <input id="pp-time-to" class="pp-input" type="time" />
+                </label>
+              </div>
+
+              <label class="pp-field">
+                <span>السبب (اختياري)</span>
+                <textarea id="pp-reason" class="pp-input" rows="3" placeholder="مثال: مريض / موعد طبي / ظرف عائلي..."></textarea>
+              </label>
+
+              <label class="pp-field">
+                <span>رابط مرفق (اختياري)</span>
+                <input id="pp-attachment" class="pp-input" type="url" placeholder="https://..." />
+              </label>
+
+              <div class="pp-actions">
+                <button class="pp-btn primary" id="pp-submit" type="submit">
+                  <i class="ri-send-plane-2-line"></i>
+                  <span>إرسال الإذن</span>
+                </button>
+
+                <button class="pp-btn ghost" type="button" id="pp-clear">
+                  <i class="ri-eraser-line"></i>
+                  <span>مسح الحقول</span>
+                </button>
+              </div>
+
+              <div class="pp-note" id="pp-msg" style="display:none;"></div>
+            </form>
+          </div>
+
+          <!-- ===== Left: Status + Rules ===== -->
+          <div class="pp-side">
+            <div class="pp-panel">
+              <div class="pp-panel-head">
+                <h3><i class="ri-information-line"></i> حالة الإذن</h3>
+                <p class="muted">يعرض إذن نفس اليوم (إن وجد)</p>
+              </div>
+
+              <div id="pp-status" class="pp-empty">
+                <i class="ri-inbox-2-line"></i>
+                <div>
+                  <strong>لا يوجد إذن لهذا اليوم</strong>
+                  <p class="muted">عند الإرسال سيظهر هنا بانتظار قرار الإدارة.</p>
+                </div>
+              </div>
+
+              <div id="pp-card" class="pp-card" style="display:none;"></div>
+            </div>
+
+            <div class="pp-mini">
+              <div class="pp-mini-head">
+                <i class="ri-lock-2-line"></i>
+                <strong>قواعد سريعة</strong>
+              </div>
+              <ul>
+                <li>يسمح بإذن <strong>واحد فقط</strong> لكل طالب في اليوم.</li>
+                <li>في حال الرفض: <strong>لا يمكن</strong> إنشاء إذن آخر لنفس اليوم.</li>
+                <li>الإدارة هي الجهة التي <strong>تعتمد/ترفض</strong> الإذن.</li>
+                <li>المعلم ينفذ القرار عند تسجيل الحضور.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- ===== مودال الرسوم ===== -->
+<div class="fees-modal modal" id="modal-fees-parent" aria-hidden="true">
+  <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="feesParentTitle">
+    <div class="modal-header">
+      <div class="modal-title">
+        <h3 id="feesParentTitle"><i class="ri-bank-card-2-line"></i> الرسوم والدفع</h3>
+        <p class="modal-sub" id="feesParentSub">عرض الرسوم وإرسال طلب دفع مع سند</p>
+      </div>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Summary -->
+      <div class="fees-summary" id="paFeesSummary"></div>
+
+      <!-- Tabs -->
+      <div class="fees-tabs">
+        <button class="fees-tab is-active" data-tab="installments" type="button">الأقساط</button>
+        <button class="fees-tab" data-tab="payments" type="button">سجل الدفعات</button>
+        <button class="fees-tab fees-tab-primary" data-tab="pay" type="button">
+          <i class="ri-send-plane-line"></i> إرسال طلب دفع
+        </button>
+      </div>
+
+      <!-- Installments -->
+      <div class="fees-panel" data-panel="installments">
+        <div class="fees-tableWrap">
+          <table class="fees-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>الاستحقاق</th>
+                <th>قيمة القسط</th>
+                <th>المدفوع</th>
+                <th>المتبقي</th>
+                <th>الحالة</th>
+              </tr>
+            </thead>
+            <tbody id="paInstallmentsBody">
+              <tr><td colspan="6" class="fees-empty">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Payments -->
+      <div class="fees-panel" data-panel="payments" hidden>
+        <div class="fees-tableWrap">
+          <table class="fees-table">
+            <thead>
+              <tr>
+                <th>التاريخ</th>
+                <th>المبلغ</th>
+                <th>الطريقة</th>
+                <th>الجهة</th>
+                <th>المرجع</th>
+                <th>الحالة</th>
+                <th>السند</th>
+              </tr>
+            </thead>
+            <tbody id="paPaymentsBody">
+              <tr><td colspan="7" class="fees-empty">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Pay request -->
+     <div class="fees-panel" data-panel="pay" hidden>
+        
+        <div id="paFullyPaidMsg" hidden style="text-align: center; padding: 3rem 1rem;">
+          <i class="ri-checkbox-circle-fill" style="font-size: 4rem; color: #10b981;"></i>
+          <h3 style="color: #065f46; margin-top: 1rem;">تم سداد جميع الأقساط بنجاح</h3>
+          <p style="color: #64748b;">لا توجد أي مبالغ متبقية لدفعها في هذا العام الدراسي. شكراً لالتزامكم.</p>
+        </div>
+
+        <div class="fees-formCard" id="paPaymentFormCard">
+          <div class="fees-formGrid">
+            <label class="fees-field">
+              <span>المبلغ</span>
+              <input type="number" id="paPayAmount" min="1" step="1" placeholder="أدخل مبلغ الدفعة" />
+            </label>
+
+            <label class="fees-field">
+              <span>نوع الدفع</span>
+              <select id="paPayMethod">
+                <option value="">اختر...</option>
+                <option value="wallet">محفظة</option>
+                <option value="transfer">حوالة/تحويل</option>
+                <option value="cash">نقدًا (تسليم للمدرسة)</option>
+                <option value="card">بطاقة</option>
+                <option value="other">أخرى</option>
+              </select>
+            </label>
+
+            <label class="fees-field">
+              <span>الجهة/المزوّد</span>
+              <input id="paProvider" placeholder="مثال: كريمي / جيبي / بنك..." />
+            </label>
+
+            <label class="fees-field">
+              <span>رقم العملية / المرجع</span>
+              <input id="paReference" placeholder="رقم التحويل/العملية" />
+            </label>
+
+            <label class="fees-field fees-field-full">
+              <span>ملاحظة (اختياري)</span>
+              <input id="paNote" placeholder="أي تفاصيل إضافية" />
+            </label>
+
+            <label class="fees-field fees-field-full">
+              <span>رفع سند (صورة/ PDF) — اختياري لكن يفضّل للحوالة/المحفظة</span>
+              <input type="file" id="paAttachment" accept="image/*,application/pdf" />
+            </label>
+          </div>
+
+          <div class="fees-infoBox" id="paMethodDetails">
+            اختر نوع الدفع لإظهار ملاحظات/نصائح.
+          </div>
+
+          <div class="fees-actions">
+            <button class="fees-btn fees-btn-primary" id="paSendRequest" type="button" disabled>
+              <i class="ri-send-plane-2-line"></i><span>إرسال طلب الدفع</span>
+            </button>
+            <button class="fees-btn" id="paReset" type="button">
+              <i class="ri-eraser-line"></i><span>تفريغ</span>
+            </button>
+          </div>
+
+          <div class="fees-footerNote">
+            <i class="ri-shield-check-line"></i>
+            <span>سيظهر طلب الدفع بحالة <b>قيد المراجعة</b> حتى تؤكده الإدارة.</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="fees-toast" id="feesToast" hidden></div>
+    </div>
+  </div>
+</div>
+<!-- ===== مودال الإشعارات ===== -->
+<div class="modal" id="modal-notifications">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-notification-3-line"></i> إشعاراتي</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+<div class="modal-body">
+  <div class="nt-wrap">
+    <div class="nt-toolbar">
+      <div class="nt-tabs">
+        <button type="button" class="nt-tab is-active" id="nt-tab-inbox">
+          <i class="ri-inbox-line"></i><span>الوارد</span>
+          <span class="chip" id="nt-inbox-unread-chip">0</span>
+        </button>
+        <button type="button" class="nt-tab" id="nt-tab-outbox">
+          <i class="ri-send-plane-line"></i><span>الصادر</span>
+        </button>
+        <button type="button" class="nt-tab" id="nt-tab-compose">
+          <i class="ri-edit-2-line"></i><span>إرسال</span>
+        </button>
+      </div>
+
+      <div class="nt-actions">
+        <div class="nt-search">
+          <i class="ri-search-line"></i>
+          <input type="text" id="nt-search" placeholder="بحث في الإشعارات..." />
+        </div>
+
+        <button type="button" class="primary-btn" id="nt-refresh"
+          style="background:linear-gradient(120deg,#0ea5e9,#2563eb);box-shadow:none;">
+          <i class="ri-refresh-line"></i><span>تحديث</span>
+        </button>
+
+        <button type="button" class="primary-btn" id="nt-mark-all-read"
+          style="background:linear-gradient(120deg,#16a34a,#22c55e);box-shadow:none;">
+          <i class="ri-check-double-line"></i><span>تعليم الكل مقروء</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="nt-filters" id="nt-filters">
+      <button type="button" class="nt-filter is-active" data-status="all">الكل</button>
+      <button type="button" class="nt-filter" data-status="unread">غير مقروء</button>
+      <button type="button" class="nt-filter" data-status="read">مقروء</button>
+    </div>
+
+    <!-- INBOX -->
+    <div class="nt-view" id="nt-view-inbox">
+      <div class="nt-list" id="nt-inbox-list"></div>
+      <div class="empty-state" id="nt-inbox-empty" style="display:none;">لا توجد إشعارات.</div>
+    </div>
+
+    <!-- OUTBOX -->
+    <div class="nt-view" id="nt-view-outbox" style="display:none;">
+      <div class="nt-list" id="nt-outbox-list"></div>
+      <div class="empty-state" id="nt-outbox-empty" style="display:none;">لا يوجد صادر.</div>
+    </div>
+
+    <!-- COMPOSE -->
+    <div class="nt-view" id="nt-view-compose" style="display:none;">
+      <div class="muted-box" id="nt-compose-status" style="display:none;"></div>
+
+      <form class="form-card" autocomplete="off">
+        <label>
+          <span>اختر الابن</span>
+          <select id="nt-child-select"></select>
+        </label>
+
+        <label>
+          <span>عنوان الرسالة</span>
+          <input type="text" id="nt-send-title" placeholder="مثال: تنبيه" />
+        </label>
+
+        <label style="grid-column:1/-1;">
+          <span>نص الرسالة</span>
+          <textarea id="nt-send-body" rows="3" style="resize:vertical"></textarea>
+        </label>
+
+        <div style="grid-column:1/-1; display:flex; gap:.45rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" class="primary-btn" id="nt-send-admins"
+            style="background:linear-gradient(120deg,#0f172a,#111827);box-shadow:none;">
+            <i class="ri-building-2-line"></i><span>للإدارة</span>
+          </button>
+
+          <button type="button" class="primary-btn" id="nt-send-child"
+            style="background:linear-gradient(120deg,#16a34a,#22c55e);box-shadow:none;">
+            <i class="ri-user-3-line"></i><span>للإبن المحدد</span>
+          </button>
+
+          <button type="button" class="primary-btn" id="nt-send-all-children"
+            style="background:linear-gradient(120deg,#0ea5e9,#2563eb);box-shadow:none;">
+            <i class="ri-group-line"></i><span>لكل الأبناء</span>
+          </button>
+
+          <button type="button" class="primary-btn" id="nt-send-all-teachers"
+            style="background:linear-gradient(120deg,#f59e0b,#f97316);box-shadow:none;">
+            <i class="ri-user-star-line"></i><span>لمعلمي الابن</span>
+          </button>
+          
+        </div>
+
+        <label style="grid-column:1/-1;">
+          <span>بحث في المعلمين (اختياري)</span>
+          <input id="nt-te-search" type="text" placeholder="اكتب اسم المعلم..." />
+        </label>
+      </form>
+
+      <div class="muted-box" style="margin-top:.6rem;">
+        اختر معلمًا واحدًا لإرسال مباشر (اختياري).
+      </div>
+      <div class="nt-list" id="nt-teachers-list" style="margin-top:.6rem;"></div>
+      <div class="empty-state" id="nt-teachers-empty" style="display:none;">لا يوجد معلمون.</div>
+    </div>
+
+    <!-- DETAIL -->
+    <div class="nt-detail" id="nt-detail" style="display:none;">
+      <div class="nt-detail-head">
+        <button type="button" class="primary-btn" id="nt-detail-back"
+          style="background:linear-gradient(120deg,#0f172a,#111827);box-shadow:none;">
+          <i class="ri-arrow-right-line"></i><span>رجوع</span>
+        </button>
+
+        <div class="nt-detail-meta">
+          <div class="nt-detail-title" id="nt-detail-title">—</div>
+          <div class="nt-detail-sub" id="nt-detail-sub">—</div>
+        </div>
+      </div>
+
+      <div class="muted-box" id="nt-detail-body" style="margin-top:.6rem;">—</div>
+
+      <div class="muted-box" id="nt-receipts-box" style="margin-top:.6rem; display:none;">
+        <strong>حالة المستلمين:</strong>
+        <span id="nt-receipts-summary">—</span>
+        <div class="nt-recipients" id="nt-recipients" style="margin-top:.6rem;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+  </div>
+</div>
+
+<!-- ===== مودال الأنشطة والاختبارات ===== -->
+<div class="modal" id="modal-activities">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-book-open-line"></i> الأنشطة والاختبارات</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <div class="modal-body" id="acList">—</div>
+  </div>
+</div>
+
+<!-- ===== مودال بيانات الابن ===== -->
+<div class="modal" id="modal-child-info">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-id-card-line"></i> بطاقة الابن</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <div class="modal-body" id="ciContent">—</div>
+  </div>
+</div>
+
+<!-- ===== مودال الملف الشخصي لولي الأمر ===== -->
+<div class="modal" id="profile-modal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-user-3-line"></i> الملف الشخصي</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <div class="modal-body">
+      <p><strong>الاسم:</strong> <span id="profile-name">وليّ الأمر</span></p>
+      <p><strong>البريد الإلكتروني:</strong> <span id="profile-email">—</span></p>
+      <p><strong>عدد الأبناء المرتبطين:</strong> <span id="profile-children-count">0</span></p>
+      <div class="muted-box">
+        هذه البيانات تأتي عادة من قاعدة البيانات.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== مودال تغيير كلمة المرور ===== -->
+<div class="modal" id="change-password-modal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-lock-password-line"></i> تغيير كلمة المرور</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <div class="modal-body">
+      <form id="changePasswordForm" class="form-card">
+        <label><span>كلمة المرور الحالية</span><input type="password" id="currentPassword" required /></label>
+        <label><span>كلمة المرور الجديدة</span><input type="password" id="newPassword" required /></label>
+        <label><span>تأكيد كلمة المرور الجديدة</span><input type="password" id="confirmNewPassword" required /></label>
+        <button type="submit" class="primary-btn">حفظ التغييرات</button>
+      </form>
+      <div class="muted-box">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== مودال تغيير البريد ===== -->
+<div class="modal" id="change-email-modal">
+  <div class="modal-dialog">
+    <div class="modal-header">
+      <h3><i class="ri-mail-settings-line"></i> تغيير البريد الإلكتروني</h3>
+      <button class="modal-close" type="button" data-close-modal>×</button>
+    </div>
+    <div class="modal-body">
+      <form id="changeEmailForm" class="form-card">
+        <label><span>البريد الحالي</span><input type="email" id="currentEmail" value="" disabled /></label>
+        <label><span>البريد الجديد</span><input type="email" id="newEmail" required /></label>
+        <button type="submit" class="primary-btn">حفظ البريد الجديد</button>
+      </form>
+      <div class="muted-box">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+<script src="/frontend/shared/js/config.js"></script>
+<!-- ✅ مسارات نسبية (أضمن مع Live Server) -->
+<script src="../login/js/auth-guard.js" defer></script>
+<script src="../shared/profile-account.js" defer></script>
+
+<!-- ✅ سكربت ولي الأمر -->
+<script src="js/parent.js" defer></script>
+<script src="js/permissions.js" defer></script>
+<script src="js/attendance-report.js" defer></script>
+<script src="js/parent-notifications.js" defer></script>
+<script src="js/feesmodal.js" defer></script>
+<script src="js/parent-activities.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<nav class="rbac-tabs">
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-modules"
+     onclick="RBAC_tabs.open(this, 'rbac-modules')">
+    الوحدات
+  </a>
+  <a href="#"
+     class="tab-link active"
+     data-tab="rbac-permissions"
+     onclick="RBAC_tabs.open(this, 'rbac-permissions')">
+    الصلاحيات
+  </a>
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-roles"
+     onclick="RBAC_tabs.open(this, 'rbac-roles')">
+    الأدوار
+  </a>
+  <a href="#"
+     class="tab-link"
+     data-tab="rbac-users"
+     onclick="RBAC_tabs.open(this, 'rbac-users')">
+    المستخدمون
+  </a>
+</nav>
+
+<section class="rbac-page rbac-page-perms">
+  <div class="rbac-card">
+    <div class="rbac-card-header">
+      <div>
+        <h2>إدارة الصلاحيات</h2>
+        <p>إضافة وتعديل الصلاحيات وربطها بالوحدات (Modules) المختلفة.</p>
+      </div>
+    </div>
+
+    <div class="rbac-card-body">
+
+      <!-- شريط الأدوات -->
+      <div class="rbac-toolbar">
+        <div class="rbac-search-input">
+          <input
+            type="text"
+            placeholder="بحث بالاسم أو الكود أو الوحدة..."
+            oninput="RBAC_filters.filter(this, 'rbac-permissions-tbody')" />
+        </div>
+
+        <div class="rbac-meta">
+          <span class="badge-soft" id="perms-count-badge">
+            0 صلاحية
+          </span>
+        </div>
+      </div>
+
+      <!-- جدول + فورم + ربط جماعي -->
+      <div class="rbac-two-column">
+
+        <!-- العمود الرئيسي: جدول الصلاحيات -->
+        <div class="column-main">
+          <div class="rbac-section-header">
+            <h3>كل الصلاحيات</h3>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>الاسم</th>
+                  <th>الكود</th>
+                  <th>الوحدة</th>
+                  <th>إجراءات</th>
+                </tr>
+              </thead>
+              <tbody id="rbac-permissions-tbody">
+                <!-- من JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- العمود الجانبي: إضافة / تعديل + ربط جماعي -->
+        <div class="column-side">
+
+          <!-- فورم إضافة / تعديل -->
+          <h3 class="side-title">إضافة / تعديل صلاحية</h3>
+          <form id="rbac-permission-form" class="form-card">
+            <input type="hidden" id="perm-id" />
+
+            <label>
+              <span>اسم الصلاحية (بالعربي)</span>
+              <input type="text" id="perm-name" required />
+            </label>
+
+            <label>
+              <span>الكود (code بالإنجليزي)</span>
+              <input type="text" id="perm-code" required />
+            </label>
+
+            <label>
+              <span>الوحدة (Module)</span>
+              <select id="perm-module" required></select>
+            </label>
+
+            <button type="submit" class="primary-btn full-width">
+              حفظ الصلاحية
+            </button>
+          </form>
+
+          <!-- كارت ربط صلاحيات بوحدة -->
+          <div class="perms-bulk-card">
+            <div class="perms-bulk-header">
+              <h4>ربط صلاحيات بوحدة</h4>
+              <p>اختر الوحدة ثم علّم ✔ على الصلاحيات المطلوبة.</p>
+            </div>
+
+            <div class="perms-bulk-controls">
+              <label>
+                <span>الوحدة (Module)</span>
+                <select id="bulk-module-select"></select>
+              </label>
+
+              <label>
+                <span>بحث عن صلاحية</span>
+                <input
+                  type="text"
+                  id="bulk-perms-search"
+                  placeholder="بحث بالاسم أو الكود..." />
+              </label>
+            </div>
+
+            <div id="bulk-perms-list" class="perms-bulk-list">
+              <!-- من JS: قائمة صلاحيات بخانات اختيار -->
+            </div>
+
+            <button
+              type="button"
+              id="bulk-assign-perms-btn"
+              class="primary-btn full-width">
+              ربط الصلاحيات المحددة بالوحدة
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

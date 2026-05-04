@@ -1,0 +1,441 @@
+<section class="sr-page sr-page-student-register" data-page-id="student-register">
+  <header class="sr-header">
+    <div class="sr-header-main">
+      <h1 class="sr-title">
+        <span class="sr-title-icon">🎓</span>
+        تسجيل طالب جديد
+      </h1>
+      <p class="sr-subtitle">
+        أدخل بيانات الطالب، وولي الأمر، والبيانات الأكاديمية والحساب في نموذج واحد متكامل.
+      </p>
+    </div>
+    <div class="sr-header-stats">
+      <div class="sr-stat">
+        <div class="sr-stat-label">طلاب هذا العام</div>
+        <div class="sr-stat-value" id="sr-stat-students">—</div>
+      </div>
+      <div class="sr-stat">
+        <div class="sr-stat-label">العام الدراسي الحالي</div>
+        <div class="sr-stat-value" id="sr-stat-year">—</div>
+      </div>
+    </div>
+  </header>
+
+  <div class="sr-layout">
+    <!-- بطاقة النصائح / الملخّص -->
+
+
+    <!-- بطاقة الفورم -->
+    <div class="sr-card">
+      <div class="sr-card-header">
+        <div>
+          <div class="sr-steps">
+            <span
+              class="sr-step sr-step-active"
+              data-target="#section-student"
+            >
+              1. بيانات الطالب
+            </span>
+            <span class="sr-step" data-target="#section-academic">
+              2. البيانات الأكاديمية
+            </span>
+            <span class="sr-step" data-target="#section-guardian">
+              3. ولي الأمر
+            </span>
+            <span class="sr-step" data-target="#section-account">
+              4. الحساب
+            </span>
+          </div>
+          <p class="sr-card-note">
+            الحقول الأساسية عليها علامة (<span class="sr-required">*</span>).
+          </p>
+        </div>
+      </div>
+
+      <div class="sr-card-body">
+        <form id="studentForm">
+          <div id="sr-alert" class="sr-alert sr-alert-hidden"></div>
+
+          <!-- ===================== 1) البيانات الشخصية ===================== -->
+          <fieldset class="sr-section" id="section-student">
+            <legend class="sr-section-title">
+              <span class="sr-section-icon">👤</span>
+              <span>البيانات الشخصية</span>
+            </legend>
+
+            <div class="sr-grid">
+              <div class="sr-field">
+                <label for="studentCode">
+                  رقم الطالب / رقم القيد <span class="sr-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="studentCode"
+                  placeholder="مثال: ST-2025-001"
+                  required
+                />
+              </div>
+
+              <div class="sr-field">
+                <label for="admissionDate">
+                  📅 تاريخ الالتحاق <span class="sr-required">*</span>
+                </label>
+                <input type="date" id="admissionDate" required />
+              </div>
+
+              <div class="sr-field sr-field-full">
+                <label for="studentName">
+                  اسم الطالب <span class="sr-required">*</span>
+                </label>
+                <input
+                  type="text"
+                  id="studentName"
+                  placeholder="أدخل اسم الطالب كاملاً"
+                  required
+                />
+              </div>
+
+              <div class="sr-field">
+                <label for="studentGender">
+                  الجنس <span class="sr-required">*</span>
+                </label>
+                <select id="studentGender" required>
+                  <option value="">اختر الجنس</option>
+                  <option value="male">ذكر</option>
+                  <option value="female">أنثى</option>
+                </select>
+              </div>
+
+              <div class="sr-field">
+                <label for="studentBirth">
+                  📅 تاريخ الميلاد <span class="sr-required">*</span>
+                </label>
+                <input type="date" id="studentBirth" required />
+              </div>
+
+              <div class="sr-field">
+                <label for="studentBirthPlace">📍 مكان الميلاد</label>
+                <input
+                  type="text"
+                  id="studentBirthPlace"
+                  placeholder="المدينة / المنطقة"
+                />
+              </div>
+
+              <div class="sr-field">
+                <label for="studentStatus">حالة الطالب</label>
+                <select id="studentStatus">
+                  <option value="active">نشط</option>
+                  <option value="graduated">متخرج</option>
+                  <option value="withdrawn">منسحب</option>
+                  <option value="suspended">موقوف</option>
+                </select>
+              </div>
+
+              <div class="sr-field sr-field-full">
+                <label for="studentAddress">🏠 العنوان الحالي</label>
+                <input
+                  type="text"
+                  id="studentAddress"
+                  placeholder="المدينة / الحي / الشارع"
+                />
+              </div>
+
+              <div class="sr-field">
+                <label for="studentPhone">📱 هاتف الطالب</label>
+                <input
+                  type="tel"
+                  id="studentPhone"
+                  placeholder="رقم الهاتف الأساسي (اختياري)"
+                />
+              </div>
+
+              <div class="sr-field">
+                <label for="studentPhone2">📞 هاتف آخر</label>
+                <input
+                  type="tel"
+                  id="studentPhone2"
+                  placeholder="رقم هاتف إضافي (اختياري)"
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- ===================== 2) البيانات الأكاديمية ===================== -->
+          <fieldset class="sr-section" id="section-academic">
+            <legend class="sr-section-title">
+              <span class="sr-section-icon">📚</span>
+              <span>البيانات الأكاديمية</span>
+            </legend>
+
+            <div class="sr-grid">
+              <div class="sr-field">
+                <label for="academicYear">
+                  السنة الدراسية <span class="sr-required">*</span>
+                </label>
+                <select id="academicYear" required>
+                  <option value="">اختر السنة الدراسية</option>
+                </select>
+              </div>
+
+              <div class="sr-field">
+                <label for="studentStage">
+                  المرحلة <span class="sr-required">*</span>
+                </label>
+                <select id="studentStage" required>
+                  <option value="">اختر المرحلة</option>
+                </select>
+              </div>
+
+              <div class="sr-field">
+                <label for="studentClass">
+                  الصف <span class="sr-required">*</span>
+                </label>
+                <select id="studentClass" required disabled>
+                  <option value="">اختر الصف</option>
+                </select>
+              </div>
+
+              <div class="sr-field">
+                <label for="sectionType">طريقة تعيين الشعبة</label>
+                <select id="sectionType">
+                  <option value="auto">توزيع تلقائي</option>
+                  <option value="manual">تعيين يدوي</option>
+                </select>
+              </div>
+
+              <div class="sr-field" id="sectionSelectWrapper">
+                <label for="studentSection">الشعبة</label>
+                <select id="studentSection" disabled>
+                  <option value="">اختر الشعبة</option>
+                </select>
+              </div>
+
+              <div class="sr-field">
+                <label for="rollNumber">رقم الطالب في الصف</label>
+                <input
+                  type="text"
+                  id="rollNumber"
+                  placeholder="مثال: 15 (اختياري)"
+                />
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- ===================== 3) بيانات ولي الأمر ===================== -->
+          <fieldset class="sr-section" id="section-guardian">
+            <legend class="sr-section-title">
+              <span class="sr-section-icon">👨‍👩‍👦</span>
+              <span>بيانات ولي الأمر</span>
+            </legend>
+
+            <div class="sr-grid sr-grid-single">
+              <div class="sr-field">
+                <label for="parentOption">اختيار طريقة إدخال ولي الأمر</label>
+                <select id="parentOption">
+                  <option value="">اختر</option>
+                  <option value="existing">ولي أمر موجود مسبقًا</option>
+                  <option value="new">ولي أمر جديد</option>
+                </select>
+              </div>
+
+              <!-- ولي أمر موجود -->
+            <!-- ولي أمر موجود -->
+<div class="sr-field sr-field-full sr-parent-existing sr-hidden" id="existingParentWrap">
+  <label for="existingParentSearch">
+    البحث عن ولي الأمر
+    <span class="sr-hint">بالاسم أو رقم الهاتف</span>
+  </label>
+
+  <div class="sr-parent-search">
+    <input
+      type="text"
+      id="existingParentSearch"
+      placeholder="ابحث عن ولي الأمر..."
+      autocomplete="off"
+    />
+    <button type="button" class="sr-parent-clear" id="existingParentClear" title="مسح الاختيار">
+      ✕
+    </button>
+  </div>
+
+  <input type="hidden" id="existingParentId" />
+
+  <!-- نتائج البحث -->
+  <div class="sr-parent-results sr-hidden" id="existingParentResults" role="listbox"></div>
+
+  <!-- عرض المختار -->
+  <div class="sr-parent-picked sr-hidden" id="existingParentPicked"></div>
+
+  <p class="sr-mini-note">
+    اكتب جزء من الاسم/الهاتف ثم اختر من القائمة ليتم ربط الطالب بهذا الولي.
+  </p>
+</div>
+
+
+              <!-- ولي أمر جديد -->
+              <div class="sr-parent-new sr-hidden">
+                <div class="sr-grid">
+                  <div class="sr-field sr-field-full">
+                    <label for="parentName">
+                      اسم ولي الأمر <span class="sr-required">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      id="parentName"
+                      placeholder="اسم ولي الأمر كاملاً"
+                    />
+                  </div>
+
+                  <div class="sr-field">
+                    <label for="parentGender">الجنس</label>
+                    <select id="parentGender">
+                      <option value="">غير محدد</option>
+                      <option value="male">ذكر</option>
+                      <option value="female">أنثى</option>
+                    </select>
+                  </div>
+
+                  <div class="sr-field">
+                    <label for="parentPhone">
+                      📱 هاتف ولي الأمر <span class="sr-required">*</span>
+                    </label>
+                    <input
+                      type="tel"
+                      id="parentPhone"
+                      placeholder="رقم هاتف ولي الأمر"
+                    />
+                  </div>
+
+                  <div class="sr-field">
+                    <label for="parentRelation">العلاقة بالطالب</label>
+                    <input
+                      type="text"
+                      id="parentRelation"
+                      placeholder="مثل: والد، والدة، أخ..."
+                    />
+                  </div>
+
+                  <div class="sr-field">
+                    <label for="parentEmail">📧 بريد ولي الأمر</label>
+                    <input
+                      type="email"
+                      id="parentEmail"
+                      placeholder="parent@example.com"
+                    />
+                  </div>
+
+                  <div class="sr-field sr-field-full">
+                    <label for="parentAddress">🏠 عنوان ولي الأمر</label>
+                    <input
+                      type="text"
+                      id="parentAddress"
+                      placeholder="المدينة / الحي / الشارع"
+                    />
+                  </div>
+
+                  <div class="sr-field sr-field-full">
+                    <label class="sr-checkbox-row">
+                      <input type="checkbox" id="createParentAccount" checked />
+                      <span>إنشاء حساب دخول لولي الأمر في النظام</span>
+                    </label>
+                  </div>
+
+                  <div class="sr-field">
+                    <label for="parentPassword">🔒 كلمة مرور ولي الأمر</label>
+                    <input
+                      type="password"
+                      id="parentPassword"
+                      placeholder="كلمة مرور قوية"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+
+          <!-- ===================== 4) بيانات الحساب ===================== -->
+          <fieldset class="sr-section" id="section-account">
+            <legend class="sr-section-title">
+              <span class="sr-section-icon">🔑</span>
+              <span>بيانات حساب الطالب</span>
+            </legend>
+
+            <div class="sr-grid sr-grid-single">
+              <div class="sr-field">
+                <label class="sr-checkbox-row">
+                  <input type="checkbox" id="createStudentAccount" checked />
+                  <span>إنشاء حساب دخول للطالب في النظام</span>
+                </label>
+              </div>
+
+              <div class="sr-grid">
+                <div class="sr-field">
+                  <label for="studentEmail">📧 بريد الطالب الإلكتروني</label>
+                  <input
+                    type="email"
+                    id="studentEmail"
+                    placeholder="student@school.edu"
+                  />
+                </div>
+
+                <div class="sr-field">
+                  <label for="studentPassword">🔒 كلمة مرور الطالب</label>
+                  <input
+                    type="password"
+                    id="studentPassword"
+                    placeholder="كلمة مرور قوية"
+                  />
+                </div>
+              </div>
+
+              <p class="sr-mini-note">
+                يمكنك لاحقًا تعديل هذه البيانات من شاشة إدارة المستخدمين، أو إعادة تعيين كلمة المرور.
+              </p>
+            </div>
+          </fieldset>
+
+          <!-- زر الحفظ -->
+          <div class="sr-submit-row">
+            <button type="submit" class="sr-btn sr-btn-primary">
+              <span class="sr-btn-icon">✅</span>
+              تسجيل الطالب
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+        <aside class="sr-side-card">
+      <div class="sr-side-header">
+        <div class="sr-side-icon">💡</div>
+        <div>
+          <h2 class="sr-side-title">نصائح سريعة للتسجيل</h2>
+          <p class="sr-side-subtitle">
+            تأكد من صحة رقم القيد وربط الطالب بولي الأمر الصحيح لتفادي التعارضات لاحقًا.
+          </p>
+        </div>
+      </div>
+
+      <ul class="sr-side-list">
+        <li>
+          <span class="sr-side-dot"></span>
+          <span>رقم الطالب <b>student_code</b> يجب أن يكون فريدًا ولا يتكرر.</span>
+        </li>
+        <li>
+          <span class="sr-side-dot"></span>
+          <span>السنة الدراسية والصف والشعبة تعتمد عليها كل وحدات: الحضور، الدرجات، الرسوم.</span>
+        </li>
+        <li>
+          <span class="sr-side-dot"></span>
+          <span>يمكنك تعطيل إنشاء حساب للطالب أو ولي الأمر إذا لم يكونوا بحاجة للدخول للنظام الآن.</span>
+        </li>
+      </ul>
+
+      <div class="sr-side-badges">
+        <span class="sr-side-badge">🎯 تسجيل مركزي</span>
+        <span class="sr-side-badge">📊 جاهز للتقارير</span>
+        <span class="sr-side-badge">🔐 متكامل مع نظام الصلاحيات</span>
+      </div>
+    </aside>
+  </div>
+</section>
