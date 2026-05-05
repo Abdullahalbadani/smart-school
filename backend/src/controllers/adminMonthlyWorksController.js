@@ -477,32 +477,32 @@ async function upsertMonthlyApproval(assessment, status, userId, note = null) {
       updated_at
     )
     VALUES (
-      $1,
-      $2,
-      $3,
-      $4,
-      $5,
-      $6,
-      $7,
-      $8,
-      $9,
+      $1::bigint,
+      $2::bigint,
+      $3::smallint,
+      $4::bigint,
+      $5::bigint,
+      $6::bigint,
+      $7::bigint,
+      $8::bigint,
+      $9::bigint,
       $10::varchar(20),
-      CASE WHEN $10::text = 'approved' THEN $11 ELSE NULL END,
-      CASE WHEN $10::text = 'approved' THEN NOW() ELSE NULL END,
-      CASE WHEN $10::text = 'returned' THEN $11 ELSE NULL END,
-      CASE WHEN $10::text = 'returned' THEN NOW() ELSE NULL END,
-      CASE WHEN $10::text = 'returned' THEN $12 ELSE NULL END,
+      CASE WHEN $10::text = 'approved' THEN $11::bigint ELSE NULL::bigint END,
+      CASE WHEN $10::text = 'approved' THEN NOW() ELSE NULL::timestamptz END,
+      CASE WHEN $10::text = 'returned' THEN $11::bigint ELSE NULL::bigint END,
+      CASE WHEN $10::text = 'returned' THEN NOW() ELSE NULL::timestamptz END,
+      CASE WHEN $10::text = 'returned' THEN $12::text ELSE NULL::text END,
       NOW(),
       NOW()
     )
     ON CONFLICT (school_id, assessment_id)
     DO UPDATE SET
       status = $10::varchar(20),
-      approved_by = CASE WHEN $10::text = 'approved' THEN $11 ELSE NULL END,
-      approved_at = CASE WHEN $10::text = 'approved' THEN NOW() ELSE NULL END,
-      returned_by = CASE WHEN $10::text = 'returned' THEN $11 ELSE NULL END,
-      returned_at = CASE WHEN $10::text = 'returned' THEN NOW() ELSE NULL END,
-      return_note = CASE WHEN $10::text = 'returned' THEN $12 ELSE NULL END,
+      approved_by = CASE WHEN $10::text = 'approved' THEN $11::bigint ELSE NULL::bigint END,
+      approved_at = CASE WHEN $10::text = 'approved' THEN NOW() ELSE NULL::timestamptz END,
+      returned_by = CASE WHEN $10::text = 'returned' THEN $11::bigint ELSE NULL::bigint END,
+      returned_at = CASE WHEN $10::text = 'returned' THEN NOW() ELSE NULL::timestamptz END,
+      return_note = CASE WHEN $10::text = 'returned' THEN $12::text ELSE NULL::text END,
       updated_at = NOW()
     RETURNING
       status,
@@ -744,6 +744,100 @@ export async function returnMonthlyWorks(req, res) {
     });
   } catch (e) {
     console.error("returnMonthlyWorks error:", e);
+    return res.status(e.status || 500).json({
+      message: e.message || "خطأ في السيرفر",
+    });
+  }
+}
+export async function getMonthlyWorkControlStatuses(req, res) {
+  try {
+    const schoolId = req.user?.school_id;
+    const userId = pickUserId(req);
+
+    if (!schoolId || !userId) {
+      return res.status(401).json({ message: "غير مصرح." });
+    }
+
+    const teacherAssignmentId = Number(req.query.teacher_assignment_id);
+    const term = Number(req.query.term);
+
+    if (!Number.isInteger(teacherAssignmentId) || teacherAssignmentId <= 0) {
+      throw badRequest("teacher_assignment_id مطلوب.");
+    }
+
+    if (![1, 2].includes(term)) {
+      throw badRequest("الفصل الدراسي غير صحيح.");
+    }
+
+    const teacherId = await getTeacherIdByUserId(userId, schoolId);
+    const assignment = await assertOwnAssignment(
+      teacherId,
+      teacherAssignmentId,
+      schoolId
+    );
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+        mwa.assessment_id,
+        mwa.status,
+        mwa.approved_at,
+        mwa.returned_at,
+        mwa.return_note,
+        mwa.updated_at,
+        a.title,
+        a.sequence_no,
+        a.max_score,
+        a.status AS assessment_status
+      FROM monthly_work_approvals mwa
+      JOIN assessments a
+        ON a.id = mwa.assessment_id
+       AND a.school_id = mwa.school_id
+      WHERE mwa.school_id = $1
+        AND mwa.academic_year_id = $2
+        AND mwa.term = $3
+        AND mwa.stage_id = $4
+        AND mwa.grade_id = $5
+        AND mwa.section_id = $6
+        AND mwa.subject_id = $7
+        AND mwa.teacher_assignment_id = $8
+        AND a.type = 'exam'
+        AND a.exam_kind = 'monthly'
+        AND mwa.status IN ('returned', 'approved')
+      ORDER BY a.sequence_no NULLS LAST, a.id
+      `,
+      [
+        schoolId,
+        assignment.academic_year_id,
+        term,
+        assignment.stage_id,
+        assignment.grade_id,
+        assignment.section_id,
+        assignment.subject_id,
+        teacherAssignmentId,
+      ]
+    );
+
+    const items = rows.map((row) => ({
+      assessment_id: row.assessment_id,
+      status: row.status || "pending",
+      title: row.title || "اختبار شهري",
+      sequence_no: row.sequence_no,
+      max_score: row.max_score,
+      assessment_status: row.assessment_status,
+      approved_at: row.approved_at || null,
+      returned_at: row.returned_at || null,
+      return_note: row.return_note || null,
+      updated_at: row.updated_at || null,
+    }));
+
+    return res.json({
+      returned_count: items.filter((item) => item.status === "returned").length,
+      approved_count: items.filter((item) => item.status === "approved").length,
+      items,
+    });
+  } catch (e) {
+    console.error("getMonthlyWorkControlStatuses error:", e);
     return res.status(e.status || 500).json({
       message: e.message || "خطأ في السيرفر",
     });

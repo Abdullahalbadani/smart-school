@@ -7,10 +7,12 @@ import {
   listReopenRequests,
   createReopenRequest,
   submitMuhassala ,
+  getMonthlyWorkControlStatuses,
   getTermWorkControlStatus
 } from "../controllers/teacherGradesController.js";
 
 const router = express.Router();
+router.get("/monthly-work-statuses", getMonthlyWorkControlStatuses);
 router.get("/term-work-status", getTermWorkControlStatus);
 router.use(authMiddleware);
 
