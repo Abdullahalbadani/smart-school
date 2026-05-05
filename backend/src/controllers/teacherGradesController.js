@@ -597,27 +597,53 @@ export async function saveGradeEntry(req, res) {
     client.release();
   }
 }
-
+async function resetReturnedMonthlyWorkToPending(assessmentId, schoolId, db = pool) {
+  await db.query(
+    `
+    UPDATE monthly_work_approvals
+    SET
+      status = 'pending',
+      returned_by = NULL,
+      returned_at = NULL,
+      return_note = NULL,
+      updated_at = NOW()
+    WHERE school_id = $1
+      AND assessment_id = $2
+      AND status = 'returned'
+    `,
+    [schoolId, assessmentId]
+  );
+}
 export async function publishGradeEntry(req, res) {
   const client = await pool.connect();
+
   try {
     const userId = pickUserId(req);
     const schoolId = req.user?.school_id;
+
     if (!userId || !schoolId) {
       return res.status(401).json({ message: "غير مصرح." });
     }
 
     const teacherId = await getTeacherIdByUserId(userId, schoolId);
+
     if (!teacherId) {
       return res.status(403).json({ message: "حساب المعلم غير موجود." });
     }
 
     const assessmentId = Number(req.body?.assessment_id);
+
     if (!assessmentId) {
       throw badRequest("assessment_id مطلوب.");
     }
 
-    const assessment = await getOwnedAssessment(teacherId, assessmentId, schoolId, client);
+    const assessment = await getOwnedAssessment(
+      teacherId,
+      assessmentId,
+      schoolId,
+      client
+    );
+
     if (!assessment) {
       throw forbidden("التقييم غير موجود أو لا يتبع لمدرستك.");
     }
@@ -629,11 +655,11 @@ export async function publishGradeEntry(req, res) {
     await client.query("BEGIN");
 
     const gradeState = await getGradesPublishState(assessmentId, client);
+
     if (gradeState.anyPublished) {
       throw badRequest("تم نشر درجات هذا التقييم بالفعل.");
     }
 
-    // إنشاء صفوف missing تلقائيًا للطلاب الذين ليس لهم صف درجة (مع school_id)
     await client.query(
       `
       INSERT INTO assessment_grades
@@ -675,35 +701,42 @@ export async function publishGradeEntry(req, res) {
       ]
     );
 
-    // نشر جميع الدرجات الموجودة
     await client.query(
       `
       UPDATE assessment_grades
-      SET is_published = true,
-          published_at = COALESCE(published_at, NOW()),
-          updated_at = NOW()
-      WHERE assessment_id = $1 AND school_id = $2
+      SET
+        is_published = true,
+        published_at = COALESCE(published_at, NOW()),
+        updated_at = NOW()
+      WHERE assessment_id = $1
+        AND school_id = $2
       `,
       [assessmentId, schoolId]
     );
 
-    // تبقى الحالة published حتى بعد نشر الدرجات، والإغلاق يتم بزر منفصل
     await client.query(
       `
       UPDATE assessments
-      SET status = 'published',
-          published_at = COALESCE(published_at, NOW()),
-          updated_at = NOW()
-      WHERE id = $1 AND school_id = $2
+      SET
+        status = 'published',
+        published_at = COALESCE(published_at, NOW()),
+        updated_at = NOW()
+      WHERE id = $1
+        AND school_id = $2
       `,
       [assessmentId, schoolId]
     );
 
+    await resetReturnedMonthlyWorkToPending(assessmentId, schoolId, client);
+
     await client.query("COMMIT");
+
     return res.status(204).send();
   } catch (e) {
     await client.query("ROLLBACK");
+
     console.error("publishGradeEntry error:", e);
+
     return res.status(e.status || 500).json({
       message: e.message || "خطأ في السيرفر",
     });

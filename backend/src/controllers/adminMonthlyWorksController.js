@@ -531,7 +531,38 @@ async function upsertMonthlyApproval(assessment, status, userId, note = null) {
 
   return rows[0];
 }
+async function reopenMonthlyAssessmentForTeacher(assessment, schoolId) {
+  await pool.query(
+    `
+    UPDATE assessments
+    SET
+      status = 'draft',
+      published_at = NULL,
+      closed_at = NULL
+    WHERE id = $1
+      AND school_id = $2
+      AND type = 'exam'
+      AND exam_kind = 'monthly'
+    `,
+    [assessment.id, schoolId]
+  );
 
+  await pool.query(
+    `
+    UPDATE assessment_grades
+    SET
+      is_published = false,
+      published_at = NULL,
+      status = CASE
+        WHEN status = 'published' THEN 'draft'
+        ELSE status
+      END
+    WHERE assessment_id = $1
+      AND school_id = $2
+    `,
+    [assessment.id, schoolId]
+  );
+}
 async function buildMonthlyWorksData(assessmentId, schoolId) {
   const assessment = await loadMonthlyAssessment(assessmentId, schoolId);
   const examOverride = await findExamOverride(assessment);
@@ -730,18 +761,19 @@ export async function returnMonthlyWorks(req, res) {
     if (data.approval.status === "approved") {
       throw badRequest("لا يمكن إرجاع كشف شهري معتمد.");
     }
+const approval = await upsertMonthlyApproval(
+  data.assessment,
+  "returned",
+  userId,
+  returnNote
+);
 
-    const approval = await upsertMonthlyApproval(
-      data.assessment,
-      "returned",
-      userId,
-      returnNote
-    );
+await reopenMonthlyAssessmentForTeacher(data.assessment, schoolId);
 
-    return res.json({
-      message: "تم إرجاع الكشف الشهري للمعلم.",
-      approval,
-    });
+return res.json({
+  message: "تم إرجاع الكشف الشهري للمعلم وتم فتحه للتعديل.",
+  approval,
+});
   } catch (e) {
     console.error("returnMonthlyWorks error:", e);
     return res.status(e.status || 500).json({

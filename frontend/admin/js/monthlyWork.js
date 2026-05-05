@@ -59,7 +59,36 @@
 
     return data;
   }
+async function apiPost(path, body = {}) {
+  const url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  const headers = {
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
 
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  let data = null;
+
+  try {
+    data = await res.json();
+  } catch (_) {
+    data = null;
+  }
+
+  if (!res.ok) {
+    throw new Error(data?.message || `فشل الاتصال بالسيرفر: ${res.status}`);
+  }
+
+  return data;
+}
   function showAlert(message, type = "info") {
     const el = qs("#mwAlert");
     if (!el) return;
@@ -167,7 +196,37 @@
     if (Number(term) === 2) return "الفصل الثاني";
     return "—";
   }
+function approvalLabel(status) {
+  if (status === "approved") return "معتمد";
+  if (status === "returned") return "مرجع للمعلم";
+  return "غير معتمد";
+}
 
+function updateActionButtons(data) {
+  const printBtn = qs("#mwPrintBtn");
+  const approveBtn = qs("#mwApproveBtn");
+  const returnBtn = qs("#mwReturnBtn");
+
+  const hasData = !!data;
+  const isApproved = data?.approval?.status === "approved";
+  const canApprove = !!data?.summary?.can_approve && !isApproved;
+
+  if (printBtn) printBtn.disabled = !hasData;
+
+  if (approveBtn) {
+    approveBtn.disabled = !canApprove;
+    approveBtn.innerHTML = isApproved
+      ? `<i class="ri-lock-line"></i> تم الاعتماد`
+      : `<i class="ri-checkbox-circle-line"></i> اعتماد الكشف الشهري`;
+  }
+
+  if (returnBtn) {
+    returnBtn.disabled = !hasData || isApproved;
+    returnBtn.innerHTML = isApproved
+      ? `<i class="ri-lock-line"></i> تم الاعتماد`
+      : `<i class="ri-arrow-go-back-line"></i> إرجاع للمعلم`;
+  }
+}
   function statusBadge(status, label) {
     const map = {
       recorded: "mw-badge-recorded",
@@ -214,7 +273,7 @@
     if (table) table.classList.remove("show");
     if (info) info.classList.remove("show");
     if (printBtn) printBtn.disabled = true;
-
+updateActionButtons(null);
     state.currentData = null;
     resetSummary();
   }
@@ -386,7 +445,7 @@
     const assessment = data.assessment || {};
     const session = data.exam_session || null;
     const summary = data.summary || {};
-
+const approval = data.approval || {};
     info.innerHTML = `
       <div class="mw-info-grid">
         <div class="mw-info-item">
@@ -424,9 +483,19 @@
           <strong>${escapeHtml(session ? `${formatDate(session.exam_date)} - ${session.period_name || "حصة"} ${formatTime(session.start_time)}-${formatTime(session.end_time)}` : "غير مرتبطة بتحضير")}</strong>
         </div>
 
-        <div class="mw-info-item">
+              <div class="mw-info-item">
           <span>جاهزية الاعتماد</span>
           <strong>${summary.can_approve ? "جاهز" : "غير جاهز"}</strong>
+        </div>
+
+        <div class="mw-info-item">
+          <span>حالة الكنترول</span>
+          <strong>${escapeHtml(approvalLabel(approval.status))}</strong>
+        </div>
+
+        <div class="mw-info-item">
+          <span>ملاحظة الإرجاع</span>
+          <strong>${escapeHtml(approval.return_note || "—")}</strong>
         </div>
       </div>
     `;
@@ -485,20 +554,23 @@
     renderInfo(data);
     renderRows(data);
 
-    const printBtn = qs("#mwPrintBtn");
-    if (printBtn) printBtn.disabled = false;
+  updateActionButtons(data);
+  const summary = data.summary || {};
+const approval = data.approval || {};
 
-    const summary = data.summary || {};
-
-    if (summary.can_approve) {
-      showAlert("الكشف الشهري جاهز للمراجعة والاعتماد لاحقًا.", "success");
-    } else if (summary.missing > 0) {
-      showAlert("يوجد طلاب ناقصون: لا توجد درجة ولا غياب ولا عذر معتمد.", "error");
-    } else if (summary.unpublished > 0) {
-      showAlert("يوجد درجات مرصودة لكنها غير منشورة من المعلم.", "error");
-    } else {
-      showAlert("");
-    }
+if (approval.status === "approved") {
+  showAlert("تم اعتماد الكشف الشهري من الكنترول.", "success");
+} else if (approval.status === "returned") {
+  showAlert(`الكشف الشهري مرجع للمعلم. السبب: ${approval.return_note || "لم يتم كتابة سبب."}`, "error");
+} else if (summary.can_approve) {
+  showAlert("الكشف الشهري جاهز للمراجعة والاعتماد.", "success");
+} else if (summary.missing > 0) {
+  showAlert("يوجد طلاب ناقصون: لا توجد درجة ولا غياب ولا عذر معتمد.", "error");
+} else if (summary.unpublished > 0) {
+  showAlert("يوجد درجات مرصودة لكنها غير منشورة من المعلم.", "error");
+} else {
+  showAlert("");
+}
   }
 
   async function loadMonthlyWorks() {
@@ -517,7 +589,68 @@
       setButtonLoading(button, false);
     }
   }
+async function approveMonthlyWorks() {
+  const button = qs("#mwApproveBtn");
 
+  try {
+    const filters = validateFilters(true);
+
+    if (!state.currentData?.summary?.can_approve) {
+      return showAlert("لا يمكن الاعتماد قبل اكتمال الكشف ونشر الدرجات.", "error");
+    }
+
+    setButtonLoading(button, true, "جاري الاعتماد");
+
+    const result = await apiPost("/admin/control/monthly-works/approve", {
+      assessment_id: filters.assessment_id,
+    });
+
+    showAlert(result?.message || "تم اعتماد الكشف الشهري.", "success");
+    await loadMonthlyWorks();
+  } catch (err) {
+    showAlert(err.message || "تعذر اعتماد الكشف الشهري.", "error");
+  } finally {
+    setButtonLoading(button, false);
+    updateActionButtons(state.currentData);
+  }
+}
+
+async function returnMonthlyWorks() {
+  const button = qs("#mwReturnBtn");
+
+  try {
+    const filters = validateFilters(true);
+
+    if (state.currentData?.approval?.status === "approved") {
+      return showAlert("لا يمكن إرجاع كشف شهري معتمد.", "error");
+    }
+
+    const note = window.prompt("اكتب سبب إرجاع الكشف الشهري للمعلم:");
+
+    if (note === null) return;
+
+    const returnNote = String(note || "").trim();
+
+    if (!returnNote) {
+      return showAlert("سبب الإرجاع مطلوب.", "error");
+    }
+
+    setButtonLoading(button, true, "جاري الإرجاع");
+
+    const result = await apiPost("/admin/control/monthly-works/return", {
+      assessment_id: filters.assessment_id,
+      return_note: returnNote,
+    });
+
+    showAlert(result?.message || "تم إرجاع الكشف الشهري للمعلم.", "success");
+    await loadMonthlyWorks();
+  } catch (err) {
+    showAlert(err.message || "تعذر إرجاع الكشف الشهري.", "error");
+  } finally {
+    setButtonLoading(button, false);
+    updateActionButtons(state.currentData);
+  }
+}
   function setupEvents() {
     qs("#mwStage")?.addEventListener("change", () => {
       fillGrades();
@@ -542,7 +675,10 @@
 
     qs("#mwPrintBtn")?.addEventListener("click", () => {
       window.print();
+
     });
+    qs("#mwApproveBtn")?.addEventListener("click", approveMonthlyWorks);
+qs("#mwReturnBtn")?.addEventListener("click", returnMonthlyWorks);
   }
 
   window.initMonthlyWorkScreen = async function () {

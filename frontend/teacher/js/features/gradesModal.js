@@ -926,10 +926,13 @@ function renderControlStatusBanner(statusData) {
 
   if (status === "approved") {
     return `
-      <div class="grd-control-banner grd-control-approved">
-        <div class="grd-control-title">تم اعتماد أعمال هذا الفصل من الكنترول</div>
-        <div class="grd-control-text">
-          لا تحتاج هذه المادة لأي تعديل جديد إلا إذا فتحت الإدارة التعديل لاحقًا.
+      <div class="grd-notice grd-notice-success">
+        <div class="grd-notice-icon">✓</div>
+        <div class="grd-notice-body">
+          <div class="grd-notice-title">تم اعتماد أعمال هذه المادة من الكنترول</div>
+          <div class="grd-notice-text">
+            لا تحتاج هذه المادة لأي تعديل جديد إلا إذا فتحت الإدارة التعديل لاحقًا.
+          </div>
         </div>
       </div>
     `;
@@ -937,10 +940,13 @@ function renderControlStatusBanner(statusData) {
 
   if (status === "returned") {
     return `
-      <div class="grd-control-banner grd-control-returned">
-        <div class="grd-control-title">هذه المادة مرجعة من الكنترول</div>
-        <div class="grd-control-text">
-          السبب: ${escapeHtml(statusData?.return_note || "لم يتم كتابة سبب الإرجاع.")}
+      <div class="grd-notice grd-notice-danger">
+        <div class="grd-notice-icon">!</div>
+        <div class="grd-notice-body">
+          <div class="grd-notice-title">هذه المادة مرجعة من الكنترول</div>
+          <div class="grd-notice-text">
+            السبب: ${escapeHtml(statusData?.return_note || "لم يتم كتابة سبب الإرجاع.")}
+          </div>
         </div>
       </div>
     `;
@@ -948,8 +954,83 @@ function renderControlStatusBanner(statusData) {
 
   return "";
 }
+function renderMonthlyWorkControlBanner(data) {
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const returnedItems = items.filter((item) => item.status === "returned");
+
+  if (!returnedItems.length) {
+    return "";
+  }
+
+  const list = returnedItems
+    .map((item) => {
+      const title = item.title || "اختبار شهري";
+      const note = item.return_note || "لم يتم كتابة سبب الإرجاع.";
+
+      return `
+        <div class="grd-notice-subitem">
+          <span class="grd-notice-subtitle">${escapeHtml(title)}</span>
+          <span class="grd-notice-subtext">السبب: ${escapeHtml(note)}</span>
+        </div>
+      `;
+    })
+    .join("");
+
+  return `
+    <div class="grd-notice grd-notice-warning">
+      <div class="grd-notice-icon">↩</div>
+      <div class="grd-notice-body">
+        <div class="grd-notice-title">يوجد اختبار شهري مرجع من الكنترول</div>
+        <div class="grd-notice-text">
+          راجع درجات الاختبار الشهري ثم أعد نشرها حتى تتمكن الإدارة من اعتمادها.
+        </div>
+        <div class="grd-notice-list">
+          ${list}
+        </div>
+      </div>
+    </div>
+  `;
+}
+async function loadMonthlyWorkControlStatuses(teacherAssignmentId, term) {
+  if (!teacherAssignmentId || !term) {
+    return {
+      returned_count: 0,
+      approved_count: 0,
+      items: [],
+    };
+  }
+
+  try {
+    const data = await api(
+      "GET",
+      `/api/teacher/grades/monthly-work-statuses?teacher_assignment_id=${encodeURIComponent(
+        teacherAssignmentId
+      )}&term=${encodeURIComponent(term)}`
+    );
+
+    console.log("Monthly work control statuses:", data);
+
+    return data || {
+      returned_count: 0,
+      approved_count: 0,
+      items: [],
+    };
+  } catch (err) {
+    console.error("Failed to load monthly work control statuses:", err);
+    return {
+      returned_count: 0,
+      approved_count: 0,
+      items: [],
+    };
+  }
+}
 function showControlStatusBanner() {
-  const html = renderControlStatusBanner(state.termWorkControlStatus);
+  const termHtml = renderControlStatusBanner(state.termWorkControlStatus);
+  const monthlyHtml = renderMonthlyWorkControlBanner(
+    state.monthlyWorkControlStatuses
+  );
+
+  const html = `${termHtml}${monthlyHtml}`;
 
   let box = qs("#grd-control-status-box");
 
@@ -957,10 +1038,10 @@ function showControlStatusBanner() {
     box = document.createElement("div");
     box.id = "grd-control-status-box";
 
-    const target =
-      sheetMuhassalaInfo()?.closest(".info-card, .card, div") ||
-      sheetHead()?.closest("table") ||
-      sheetEmpty()?.parentElement;
+    const table = sheetHead()?.closest("table");
+    const tableCard = table?.closest(".card, .info-card, .grd-card, div");
+    const emptyBox = sheetEmpty()?.parentElement;
+    const target = tableCard || emptyBox || sheetMuhassalaInfo()?.parentElement;
 
     if (target?.parentElement) {
       target.parentElement.insertBefore(box, target);
@@ -970,7 +1051,7 @@ function showControlStatusBanner() {
   if (!box) return;
 
   box.innerHTML = html;
-  box.style.display = html ? "" : "none";
+  box.style.display = html ? "grid" : "none";
 }
 async function loadTermWorkControlStatus(teacherAssignmentId, term) {
   if (!teacherAssignmentId || !term) {
@@ -1014,6 +1095,13 @@ state.termWorkControlStatus = await loadTermWorkControlStatus(
   teacher_assignment_id,
   term
 );
+
+state.monthlyWorkControlStatuses = await loadMonthlyWorkControlStatuses(
+  teacher_assignment_id,
+  term
+);
+
+showControlStatusBanner();
 
 const onlyPublished = String(sheetVisibility()?.value || "published_only") === "published_only";
 const studentQ = String(sheetStudentSearch()?.value || "").trim().toLowerCase();

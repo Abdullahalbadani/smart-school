@@ -116,7 +116,15 @@
       color: #e2e8f0;
       border: 1px solid rgba(148, 163, 184, 0.18);
     }
+.mw-btn-success {
+  background: linear-gradient(135deg, #16a34a, #22c55e);
+  color: white;
+}
 
+.mw-btn-danger {
+  background: linear-gradient(135deg, #dc2626, #f97316);
+  color: white;
+}
     .mw-alert {
       display: none;
       margin-bottom: 16px;
@@ -461,6 +469,15 @@
         <i class="ri-printer-line"></i>
         طباعة
       </button>
+      <button type="button" class="mw-btn mw-btn-success" id="mwApproveBtn" disabled>
+  <i class="ri-checkbox-circle-line"></i>
+  اعتماد الكشف الشهري
+</button>
+
+<button type="button" class="mw-btn mw-btn-danger" id="mwReturnBtn" disabled>
+  <i class="ri-arrow-go-back-line"></i>
+  إرجاع للمعلم
+</button>
     </div>
   </div>
 
