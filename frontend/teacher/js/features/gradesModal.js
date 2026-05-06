@@ -1132,12 +1132,31 @@ showControlStatusBanner();
     state.midtermExamMax = Number(midtermExamAssm?.max_score ?? 30);
     state.finalExamMax = Number(finalExamAssm?.max_score ?? 30);
 
-    const isMidMuhassalaLocked =
-      !!midMuhassalaAssm && (midMuhassalaAssm.status === "published" || midMuhassalaAssm.status === "closed");
+   const termWorkStatus = state.termWorkControlStatus?.status || "pending";
+const termWorkReturned = termWorkStatus === "returned";
+const termWorkApproved = termWorkStatus === "approved";
 
-    const isFinMuhassalaLocked =
-      !!finMuhassalaAssm && (finMuhassalaAssm.status === "published" || finMuhassalaAssm.status === "closed");
+const isTermOne = Number(term) === 1;
+const isTermTwo = Number(term) === 2;
 
+const canEditMidMuhassalaAfterReturn = termWorkReturned && isTermOne;
+const canEditFinMuhassalaAfterReturn = termWorkReturned && isTermTwo;
+
+const isMidMuhassalaLocked =
+  termWorkApproved ||
+  (
+    !!midMuhassalaAssm &&
+    (midMuhassalaAssm.status === "published" || midMuhassalaAssm.status === "closed") &&
+    !canEditMidMuhassalaAfterReturn
+  );
+
+const isFinMuhassalaLocked =
+  termWorkApproved ||
+  (
+    !!finMuhassalaAssm &&
+    (finMuhassalaAssm.status === "published" || finMuhassalaAssm.status === "closed") &&
+    !canEditFinMuhassalaAfterReturn
+  );
     if (!assessments.length && !allAssessments.length) {
       sheetEmpty() && (sheetEmpty().style.display = "");
       return;
@@ -1248,18 +1267,22 @@ showControlStatusBanner();
     `;
     headRow.innerHTML = headHTML;
     sheetHead()?.appendChild(headRow);
+const getSingleScore = (gradesMap, predicate, includeUnpublished = false) => {
+  for (const assessment of assessments) {
+    if (!predicate(assessment)) continue;
 
-    const getSingleScore = (gradesMap, predicate) => {
-      for (const assessment of assessments) {
-        if (!predicate(assessment)) continue;
-        const g = gradesMap.get(Number(assessment.id));
-        if (!g) continue;
-        if (onlyPublished && !g.is_published) continue;
-        if (g.score != null && Number.isFinite(Number(g.score))) return Number(g.score);
-      }
-      return null;
-    };
+    const g = gradesMap.get(Number(assessment.id));
+    if (!g) continue;
 
+    if (onlyPublished && !includeUnpublished && !g.is_published) continue;
+
+    if (g.score != null && Number.isFinite(Number(g.score))) {
+      return Number(g.score);
+    }
+  }
+
+  return null;
+};
     for (const student of students) {
       const tr = document.createElement("tr");
       let rowHTML = `<td><div style="display:flex;flex-direction:column;gap:.15rem;"><strong>${escapeHtml(
@@ -1284,12 +1307,31 @@ showControlStatusBanner();
 
         rowHTML += `<td>${escapeHtml(display)}</td>`;
       }
+const includeReturnedTermScores = state.termWorkControlStatus?.status === "returned";
 
-      const midMuhassala = getSingleScore(student.grades, (a) => isAssessmentAggregate(a, "midterm"));
-      const midtermExam = getSingleScore(student.grades, (a) => isAssessmentExam(a, "midterm"));
-      const finMuhassala = getSingleScore(student.grades, (a) => isAssessmentAggregate(a, "final"));
-      const finalExam = getSingleScore(student.grades, (a) => isAssessmentExam(a, "final"));
+const midMuhassala = getSingleScore(
+  student.grades,
+  (a) => isAssessmentAggregate(a, "midterm"),
+  includeReturnedTermScores
+);
 
+const midtermExam = getSingleScore(
+  student.grades,
+  (a) => isAssessmentExam(a, "midterm"),
+  includeReturnedTermScores
+);
+
+const finMuhassala = getSingleScore(
+  student.grades,
+  (a) => isAssessmentAggregate(a, "final"),
+  includeReturnedTermScores
+);
+
+const finalExam = getSingleScore(
+  student.grades,
+  (a) => isAssessmentExam(a, "final"),
+  includeReturnedTermScores
+);
       const total = [midMuhassala, midtermExam, finMuhassala, finalExam].reduce(
         (sum, n) => sum + (Number.isFinite(n) ? n : 0),
         0

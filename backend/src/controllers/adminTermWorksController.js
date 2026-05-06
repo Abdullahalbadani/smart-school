@@ -665,7 +665,94 @@ export async function approveTermWorks(req, res) {
         });
     }
 }
+function getTermWorkKinds(term) {
+  const t = Number(term);
 
+  if (t === 1) {
+    return {
+      examKind: "midterm",
+      aggregateKind: "midterm",
+      legacyExamType: "midterm_exam",
+      legacyAggregateType: "midterm_muhassala",
+    };
+  }
+
+  if (t === 2) {
+    return {
+      examKind: "final",
+      aggregateKind: "final",
+      legacyExamType: "final_exam",
+      legacyAggregateType: "final_muhassala",
+    };
+  }
+
+  throw badRequest("الفصل الدراسي يجب أن يكون 1 أو 2.");
+}
+
+async function reopenReturnedTermWorkAssessments(params) {
+  const { schoolId, teacherAssignmentId, term } = params;
+  const kinds = getTermWorkKinds(term);
+
+  const { rows } = await pool.query(
+    `
+    SELECT id
+    FROM assessments
+    WHERE school_id = $1
+      AND teacher_assignment_id = $2
+      AND (
+        (type = 'exam' AND exam_kind = $3)
+        OR
+        (type = 'aggregate' AND aggregate_kind = $4)
+        OR
+        type = $5
+        OR
+        type = $6
+      )
+    `,
+    [
+      schoolId,
+      teacherAssignmentId,
+      kinds.examKind,
+      kinds.aggregateKind,
+      kinds.legacyExamType,
+      kinds.legacyAggregateType,
+    ]
+  );
+
+  const assessmentIds = rows.map((r) => Number(r.id)).filter(Boolean);
+
+  if (!assessmentIds.length) {
+    return;
+  }
+
+  // نفتح درجات الطلاب للتعديل من جديد
+  await pool.query(
+    `
+    UPDATE assessment_grades
+    SET
+      is_published = false,
+      published_at = NULL,
+      updated_at = NOW()
+    WHERE school_id = $1
+      AND assessment_id = ANY($2::bigint[])
+    `,
+    [schoolId, assessmentIds]
+  );
+
+  // إذا كان التقييم مغلقًا، نعيده منشورًا كنشاط موجود لكن درجاته غير منشورة
+  await pool.query(
+    `
+    UPDATE assessments
+    SET
+      status = CASE WHEN status = 'closed' THEN 'published' ELSE status END,
+      closed_at = NULL,
+      updated_at = NOW()
+    WHERE school_id = $1
+      AND id = ANY($2::bigint[])
+    `,
+    [schoolId, assessmentIds]
+  );
+}
 export async function returnTermWorks(req, res) {
     try {
         const schoolId = req.user?.school_id;
@@ -681,8 +768,7 @@ export async function returnTermWorks(req, res) {
         const gradeId = parseId(req.body.grade_id, "الصف");
         const sectionId = parseId(req.body.section_id, "الشعبة");
         const subjectId = parseId(req.body.subject_id, "المادة");
-        const note = String(req.body.note || "").trim();
-
+const note = String(req.body.note || req.body.return_note || "").trim();
         if (![1, 2].includes(term)) {
             throw badRequest("الفصل الدراسي يجب أن يكون 1 أو 2.");
         }
@@ -700,7 +786,9 @@ export async function returnTermWorks(req, res) {
             sectionId,
             subjectId,
         });
-
+if (data.approval?.status === "approved") {
+  throw badRequest("لا يمكن إرجاع أعمال فصلية معتمدة.");
+}
         const approval = await upsertApproval({
             schoolId,
             academicYearId,
@@ -714,7 +802,11 @@ export async function returnTermWorks(req, res) {
             userId,
             note,
         });
-
+await reopenReturnedTermWorkAssessments({
+  schoolId,
+  teacherAssignmentId: data.assignment.id,
+  term,
+});
         return res.json({
             message: "تم إرجاع الأعمال الفصلية للمعلم.",
             approval,

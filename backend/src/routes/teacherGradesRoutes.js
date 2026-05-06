@@ -6,21 +6,23 @@ import {
   publishGradeEntry,
   listReopenRequests,
   createReopenRequest,
-  submitMuhassala ,
+  submitMuhassala,
   getMonthlyWorkControlStatuses,
-  getTermWorkControlStatus
+  getTermWorkControlStatus,
 } from "../controllers/teacherGradesController.js";
 
 const router = express.Router();
+
+// مهم جدًا: كل مسارات درجات المعلم تحتاج req.user
+router.use(authMiddleware);
+
 router.get("/monthly-work-statuses", getMonthlyWorkControlStatuses);
 router.get("/term-work-status", getTermWorkControlStatus);
-router.use(authMiddleware);
 
 router.get("/entry", getGradeEntry);
 router.post("/entry/save", saveGradeEntry);
 router.post("/entry/publish", publishGradeEntry);
 
-// المسار الخاص باعتماد المحصلة ورفعها للإدارة
 router.post("/muhassala/submit", submitMuhassala);
 
 router.get("/reopen-requests", listReopenRequests);
