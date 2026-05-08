@@ -402,7 +402,7 @@ export const ExamTimetablesController = {
         FROM exam_timetable_entries e
         JOIN subjects s ON s.id = e.subject_id
         LEFT JOIN sections sc ON sc.id = e.apply_to_section_id
-        WHERE e.exam_timetable_id=$1 AND e.school_id=$2
+        WHERE e.exam_timetable_id=$1 AND s.school_id=$2
         ORDER BY e.exam_date, e.start_time
         `,
         [id, schoolId]
@@ -421,206 +421,243 @@ export const ExamTimetablesController = {
   // PUT /api/exam-timetables/:id/entries
   // =========================
   async saveEntries(req, res) {
-    const client = await pool.connect();
-    try {
-      const schoolId = req.user?.school_id;
-      if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
+  const client = await pool.connect();
 
-      const timetableId = toInt(req.params.id);
-      const rows = Array.isArray(req.body.entries) ? req.body.entries : [];
-      if (!timetableId) return res.status(400).json({ message: "id غير صحيح" });
+  try {
+    const schoolId = req.user?.school_id;
+    if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
 
-      const ttQ = await client.query(
-        "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
-        [timetableId, schoolId]
-      );
-      if (!ttQ.rows.length)
-        return res.status(404).json({ message: "الجدول غير موجود" });
+    const timetableId = toInt(req.params.id);
+    const rows = Array.isArray(req.body.entries) ? req.body.entries : [];
 
-      const tt = ttQ.rows[0];
-      if (tt.status === "published") {
-        return res
-          .status(400)
-          .json({ message: "لا يمكن تعديل جدول منشور، اجعله مسودة أولاً." });
+    if (!timetableId) {
+      return res.status(400).json({ message: "id غير صحيح" });
+    }
+
+    const ttQ = await client.query(
+      "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
+      [timetableId, schoolId]
+    );
+
+    if (!ttQ.rows.length) {
+      return res.status(404).json({ message: "الجدول غير موجود" });
+    }
+
+    const tt = ttQ.rows[0];
+
+    if (tt.status === "published") {
+      return res.status(400).json({
+        message: "لا يمكن تعديل جدول منشور، اجعله مسودة أولاً.",
+      });
+    }
+
+    const clean = [];
+    const slotSet = new Set();
+
+    for (let i = 0; i < rows.length; i++) {
+      const e = rows[i] || {};
+
+      const date = normalizeDateISO(e.date || e.exam_date || "");
+      const start_time = normalizeTimeHHMM(e.start_time || e.start || "");
+      const end_time = normalizeTimeHHMM(e.end_time || e.end || "");
+
+      const subjectId = toInt(e.subjectId ?? e.subject_id);
+      const room = String(e.room || "").trim() || null;
+      const notes = String(e.notes || "").trim() || null;
+      let applyToSectionId = toInt(e.applyToSectionId ?? e.apply_to_section_id);
+
+      const anyValue =
+        e.date ||
+        e.exam_date ||
+        e.start_time ||
+        e.end_time ||
+        subjectId ||
+        room ||
+        notes ||
+        applyToSectionId;
+
+      if (!anyValue) continue;
+
+      if (!date) {
+        return res.status(400).json({
+          message: `السطر رقم ${i + 1}: صيغة التاريخ غير صحيحة. استخدم YYYY-MM-DD أو DD/MM/YYYY.`,
+        });
       }
 
-      const clean = [];
-      const slotSet = new Set();
+      if (!isValidDateISO(date)) {
+        return res.status(400).json({
+          message: `السطر رقم ${i + 1}: صيغة التاريخ غير صحيحة (YYYY-MM-DD).`,
+        });
+      }
 
-      for (let i = 0; i < rows.length; i++) {
-        const e = rows[i] || {};
+      if (!subjectId) {
+        return res.status(400).json({
+          message: `السطر رقم ${i + 1}: المادة مطلوبة.`,
+        });
+      }
 
-        const date = normalizeDateISO(e.date || e.exam_date || "");
-        const start_time = normalizeTimeHHMM(e.start_time || e.start || "");
-        const end_time = normalizeTimeHHMM(e.end_time || e.end || "");
+      if (!start_time || !end_time) {
+        return res.status(400).json({
+          message: `السطر رقم ${i + 1}: وقت (من/إلى) مطلوب.`,
+        });
+      }
 
-        const subjectId = toInt(e.subjectId ?? e.subject_id);
-        const room = String(e.room || "").trim() || null;
-        const notes = String(e.notes || "").trim() || null;
-        let applyToSectionId = toInt(
-          e.applyToSectionId ?? e.apply_to_section_id
-        );
+      if (!isValidTimeHHMM(start_time) || !isValidTimeHHMM(end_time)) {
+        return res.status(400).json({
+          message: `السطر رقم ${i + 1}: وقت غير صحيح (${start_time} - ${end_time}).`,
+        });
+      }
 
-        const anyValue =
-          e.date ||
-          e.exam_date ||
-          e.start_time ||
-          e.end_time ||
-          subjectId ||
-          room ||
-          notes ||
-          applyToSectionId;
-        if (!anyValue) continue;
+      if (!timeLess(start_time, end_time)) {
+        return res.status(400).json({
+          message: `السطر رقم ${i + 1}: وقت البداية يجب أن يكون أقل من النهاية.`,
+        });
+      }
 
-        if (!date) {
-          return res.status(400).json({
-            message: `السطر رقم ${i + 1}: صيغة التاريخ غير صحيحة. استخدم YYYY-MM-DD أو DD/MM/YYYY.`,
-          });
-        }
-        if (!isValidDateISO(date)) {
-          return res.status(400).json({
-            message: `السطر رقم ${i + 1}: صيغة التاريخ غير صحيحة (YYYY-MM-DD).`,
-          });
-        }
-
-        if (!subjectId)
-          return res.status(400).json({ message: `السطر رقم ${i + 1}: المادة مطلوبة.` });
-
-        if (!start_time || !end_time) {
-          return res.status(400).json({ message: `السطر رقم ${i + 1}: وقت (من/إلى) مطلوب.` });
-        }
-        if (!isValidTimeHHMM(start_time) || !isValidTimeHHMM(end_time)) {
-          return res.status(400).json({
-            message: `السطر رقم ${i + 1}: وقت غير صحيح (${start_time} - ${end_time}).`,
-          });
-        }
-        if (!timeLess(start_time, end_time)) {
-          return res.status(400).json({
-            message: `السطر رقم ${i + 1}: وقت البداية يجب أن يكون أقل من النهاية.`,
-          });
-        }
-
-        if (tt.scope === "section") {
+      if (tt.scope === "section") {
+        applyToSectionId = null;
+      } else {
+        if (!applyToSectionId || applyToSectionId <= 0) {
           applyToSectionId = null;
-        } else {
-          if (!applyToSectionId || applyToSectionId <= 0)
-            applyToSectionId = null;
         }
+      }
 
-        const groupKey = applyToSectionId ? `sec:${applyToSectionId}` : "all";
-        const slotKey = `${groupKey}-${date}-${start_time}-${end_time}`;
+      const groupKey = applyToSectionId ? `sec:${applyToSectionId}` : "all";
+      const slotKey = `${groupKey}-${date}-${start_time}-${end_time}`;
 
-        if (slotSet.has(slotKey)) {
-          return res.status(400).json({
-            message: `تكرار اختبار لنفس المجموعة في نفس الوقت (السطر ${i + 1}).`,
-          });
-        }
-        slotSet.add(slotKey);
+      if (slotSet.has(slotKey)) {
+        return res.status(400).json({
+          message: `تكرار اختبار لنفس المجموعة في نفس الوقت (السطر ${i + 1}).`,
+        });
+      }
 
-        clean.push({
-          date,
+      slotSet.add(slotKey);
+
+      clean.push({
+        date,
+        start_time,
+        end_time,
+        subjectId,
+        room,
+        notes,
+        applyToSectionId,
+      });
+    }
+
+    await client.query("BEGIN");
+
+    await client.query(
+      `
+      DELETE FROM exam_timetable_entries
+      WHERE exam_timetable_id = $1
+      `,
+      [timetableId]
+    );
+
+    for (const x of clean) {
+      await client.query(
+        `
+        INSERT INTO exam_timetable_entries (
+          exam_timetable_id,
+          exam_date,
           start_time,
           end_time,
-          subjectId,
+          subject_id,
           room,
           notes,
-          applyToSectionId,
-        });
-      }
-
-      await client.query("BEGIN");
-      await client.query(
-        "DELETE FROM exam_timetable_entries WHERE exam_timetable_id=$1 AND school_id=$2",
-        [timetableId, schoolId]
+          apply_to_section_id
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        `,
+        [
+          timetableId,
+          x.date,
+          x.start_time,
+          x.end_time,
+          x.subjectId,
+          x.room,
+          x.notes,
+          x.applyToSectionId,
+        ]
       );
-
-      for (const x of clean) {
-        // ✅ التعديل الأهم: إضافة school_id للإدخال
-        await client.query(
-          `
-          INSERT INTO exam_timetable_entries
-            (school_id, exam_timetable_id, exam_date, start_time, end_time, subject_id, room, notes, apply_to_section_id)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-          `,
-          [
-            schoolId,
-            timetableId,
-            x.date,
-            x.start_time,
-            x.end_time,
-            x.subjectId,
-            x.room,
-            x.notes,
-            x.applyToSectionId,
-          ]
-        );
-      }
-
-      await client.query(
-        "UPDATE exam_timetables SET updated_at=now() WHERE id=$1 AND school_id=$2",
-        [timetableId, schoolId]
-      );
-      await client.query("COMMIT");
-
-      return res.json({
-        message: "تم حفظ مسودة جدول الاختبارات بنجاح",
-        data: { saved: clean.length },
-      });
-    } catch (e) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        console.error("Rollback failed in saveEntries:", rollbackError);
-      }
-      console.error("exam saveEntries error:", e);
-
-      if (String(e?.code) === "23505") {
-        return res.status(400).json({
-          message: "يوجد تكرار في نفس الوقت لنفس المجموعة داخل الجدول.",
-        });
-      }
-
-      return res.status(500).json({ message: "خطأ في حفظ جدول الاختبارات" });
-    } finally {
-      client.release();
     }
-  },
+
+    await client.query(
+      "UPDATE exam_timetables SET updated_at=now() WHERE id=$1 AND school_id=$2",
+      [timetableId, schoolId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      message: "تم حفظ مسودة جدول الاختبارات بنجاح",
+      data: { saved: clean.length },
+    });
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("Rollback failed in saveEntries:", rollbackError);
+    }
+
+    console.error("exam saveEntries error:", e);
+
+    if (String(e?.code) === "23505") {
+      return res.status(400).json({
+        message: "يوجد تكرار في نفس الوقت لنفس المجموعة داخل الجدول.",
+      });
+    }
+
+    return res.status(500).json({ message: "خطأ في حفظ جدول الاختبارات" });
+  } finally {
+    client.release();
+  }
+},
 
   // =========================
   // PUT /api/exam-timetables/:id/publish
   // =========================
   async publish(req, res) {
-    try {
-      const schoolId = req.user?.school_id;
-      if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
+  try {
+    const schoolId = req.user?.school_id;
+    if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
 
-      const timetableId = toInt(req.params.id);
-      if (!timetableId) return res.status(400).json({ message: "id غير صحيح" });
+    const timetableId = toInt(req.params.id);
+    if (!timetableId) return res.status(400).json({ message: "id غير صحيح" });
 
-      const ttQ = await pool.query(
-        "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
-        [timetableId, schoolId]
-      );
-      if (!ttQ.rows.length)
-        return res.status(404).json({ message: "الجدول غير موجود" });
+    const ttQ = await pool.query(
+      "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
+      [timetableId, schoolId]
+    );
 
-      const countQ = await pool.query(
-        "SELECT COUNT(*)::int AS c FROM exam_timetable_entries WHERE exam_timetable_id=$1 AND school_id=$2",
-        [timetableId, schoolId]
-      );
-      if (!countQ.rows[0].c)
-        return res.status(400).json({ message: "لا يمكن نشر جدول فارغ." });
-
-      await pool.query(
-        "UPDATE exam_timetables SET status='published', updated_at=now() WHERE id=$1 AND school_id=$2",
-        [timetableId, schoolId]
-      );
-      return res.json({ message: "تم نشر جدول الاختبارات" });
-    } catch (e) {
-      console.error("exam publish error:", e);
-      return res.status(500).json({ message: "خطأ في نشر جدول الاختبارات" });
+    if (!ttQ.rows.length) {
+      return res.status(404).json({ message: "الجدول غير موجود" });
     }
-  },
+
+    const countQ = await pool.query(
+      `
+      SELECT COUNT(*)::int AS c
+      FROM exam_timetable_entries
+      WHERE exam_timetable_id = $1
+      `,
+      [timetableId]
+    );
+
+    if (!countQ.rows[0].c) {
+      return res.status(400).json({ message: "لا يمكن نشر جدول فارغ." });
+    }
+
+    await pool.query(
+      "UPDATE exam_timetables SET status='published', updated_at=now() WHERE id=$1 AND school_id=$2",
+      [timetableId, schoolId]
+    );
+
+    return res.json({ message: "تم نشر جدول الاختبارات" });
+  } catch (e) {
+    console.error("exam publish error:", e);
+    return res.status(500).json({ message: "خطأ في نشر جدول الاختبارات" });
+  }
+},
 
   // =========================
   // PUT /api/exam-timetables/:id/unpublish
@@ -647,210 +684,262 @@ export const ExamTimetablesController = {
   // =========================
   // DELETE /api/exam-timetables/:id/entries
   // =========================
-  async clearEntries(req, res) {
-    const client = await pool.connect();
-    try {
-      const schoolId = req.user?.school_id;
-      if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
+async clearEntries(req, res) {
+  const client = await pool.connect();
 
-      const timetableId = toInt(req.params.id);
-      if (!timetableId) return res.status(400).json({ message: "id غير صحيح" });
+  try {
+    const schoolId = req.user?.school_id;
+    if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
 
-      const ttQ = await client.query(
-        "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
-        [timetableId, schoolId]
-      );
-      if (!ttQ.rows.length)
-        return res.status(404).json({ message: "الجدول غير موجود" });
+    const timetableId = toInt(req.params.id);
+    if (!timetableId) return res.status(400).json({ message: "id غير صحيح" });
 
-      const tt = ttQ.rows[0];
-      if (tt.status === "published") {
-        return res
-          .status(400)
-          .json({ message: "لا يمكن تفريغ جدول منشور، اجعله مسودة أولاً." });
-      }
+    const ttQ = await client.query(
+      "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
+      [timetableId, schoolId]
+    );
 
-      await client.query("BEGIN");
-      await client.query(
-        "DELETE FROM exam_timetable_entries WHERE exam_timetable_id=$1 AND school_id=$2",
-        [timetableId, schoolId]
-      );
-      await client.query(
-        "UPDATE exam_timetables SET updated_at=now() WHERE id=$1 AND school_id=$2",
-        [timetableId, schoolId]
-      );
-      await client.query("COMMIT");
-
-      return res.json({ message: "تم تفريغ جدول الاختبارات" });
-    } catch (e) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        console.error("Rollback failed in clearEntries:", rollbackError);
-      }
-      console.error("exam clearEntries error:", e);
-      return res.status(500).json({ message: "خطأ في تفريغ جدول الاختبارات" });
-    } finally {
-      client.release();
+    if (!ttQ.rows.length) {
+      return res.status(404).json({ message: "الجدول غير موجود" });
     }
-  },
+
+    const tt = ttQ.rows[0];
+
+    if (tt.status === "published") {
+      return res.status(400).json({
+        message: "لا يمكن تفريغ جدول منشور، اجعله مسودة أولاً.",
+      });
+    }
+
+    await client.query("BEGIN");
+
+    await client.query(
+      `
+      DELETE FROM exam_timetable_entries
+      WHERE exam_timetable_id = $1
+      `,
+      [timetableId]
+    );
+
+    await client.query(
+      "UPDATE exam_timetables SET updated_at=now() WHERE id=$1 AND school_id=$2",
+      [timetableId, schoolId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({ message: "تم تفريغ جدول الاختبارات" });
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("Rollback failed in clearEntries:", rollbackError);
+    }
+
+    console.error("exam clearEntries error:", e);
+    return res.status(500).json({ message: "خطأ في تفريغ جدول الاختبارات" });
+  } finally {
+    client.release();
+  }
+},
 
   // =========================
   // DELETE /api/exam-timetables/:id
   // =========================
-  async remove(req, res) {
-    const client = await pool.connect();
-    try {
-      const schoolId = req.user?.school_id;
-      if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
+ async remove(req, res) {
+  const client = await pool.connect();
 
-      const id = toInt(req.params.id);
-      if (!id) return res.status(400).json({ message: "id غير صحيح" });
+  try {
+    const schoolId = req.user?.school_id;
+    if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
 
-      const ttQ = await client.query(
-        "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
-        [id, schoolId]
-      );
-      if (!ttQ.rows.length)
-        return res.status(404).json({ message: "الجدول غير موجود" });
+    const id = toInt(req.params.id);
+    if (!id) return res.status(400).json({ message: "id غير صحيح" });
 
-      const tt = ttQ.rows[0];
-      if (tt.status === "published") {
-        return res
-          .status(400)
-          .json({ message: "لا يمكن حذف جدول منشور. ألغِ النشر أولاً." });
-      }
+    const ttQ = await client.query(
+      "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
+      [id, schoolId]
+    );
 
-      await client.query("BEGIN");
-      await client.query(
-        "DELETE FROM exam_timetable_entries WHERE exam_timetable_id=$1 AND school_id=$2",
-        [id, schoolId]
-      );
-      await client.query("DELETE FROM exam_timetables WHERE id=$1 AND school_id=$2", [id, schoolId]);
-      await client.query("COMMIT");
-
-      return res.json({ message: "تم حذف جدول الاختبارات" });
-    } catch (e) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        console.error("Rollback failed in remove:", rollbackError);
-      }
-      console.error("exam remove error:", e);
-      return res.status(500).json({ message: "خطأ في حذف جدول الاختبارات" });
-    } finally {
-      client.release();
+    if (!ttQ.rows.length) {
+      return res.status(404).json({ message: "الجدول غير موجود" });
     }
-  },
 
+    const tt = ttQ.rows[0];
+
+    if (tt.status === "published") {
+      return res.status(400).json({
+        message: "لا يمكن حذف جدول منشور. ألغِ النشر أولاً.",
+      });
+    }
+
+    await client.query("BEGIN");
+
+    await client.query(
+      `
+      DELETE FROM exam_timetable_entries
+      WHERE exam_timetable_id = $1
+      `,
+      [id]
+    );
+
+    await client.query(
+      "DELETE FROM exam_timetables WHERE id=$1 AND school_id=$2",
+      [id, schoolId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({ message: "تم حذف جدول الاختبارات" });
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("Rollback failed in remove:", rollbackError);
+    }
+
+    console.error("exam remove error:", e);
+    return res.status(500).json({ message: "خطأ في حذف جدول الاختبارات" });
+  } finally {
+    client.release();
+  }
+},
   // =========================
   // POST /api/exam-timetables/:id/copy-from
   // =========================
   async copyFrom(req, res) {
-    const client = await pool.connect();
-    try {
-      const schoolId = req.user?.school_id;
-      if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
+  const client = await pool.connect();
 
-      const targetId = toInt(req.params.id);
-      const fromTimetableId = toInt(req.body?.fromTimetableId);
+  try {
+    const schoolId = req.user?.school_id;
+    if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
 
-      if (!targetId)
-        return res.status(400).json({ message: "target id غير صحيح" });
-      if (!fromTimetableId)
-        return res.status(400).json({ message: "fromTimetableId مطلوب" });
+    const targetId = toInt(req.params.id);
+    const fromTimetableId = toInt(req.body?.fromTimetableId);
 
-      const tgtQ = await client.query(
-        "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
-        [targetId, schoolId]
-      );
-      if (!tgtQ.rows.length)
-        return res.status(404).json({ message: "الجدول الهدف غير موجود" });
-
-      const ttTarget = tgtQ.rows[0];
-      if (ttTarget.status === "published") {
-        return res.status(400).json({
-          message: "لا يمكن النسخ إلى جدول منشور، اجعله مسودة أولاً.",
-        });
-      }
-
-      const srcQ = await client.query(
-        "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
-        [fromTimetableId, schoolId]
-      );
-      if (!srcQ.rows.length)
-        return res.status(404).json({ message: "الجدول المصدر غير موجود" });
-
-      const srcEntriesQ = await client.query(
-        `
-        SELECT exam_date, start_time, end_time, subject_id, room, notes, apply_to_section_id
-        FROM exam_timetable_entries
-        WHERE exam_timetable_id=$1 AND school_id=$2
-        ORDER BY exam_date, start_time
-        `,
-        [fromTimetableId, schoolId]
-      );
-
-      await client.query("BEGIN");
-      await client.query(
-        "DELETE FROM exam_timetable_entries WHERE exam_timetable_id=$1 AND school_id=$2",
-        [targetId, schoolId]
-      );
-
-      for (const e of srcEntriesQ.rows) {
-        const applyTo =
-          ttTarget.scope === "section" ? null : e.apply_to_section_id ?? null;
-
-        // ✅ التعديل الأهم: إضافة school_id للإدخال
-        await client.query(
-          `
-          INSERT INTO exam_timetable_entries
-            (school_id, exam_timetable_id, exam_date, start_time, end_time, subject_id, room, notes, apply_to_section_id)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
-          `,
-          [
-            schoolId,
-            targetId,
-            e.exam_date,
-            e.start_time,
-            e.end_time,
-            e.subject_id,
-            e.room,
-            e.notes,
-            applyTo,
-          ]
-        );
-      }
-
-      await client.query(
-        "UPDATE exam_timetables SET updated_at=now() WHERE id=$1 AND school_id=$2",
-        [targetId, schoolId]
-      );
-      await client.query("COMMIT");
-
-      return res.json({
-        message: "تم نسخ جدول الاختبارات بنجاح",
-        data: { fromTimetableId, targetId },
-      });
-    } catch (e) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        console.error("Rollback failed in copyFrom:", rollbackError);
-      }
-      console.error("exam copyFrom error:", e);
-
-      if (String(e?.code) === "23505") {
-        return res
-          .status(400)
-          .json({ message: "يوجد تكرار وقت بعد النسخ داخل الجدول الهدف." });
-      }
-
-      return res.status(500).json({ message: "خطأ في نسخ جدول الاختبارات" });
-    } finally {
-      client.release();
+    if (!targetId) {
+      return res.status(400).json({ message: "target id غير صحيح" });
     }
-  },
+
+    if (!fromTimetableId) {
+      return res.status(400).json({ message: "fromTimetableId مطلوب" });
+    }
+
+    const tgtQ = await client.query(
+      "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
+      [targetId, schoolId]
+    );
+
+    if (!tgtQ.rows.length) {
+      return res.status(404).json({ message: "الجدول الهدف غير موجود" });
+    }
+
+    const ttTarget = tgtQ.rows[0];
+
+    if (ttTarget.status === "published") {
+      return res.status(400).json({
+        message: "لا يمكن النسخ إلى جدول منشور، اجعله مسودة أولاً.",
+      });
+    }
+
+    const srcQ = await client.query(
+      "SELECT * FROM exam_timetables WHERE id=$1 AND school_id=$2",
+      [fromTimetableId, schoolId]
+    );
+
+    if (!srcQ.rows.length) {
+      return res.status(404).json({ message: "الجدول المصدر غير موجود" });
+    }
+
+    const srcEntriesQ = await client.query(
+      `
+      SELECT
+        exam_date,
+        start_time,
+        end_time,
+        subject_id,
+        room,
+        notes,
+        apply_to_section_id
+      FROM exam_timetable_entries
+      WHERE exam_timetable_id = $1
+      ORDER BY exam_date, start_time
+      `,
+      [fromTimetableId]
+    );
+
+    await client.query("BEGIN");
+
+    await client.query(
+      `
+      DELETE FROM exam_timetable_entries
+      WHERE exam_timetable_id = $1
+      `,
+      [targetId]
+    );
+
+    for (const e of srcEntriesQ.rows) {
+      const applyTo =
+        ttTarget.scope === "section" ? null : e.apply_to_section_id ?? null;
+
+      await client.query(
+        `
+        INSERT INTO exam_timetable_entries (
+          exam_timetable_id,
+          exam_date,
+          start_time,
+          end_time,
+          subject_id,
+          room,
+          notes,
+          apply_to_section_id
+        )
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        `,
+        [
+          targetId,
+          e.exam_date,
+          e.start_time,
+          e.end_time,
+          e.subject_id,
+          e.room,
+          e.notes,
+          applyTo,
+        ]
+      );
+    }
+
+    await client.query(
+      "UPDATE exam_timetables SET updated_at=now() WHERE id=$1 AND school_id=$2",
+      [targetId, schoolId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      message: "تم نسخ جدول الاختبارات بنجاح",
+      data: { fromTimetableId, targetId },
+    });
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("Rollback failed in copyFrom:", rollbackError);
+    }
+
+    console.error("exam copyFrom error:", e);
+
+    if (String(e?.code) === "23505") {
+      return res.status(400).json({
+        message: "يوجد تكرار وقت بعد النسخ داخل الجدول الهدف.",
+      });
+    }
+
+    return res.status(500).json({ message: "خطأ في نسخ جدول الاختبارات" });
+  } finally {
+    client.release();
+  }
+},
 };
 
 export default ExamTimetablesController;

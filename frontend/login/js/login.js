@@ -4,8 +4,7 @@
 
   console.log("login.js loaded ✅ with Auto-Slug support");
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
-
+const API_BASE = "/api";
   const state = { inited: false };
 
   // --- دالة استخراج معرف المدرسة (Slug) من الرابط ---

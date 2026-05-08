@@ -896,6 +896,38 @@ async function assertTermWorkNotApproved(assignment, schoolId, term, db = pool) 
     throw badRequest("لا يمكن تعديل المحصلة لأن أعمال هذا الفصل معتمدة من الكنترول.");
   }
 }
+async function resetReturnedTermWorkToPending(assignment, schoolId, term, db = pool) {
+  await db.query(
+    `
+    UPDATE term_work_approvals
+    SET
+      status = 'pending',
+      returned_by = NULL,
+      returned_at = NULL,
+      return_note = NULL,
+      updated_at = NOW()
+    WHERE school_id = $1
+      AND academic_year_id = $2
+      AND term = $3
+      AND stage_id = $4
+      AND grade_id = $5
+      AND section_id = $6
+      AND subject_id = $7
+      AND teacher_assignment_id = $8
+      AND status = 'returned'
+    `,
+    [
+      schoolId,
+      assignment.academic_year_id,
+      term,
+      assignment.stage_id,
+      assignment.grade_id,
+      assignment.section_id,
+      assignment.subject_id,
+      assignment.id,
+    ]
+  );
+}
 export async function submitMuhassala(req, res) {
   const client = await pool.connect();
   try {
@@ -1159,7 +1191,7 @@ if (submittedStudentIds.size !== allowedStudentIds.size) {
         );
       }
     }
-
+await resetReturnedTermWorkToPending(assignment, schoolId, term, client);
     await client.query("COMMIT");
     return res.status(200).json({
       message: "تم اعتماد المحصلة بنجاح.",

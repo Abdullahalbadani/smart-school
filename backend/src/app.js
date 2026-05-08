@@ -72,10 +72,11 @@ import { startFeesCronJob } from "./utils/feesCron.js";
 import teacherReportsRoutes from "./routes/teacherReportsRoutes.js";
 import adminAssessmentsRoutes from './routes/adminAssessmentsRoutes.js';
 import adminTermWorksRoutes from "./routes/adminTermWorksRoutes.js";
+import adminTermResultsRoutes from "./routes/adminTermResultsRoutes.js";
 // ✅ استيراد ملفات مراقبة النشاطات (لاحظ الأقواس المعكوفة للميدل وير)
 import { autoActivityLogger } from './middleware/activityLogger.js';
 import activityRoutes from './routes/activityRoutes.js'; 
-
+import monthlyCertificatesRoutes from "./routes/monthlyCertificatesRoutes.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -183,7 +184,7 @@ app.use("/api/sections", authMiddleware, sectionRoutes);
 app.use("/api/students", authMiddleware, studentRoutes);
 app.use("/api/periods", authMiddleware, periodsRoutes);
 app.use("/api/dashboard", authMiddleware, dashboardRoutes);
-
+app.use("/api/admin/monthly-certificates", monthlyCertificatesRoutes);
 // بوابة المعلم
 app.use("/api/teacher/attendance", authMiddleware, teacherAttendanceRoutes);
 app.use("/api/teacher/sessions", authMiddleware, teacherSessionsRoutes);
@@ -198,7 +199,7 @@ app.use("/api/teacher/assessments", authMiddleware, teacherAssessmentsRoutes);
 app.use("/api/teacher/grades", authMiddleware, teacherGradesRoutes);
 app.use("/api/teacher/reports", authMiddleware, teacherReportsRoutes);
 app.use("/api/teacher/notifications", authMiddleware, teacherNotificationsRoutes);
-
+app.use("/api/admin/term-results", adminTermResultsRoutes);
 // الإشعارات
 app.use("/api/notifications/admin", authMiddleware, notificationsAdminRoutes);
 app.use("/api/notifications", authMiddleware, notificationsInboxRoutes);

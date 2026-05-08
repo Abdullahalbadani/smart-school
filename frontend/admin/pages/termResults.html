@@ -1,0 +1,930 @@
+<section id="termResultsPage" class="tr-page" dir="rtl">
+<style>
+  .tr-page {
+    position: relative;
+    isolation: isolate;
+    padding: 18px;
+    padding-bottom: 110px;
+    color: var(--text-main);
+  }
+
+  .tr-page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 90% 8%, rgba(37, 99, 235, 0.14), transparent 28%),
+      radial-gradient(circle at 8% 35%, rgba(34, 197, 94, 0.1), transparent 24%),
+      radial-gradient(circle at 50% 100%, rgba(245, 158, 11, 0.06), transparent 34%);
+    opacity: 0.95;
+  }
+
+  .tr-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .tr-header > div {
+    width: 100%;
+    padding: 18px 20px;
+    border-radius: var(--radius-xl);
+    background:
+      linear-gradient(135deg, rgba(37, 99, 235, 0.12), transparent 44%),
+      var(--bg-panel);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .tr-header h2 {
+    position: relative;
+    margin: 0;
+    width: fit-content;
+    font-size: clamp(21px, 2.2vw, 30px);
+    font-weight: 950;
+    color: var(--text-main);
+    letter-spacing: -0.5px;
+  }
+
+  .tr-header h2::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -8px;
+    width: 72%;
+    height: 4px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+  }
+
+  .tr-header p {
+    max-width: 850px;
+    margin: 18px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.9;
+  }
+
+  .tr-card {
+    background: var(--bg-panel);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .tr-filters {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .tr-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .tr-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .tr-field label {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 950;
+  }
+
+  .tr-field select,
+  .tr-field input {
+    width: 100%;
+    min-height: 44px;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-soft);
+    background: var(--bg-panel-soft);
+    color: var(--text-main);
+    padding: 0 12px;
+    outline: none;
+    font-weight: 850;
+    transition: 0.18s ease;
+  }
+
+  .tr-field select:focus,
+  .tr-field input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+
+  .tr-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+
+  .tr-btn {
+    min-height: 42px;
+    border: 0;
+    border-radius: var(--radius-lg);
+    padding: 0 16px;
+    cursor: pointer;
+    font-weight: 950;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--primary), #1d4ed8);
+    box-shadow: 0 10px 22px rgba(37, 99, 235, 0.22);
+    transition: 0.18s ease;
+    white-space: nowrap;
+  }
+
+  .tr-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.05);
+  }
+
+  .tr-btn:active {
+    transform: translateY(0);
+  }
+
+  .tr-btn:disabled {
+    opacity: 0.48;
+    cursor: not-allowed;
+    transform: none;
+    filter: grayscale(0.35);
+    box-shadow: none;
+  }
+
+  .tr-btn-soft {
+    background: var(--bg-panel-soft);
+    color: var(--text-main);
+    border: 1px solid var(--border-soft);
+    box-shadow: none;
+  }
+
+  .tr-btn-success {
+    background: linear-gradient(135deg, var(--accent), #16a34a);
+    box-shadow: 0 10px 22px rgba(34, 197, 94, 0.2);
+  }
+
+  .tr-btn-warning {
+    background: linear-gradient(135deg, var(--accent-amber), #d97706);
+    box-shadow: 0 10px 22px rgba(245, 158, 11, 0.2);
+  }
+
+  .tr-btn-danger {
+    background: linear-gradient(135deg, var(--danger), #dc2626);
+    box-shadow: 0 10px 22px rgba(239, 68, 68, 0.18);
+  }
+
+  .tr-alert {
+    display: none;
+    margin-bottom: 16px;
+    padding: 13px 15px;
+    border-radius: var(--radius-lg);
+    font-weight: 900;
+    line-height: 1.8;
+    border: 1px solid var(--border-soft);
+    background: var(--bg-panel);
+    color: var(--text-muted);
+  }
+
+  .tr-alert.show {
+    display: block;
+  }
+
+  .tr-alert.success {
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.35);
+    color: var(--accent);
+  }
+
+  .tr-alert.error {
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.35);
+    color: var(--danger);
+  }
+
+  .tr-status-line {
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    background:
+      linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 45%),
+      var(--bg-panel);
+  }
+
+  .tr-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(130px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .tr-summary-card {
+    position: relative;
+    overflow: hidden;
+    padding: 16px;
+    min-height: 104px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel);
+    border: 1px solid var(--border-soft);
+    box-shadow: var(--shadow-soft);
+  }
+
+  .tr-summary-card::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 0;
+    width: 5px;
+    height: 100%;
+    background: linear-gradient(180deg, var(--primary), var(--accent));
+  }
+
+  .tr-summary-label {
+    position: relative;
+    font-size: 12px;
+    color: var(--text-muted);
+    font-weight: 900;
+    margin-bottom: 10px;
+  }
+
+  .tr-summary-value {
+    position: relative;
+    font-size: clamp(23px, 2.1vw, 32px);
+    color: var(--text-main);
+    font-weight: 950;
+    line-height: 1.2;
+  }
+
+  .tr-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 30px;
+    padding: 6px 11px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 950;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .tr-badge-draft,
+  .tr-badge-calculated {
+    background: var(--primary-soft);
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.25);
+  }
+
+  .tr-badge-approved,
+  .tr-badge-passed {
+    background: rgba(34, 197, 94, 0.14);
+    color: var(--accent);
+    border-color: rgba(34, 197, 94, 0.25);
+  }
+
+  .tr-badge-published {
+    background: rgba(37, 99, 235, 0.14);
+    color: var(--primary);
+    border-color: rgba(37, 99, 235, 0.25);
+  }
+
+  .tr-badge-failed {
+    background: rgba(239, 68, 68, 0.14);
+    color: var(--danger);
+    border-color: rgba(239, 68, 68, 0.25);
+  }
+
+  .tr-badge-incomplete,
+  .tr-badge-missing,
+  .tr-badge-not_approved,
+  .tr-badge-excused {
+    background: rgba(245, 158, 11, 0.14);
+    color: var(--accent-amber);
+    border-color: rgba(245, 158, 11, 0.25);
+  }
+
+  .tr-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.32fr) minmax(350px, 0.68fr);
+    gap: 16px;
+    align-items: start;
+  }
+
+  .tr-panel {
+    padding: 16px;
+    min-width: 0;
+  }
+
+  .tr-panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+
+  .tr-panel h3 {
+    margin: 0;
+    font-size: 17px;
+    color: var(--text-main);
+    font-weight: 950;
+  }
+
+  .tr-muted {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .tr-table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-soft);
+  }
+
+  .tr-table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .tr-table th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--bg-panel-soft);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 950;
+    text-align: right;
+    padding: 13px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    white-space: nowrap;
+  }
+
+  .tr-table td {
+    padding: 13px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 850;
+    vertical-align: middle;
+  }
+
+  .tr-table tbody tr {
+    transition: 0.16s ease;
+  }
+
+  .tr-table tbody tr:hover td {
+    background: var(--primary-soft);
+  }
+
+  .tr-student-name {
+    color: var(--text-main);
+    font-weight: 950;
+    line-height: 1.6;
+  }
+
+  .tr-empty {
+    padding: 28px;
+    text-align: center;
+    color: var(--text-muted);
+    font-weight: 900;
+    line-height: 1.9;
+  }
+
+  .tr-detail-box {
+    position: sticky;
+    top: 88px;
+    max-height: calc(100vh - 126px);
+    overflow-y: auto;
+    min-height: 240px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-soft) transparent;
+  }
+
+  .tr-detail-box::-webkit-scrollbar {
+    width: 7px;
+  }
+
+  .tr-detail-box::-webkit-scrollbar-thumb {
+    background: var(--border-soft);
+    border-radius: 999px;
+  }
+
+  .tr-detail-title {
+    color: var(--text-main);
+    font-size: 17px;
+    font-weight: 950;
+    margin-bottom: 8px;
+  }
+
+  .tr-detail-sub {
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 14px;
+  }
+
+  .tr-subject-card {
+    position: relative;
+    overflow: hidden;
+    padding: 12px;
+    border-radius: var(--radius-lg);
+    background: var(--bg-panel-soft);
+    border: 1px solid var(--border-soft);
+    margin-bottom: 10px;
+  }
+
+  .tr-subject-card::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 4px;
+    border-radius: 999px;
+    background: var(--primary);
+    opacity: 0.85;
+  }
+
+  .tr-subject-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 9px;
+  }
+
+  .tr-subject-name {
+    color: var(--text-main);
+    font-weight: 950;
+    line-height: 1.5;
+  }
+
+  .tr-subject-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .tr-mini {
+    background: var(--bg-panel);
+    border-radius: 14px;
+    padding: 9px;
+    border: 1px solid var(--border-soft);
+  }
+
+  .tr-mini-label {
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 900;
+    margin-bottom: 5px;
+  }
+
+  .tr-mini-value {
+    color: var(--text-main);
+    font-weight: 950;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .tr-reason {
+    margin-top: 10px;
+    color: var(--danger);
+    font-size: 12px;
+    font-weight: 900;
+    line-height: 1.8;
+    padding: 9px 10px;
+    border-radius: 14px;
+    background: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.18);
+  }
+
+  .tr-mobile-summary,
+  .tr-mobile-item {
+    display: none;
+  }
+
+  @media (max-width: 1180px) {
+    .tr-filter-grid {
+      grid-template-columns: repeat(3, minmax(150px, 1fr));
+    }
+
+    .tr-summary-grid {
+      grid-template-columns: repeat(3, minmax(130px, 1fr));
+    }
+
+    .tr-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .tr-detail-box {
+      position: static;
+      max-height: none;
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 860px) {
+    .tr-page {
+      padding: 14px;
+      padding-bottom: 105px;
+    }
+
+    .tr-header > div,
+    .tr-filters,
+    .tr-panel,
+    .tr-status-line {
+      border-radius: var(--radius-lg);
+    }
+
+    .tr-filter-grid,
+    .tr-summary-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tr-actions {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .tr-btn {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 680px) {
+    .tr-page {
+      padding: 12px;
+      padding-bottom: 105px;
+    }
+
+    .tr-filter-grid,
+    .tr-summary-grid,
+    .tr-actions {
+      grid-template-columns: 1fr;
+    }
+
+    .tr-summary-card {
+      min-height: 84px;
+    }
+
+    .tr-status-line {
+      align-items: flex-start;
+    }
+
+    .tr-table-wrap {
+      overflow: visible;
+      border: 0;
+    }
+
+    .tr-table {
+      min-width: 0;
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 12px;
+    }
+
+    .tr-table thead {
+      display: none;
+    }
+
+    .tr-table,
+    .tr-table tbody,
+    .tr-table tr,
+    .tr-table td {
+      display: block;
+      width: 100%;
+    }
+
+    .tr-table tr {
+      background: var(--bg-panel-soft);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius-lg);
+      padding: 12px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .tr-table td {
+      border: 0;
+      padding: 0;
+    }
+
+    .tr-col-index,
+    .tr-col-code,
+    .tr-col-total,
+    .tr-col-percentage,
+    .tr-col-grade,
+    .tr-col-rank,
+    .tr-col-missing,
+    .tr-col-failed {
+      display: none !important;
+    }
+
+    .tr-col-student {
+      margin-bottom: 10px;
+    }
+
+    .tr-student-name {
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .tr-mobile-summary {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .tr-mobile-item {
+      display: block;
+      background: var(--bg-panel);
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      padding: 8px;
+    }
+
+    .tr-mobile-label {
+      display: block;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 950;
+      margin-bottom: 4px;
+    }
+
+    .tr-mobile-value {
+      display: block;
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 950;
+      line-height: 1.5;
+    }
+
+    .tr-col-status {
+      margin-top: 10px;
+      display: flex !important;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .tr-col-status::before {
+      content: "الحالة";
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 950;
+    }
+
+    .tr-col-action {
+      margin-top: 10px;
+    }
+
+    .tr-col-action .tr-btn {
+      width: 100%;
+      min-height: 40px;
+    }
+
+    .tr-subject-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media print {
+    body * {
+      visibility: hidden !important;
+    }
+
+    #termResultsPage,
+    #termResultsPage * {
+      visibility: visible !important;
+    }
+
+    #termResultsPage {
+      position: absolute;
+      inset: 0;
+      background: white !important;
+      color: #111827 !important;
+      padding: 12px !important;
+    }
+
+    #termResultsPage::before,
+    .tr-filters,
+    .tr-actions,
+    .tr-detail-box,
+    .tr-alert {
+      display: none !important;
+    }
+
+    .tr-header > div,
+    .tr-card,
+    .tr-summary-card {
+      background: white !important;
+      color: #111827 !important;
+      box-shadow: none !important;
+      border-color: #ddd !important;
+    }
+
+    .tr-summary-grid {
+      grid-template-columns: repeat(5, 1fr) !important;
+    }
+
+    .tr-table-wrap {
+      overflow: visible !important;
+    }
+
+    .tr-table {
+      min-width: 0 !important;
+      width: 100% !important;
+      border-collapse: collapse !important;
+    }
+
+    .tr-table th,
+    .tr-table td {
+      color: #111827 !important;
+      border-color: #ddd !important;
+      padding: 8px !important;
+    }
+
+    .tr-mobile-summary {
+      display: none !important;
+    }
+  }
+</style>
+
+  <div class="tr-header">
+    <div>
+      <h2>نتائج نهاية الفصل</h2>
+      <p>
+        احتساب ومراجعة واعتماد ونشر نتائج نهاية الفصل من درجات المعلم المعتمدة من الكنترول.
+        لا يتم إدخال أي درجة من هذه الصفحة.
+      </p>
+    </div>
+  </div>
+
+  <div class="tr-card tr-filters">
+    <div class="tr-filter-grid">
+      <div class="tr-field">
+        <label>السنة الدراسية</label>
+        <select id="trAcademicYear"></select>
+      </div>
+
+      <div class="tr-field">
+        <label>الفصل الدراسي</label>
+        <select id="trTerm">
+          <option value="">اختر الفصل</option>
+          <option value="1">الفصل الأول</option>
+          <option value="2">الفصل الثاني</option>
+        </select>
+      </div>
+
+      <div class="tr-field">
+        <label>المرحلة</label>
+        <select id="trStage"></select>
+      </div>
+
+      <div class="tr-field">
+        <label>الصف</label>
+        <select id="trGrade"></select>
+      </div>
+
+      <div class="tr-field">
+        <label>الشعبة</label>
+        <select id="trSection"></select>
+      </div>
+    </div>
+
+    <div class="tr-actions">
+      <button type="button" class="tr-btn tr-btn-soft" id="trLoadBtn">
+        عرض النتائج المحفوظة
+      </button>
+
+      <button type="button" class="tr-btn" id="trCalculateBtn">
+        احتساب النتائج
+      </button>
+
+      <button type="button" class="tr-btn tr-btn-success" id="trApproveBtn" disabled>
+        اعتماد النتائج
+      </button>
+
+      <button type="button" class="tr-btn tr-btn-warning" id="trPublishBtn" disabled>
+        نشر النتائج
+      </button>
+
+      <button type="button" class="tr-btn tr-btn-danger" id="trUnpublishBtn" disabled>
+        إلغاء النشر
+      </button>
+
+      <button type="button" class="tr-btn tr-btn-soft" id="trPrintBtn" disabled>
+        طباعة
+      </button>
+    </div>
+  </div>
+
+  <div id="trAlert" class="tr-alert"></div>
+
+  <div class="tr-card tr-status-line">
+    <div>
+      <span class="tr-muted">حالة الدفعة:</span>
+      <span id="trBatchStatus" class="tr-badge tr-badge-draft">لا توجد نتائج</span>
+    </div>
+    <div class="tr-muted" id="trBatchDates">—</div>
+  </div>
+
+  <div class="tr-summary-grid">
+    <div class="tr-summary-card">
+      <div class="tr-summary-label">عدد الطلاب</div>
+      <div class="tr-summary-value" id="trCountStudents">0</div>
+    </div>
+
+    <div class="tr-summary-card">
+      <div class="tr-summary-label">ناجح</div>
+      <div class="tr-summary-value" id="trCountPassed">0</div>
+    </div>
+
+    <div class="tr-summary-card">
+      <div class="tr-summary-label">راسب</div>
+      <div class="tr-summary-value" id="trCountFailed">0</div>
+    </div>
+
+    <div class="tr-summary-card">
+      <div class="tr-summary-label">ناقص</div>
+      <div class="tr-summary-value" id="trCountIncomplete">0</div>
+    </div>
+
+    <div class="tr-summary-card">
+      <div class="tr-summary-label">الفصل</div>
+      <div class="tr-summary-value" id="trTermLabel">—</div>
+    </div>
+  </div>
+
+  <div class="tr-grid">
+    <div class="tr-card tr-panel">
+      <div class="tr-panel-head">
+        <div>
+          <h3>نتائج الطلاب</h3>
+          <div class="tr-muted" id="trStudentsMeta">لا توجد نتائج معروضة.</div>
+        </div>
+      </div>
+
+      <div id="trTableWrap" class="tr-table-wrap" style="display:none;">
+        <table class="tr-table">
+          <thead>
+            <tr>
+              <th>م</th>
+              <th>الطالب</th>
+              <th>الكود</th>
+              <th>المجموع</th>
+          <th>النسبة</th>
+<th>التقدير</th>
+<th>الترتيب</th>
+              <th>المواد الناقصة</th>
+              <th>المواد الراسبة</th>
+              <th>الحالة</th>
+              <th>تفاصيل</th>
+            </tr>
+          </thead>
+          <tbody id="trStudentsBody"></tbody>
+        </table>
+      </div>
+
+      <div id="trEmpty" class="tr-empty">
+        اختر الفلاتر ثم اضغط احتساب النتائج أو عرض النتائج المحفوظة.
+      </div>
+    </div>
+
+    <div class="tr-card tr-panel tr-detail-box">
+      <div class="tr-panel-head">
+        <div>
+          <h3>تفاصيل الطالب</h3>
+          <div class="tr-muted">تفاصيل المواد والملاحظات</div>
+        </div>
+      </div>
+
+      <div id="trDetails">
+        <div class="tr-empty">اختر طالبًا من الجدول لعرض تفاصيله.</div>
+      </div>
+    </div>
+  </div>
+</section>

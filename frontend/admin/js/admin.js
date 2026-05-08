@@ -359,6 +359,18 @@ if (window.attendanceReports) {
         requestAnimationFrame(() => window.initMonthlyWorkScreen());
       }
       if (
+        normalizedKey === "termWork" &&
+        typeof window.initMonthlyCertificatesScreen === "function"
+      ) {
+        requestAnimationFrame(() => window.initMonthlyCertificatesScreen());
+      }
+      if (
+        normalizedKey === "termResults" &&
+        typeof window.initTermResultsScreen === "function"
+      ) {
+        requestAnimationFrame(() => window.initTermResultsScreen());
+      }
+      if (
   normalizedKey === "monthlyReports" &&
   typeof window.initMonthlyReportsScreen === "function"
 ) {
