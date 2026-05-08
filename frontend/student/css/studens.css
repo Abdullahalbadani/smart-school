@@ -1239,4 +1239,50 @@
     flex-direction: column;
     align-items: flex-start;
   }
+}@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #modal-grades,
+  #modal-grades * {
+    visibility: visible !important;
+  }
+
+  #modal-grades {
+    position: absolute !important;
+    inset: 0 !important;
+    display: block !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+  }
+
+  #modal-grades .modal-dialog {
+    width: 100% !important;
+    max-height: none !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  #modal-grades .modal-header,
+  #modal-grades #stu-gr-filter-form,
+  #modal-grades .stu-panel--detail,
+  #modal-grades .modal-close {
+    display: none !important;
+  }
+
+  #modal-grades .stu-modal-grid {
+    display: block !important;
+  }
+
+  #modal-grades .ss-table-wrap {
+    overflow: visible !important;
+    box-shadow: none !important;
+  }
+
+  #modal-grades table.data-table {
+    width: 100% !important;
+    font-size: 12px !important;
+  }
 }
