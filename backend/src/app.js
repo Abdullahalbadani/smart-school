@@ -77,7 +77,7 @@ import adminTermResultsRoutes from "./routes/adminTermResultsRoutes.js";
 import { autoActivityLogger } from './middleware/activityLogger.js';
 import activityRoutes from './routes/activityRoutes.js'; 
 import monthlyCertificatesRoutes from "./routes/monthlyCertificatesRoutes.js";
-
+import studentTermResultsRoutes from "./routes/studentTermResultsRoutes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -206,7 +206,7 @@ app.use("/api/notifications", authMiddleware, notificationsInboxRoutes);
 app.use("/api/teacher/notifications", authMiddleware, teacherNotificationsSendRoutes);
 app.use("/api/student/notifications", authMiddleware, studentNotificationsRoutes);
 app.use("/api/parent/notifications", authMiddleware, parentNotificationsRoutes);
-
+app.use("/api/student/term-results", studentTermResultsRoutes);
 // بوابة الطالب وولي الأمر
 app.use("/api/student/attendance", authMiddleware, studentAttendanceRoutes);
 app.use("/api/student/barcode", authMiddleware, studentBarcodeRoutes);

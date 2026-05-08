@@ -206,8 +206,7 @@
             <span class="card-tag card-tag-warn">امتحانات</span>
           </article>
 
-          <article class="card" data-modal="modal-grades">
-            <div class="card-icon">
+<article class="card" data-modal="modal-grades" id="open-term-results-card">          <div class="card-icon">
               <i class="ri-bar-chart-2-line" aria-hidden="true"></i>
             </div>
             <div>
@@ -1595,7 +1594,30 @@
         </div>
       </div>
     </div>
+<div class="str-modal" id="modal-term-results" hidden>
+  <div class="str-box" role="dialog" aria-modal="true">
+    <div class="str-head">
+      <div>
+        <h2>نتيجة نهاية الفصل</h2>
+        <p>درجات المواد والمجموع النهائي كما نشرتها الإدارة.</p>
+      </div>
+      <button type="button" class="str-close" id="strCloseBtn">×</button>
+    </div>
 
+    <div class="str-body">
+      <div class="str-print-title">نتيجة نهاية الفصل</div>
+
+      <div class="str-toolbar">
+        <select class="str-select" id="strResultSelect"></select>
+        <button type="button" class="str-btn" id="strPrintBtn">طباعة النتيجة</button>
+      </div>
+
+      <div id="strContent">
+        <div class="str-alert">جاري تحميل النتيجة...</div>
+      </div>
+    </div>
+  </div>
+</div>
     <div class="toast" id="toast"></div>
 <script src="/frontend/shared/js/config.js"></script>
     <script src="/frontend/login/js/auth-guard.js" defer></script>
@@ -1611,5 +1633,21 @@
     <script>
       window.initStudentNotifications && window.initStudentNotifications();
     </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   </body>
 </html>

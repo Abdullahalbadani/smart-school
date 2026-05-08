@@ -183,7 +183,7 @@ async function getCountsForDay(db, studentId, isoDate, term, yearId, schoolId) {
     WHERE ae.student_id = $1
       AND s.attendance_date = $2::date
       AND s.term = $3
-      AND ae.school_id = $4
+      AND s.school_id = $4
       AND s.school_id = $4
       ${yearFilter}
   `;
@@ -227,7 +227,7 @@ async function getCountsByDateRange(db, studentId, fromISO, toISO, term, yearId,
     WHERE ae.student_id = $1
       AND s.attendance_date::date BETWEEN $2::date AND $3::date
       AND s.term = $4
-      AND ae.school_id = $5
+      AND s.school_id = $5
       AND s.school_id = $5
       ${yearFilter}
     GROUP BY 1
@@ -538,7 +538,7 @@ export const StudentAttendanceController = {
       }
 
       const params = [studentId, schoolId];
-      let where = `WHERE ae.student_id = $1 AND ae.school_id = $2 AND s.school_id = $2`;
+      let where = `WHERE ae.student_id = $1 AND s.school_id = $2 AND s.school_id = $2`;
 
       if (yearId) {
         params.push(yearId);

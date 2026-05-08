@@ -70,7 +70,7 @@ export const getStudentHeroStats = async (req, res) => {
           ON cs.student_id = ae.student_id
         JOIN current_year cy
           ON cy.academic_year_id = ats.academic_year_id
-        WHERE ae.school_id = $2
+        WHERE ats.school_id = $2
       ),
       grade_stats AS (
         SELECT
