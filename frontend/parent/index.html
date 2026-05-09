@@ -419,46 +419,56 @@
       <h3><i class="ri-bar-chart-2-line"></i> درجات الابن</h3>
       <button class="modal-close" type="button" data-close-modal>×</button>
     </div>
+
     <div class="modal-body">
-      <form class="form-card">
+      <form class="form-card" id="parentGradesForm">
         <label>
-          <span>نوع التقييم</span>
+          <span>نوع الدرجات</span>
           <select id="grType">
-            <option value="monthly">شهري</option>
-            <option value="exam">اختبار</option>
-            <option value="final">نهائي</option>
+            <option value="term_results">نتائج نهاية الفصل</option>
+            <option value="monthly" disabled>الاختبارات الشهرية - لاحقًا</option>
+            <option value="monthly_work" disabled>الأعمال الشهرية - لاحقًا</option>
+            <option value="term_work" disabled>الأعمال الفصلية - لاحقًا</option>
           </select>
         </label>
+
         <label>
-          <span>الفصل الدراسي</span>
-          <select id="grTerm">
-            <option value="1">الترم الأول</option>
-            <option value="2">الترم الثاني</option>
+          <span>النتيجة المنشورة</span>
+          <select id="grResultSelect">
+            <option value="">جاري التحميل...</option>
           </select>
         </label>
-        <label>
-          <span>الشهر</span>
-          <select id="grMonth">
-            <option value="1">يناير</option>
-            <option value="2">فبراير</option>
-            <option value="3">مارس</option>
-            <option value="4">أبريل</option>
-            <option value="5">مايو</option>
-            <option value="6">يونيو</option>
-          </select>
-        </label>
-        <button type="button" class="primary-btn" id="btnGrLoad">عرض الدرجات</button>
+
+        <button type="button" class="primary-btn" id="btnGrLoad">
+          عرض الدرجات
+        </button>
+
+        <button type="button" class="primary-btn" id="btnGrPrint">
+          طباعة النتيجة
+        </button>
       </form>
 
+      <div class="parent-result-summary" id="parentResultSummary">
+        <div class="muted-box">اختر الابن ثم اضغط عرض الدرجات.</div>
+      </div>
+
       <table class="data-table">
-        <thead>
-          <tr><th>المادة</th><th>الدرجة</th><th>من</th></tr>
+        <thead id="grHead">
+          <tr>
+            <th>المادة</th>
+            <th>المحصلة</th>
+            <th>الاختبار</th>
+            <th>المجموع</th>
+            <th>النسبة</th>
+            <th>التقدير</th>
+            <th>الحالة</th>
+          </tr>
         </thead>
         <tbody id="grBody"></tbody>
       </table>
 
-      <div class="muted-box">
-        سيتم ربطه لاحقًا مع API (درجات ولي الأمر).
+      <div class="muted-box" id="grEmpty" style="display:none;">
+        لا توجد درجات منشورة لهذا الابن.
       </div>
     </div>
   </div>
@@ -1074,5 +1084,6 @@
 <script src="js/parent-notifications.js" defer></script>
 <script src="js/feesmodal.js" defer></script>
 <script src="js/parent-activities.js" defer></script>
+<script src="js/parent-grades.js?v=1"></script>
 </body>
 </html>
