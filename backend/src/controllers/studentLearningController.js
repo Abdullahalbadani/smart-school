@@ -23,7 +23,7 @@ function notFound(message) {
   return err;
 }
 
-// ✅ تم الإصلاح: سحب بيانات الطالب للسنة النشطة فقط (مع حماية school_id)
+// ✅ سحب بيانات الطالب للسنة النشطة فقط (مع حماية school_id)
 async function getStudentContext(userId, schoolId) {
   const { rows } = await pool.query(
     `
@@ -59,7 +59,7 @@ async function getStudentContext(userId, schoolId) {
   return rows[0] ?? null;
 }
 
-// ✅ تم الإصلاح: دعم تقييمات الصف كامل ومنع ظهور المسودات (مع حماية school_id)
+// ✅ دعم تقييمات الصف كامل ومنع ظهور المسودات (مع حماية school_id)
 async function getAccessibleAssessment(studentCtx, assessmentId, schoolId) {
   const { rows } = await pool.query(
     `
@@ -79,7 +79,6 @@ async function getAccessibleAssessment(studentCtx, assessmentId, schoolId) {
     LEFT JOIN teachers t ON t.id = ta.teacher_id
     WHERE a.id = $1
       AND a.school_id = $6
-      AND ta.school_id = $6
       AND ta.academic_year_id = $2
       AND ta.term = $3
       AND (ta.section_id = $4 OR (ta.section_id IS NULL AND ta.grade_id = $5))
@@ -165,7 +164,7 @@ function canStudentSubmit(assessment, existingSubmission) {
   return { allowed: true, reason: null };
 }
 
-// ✅ تصفية الأنشطة بشكل سليم (مع حماية المدرسة)
+// ✅ تصفية الأنشطة بشكل سليم 
 export async function listStudentActivities(req, res) {
   try {
     const userId = pickUserId(req);
@@ -196,8 +195,7 @@ export async function listStudentActivities(req, res) {
       `(ta.section_id = $4 OR (ta.section_id IS NULL AND ta.grade_id = $5))`,
       `a.type NOT IN ('continuous_assessment', 'midterm_muhassala', 'final_muhassala')`,
       `a.status IN ('published', 'active', 'closed')`,
-      `a.school_id = $6`,
-      `ta.school_id = $6`
+      `a.school_id = $6`
     ];
 
     let idx = 7;
@@ -265,7 +263,7 @@ export async function listStudentActivities(req, res) {
   }
 }
 
-// ✅ جلب نشاط واحد للطالب مع الدرجة والمرفقات (وحماية المدرسة)
+// ✅ جلب نشاط واحد للطالب مع الدرجة والمرفقات (بدون إيرور الجداول الفرعية)
 export async function getStudentActivityDetail(req, res) {
   try {
     const userId = pickUserId(req);
@@ -294,18 +292,17 @@ export async function getStudentActivityDetail(req, res) {
       FROM submissions
       WHERE assessment_id = $1
         AND student_id = $2
-        AND school_id = $3
       ORDER BY COALESCE(submitted_at, created_at) DESC, id DESC
       LIMIT 1
       `,
-      [assessmentId, studentCtx.student_id, schoolId]
+      [assessmentId, studentCtx.student_id]
     );
 
     const submission = submissionQ.rows[0] || null;
 
     const gradeQ = await pool.query(
-      `SELECT score, feedback, is_published FROM assessment_grades WHERE assessment_id = $1 AND student_id = $2 AND school_id = $3 LIMIT 1`,
-      [assessmentId, studentCtx.student_id, schoolId]
+      `SELECT score, feedback, is_published FROM assessment_grades WHERE assessment_id = $1 AND student_id = $2 LIMIT 1`,
+      [assessmentId, studentCtx.student_id]
     );
     const grade = gradeQ.rows[0] || null;
 
@@ -395,10 +392,9 @@ export async function submitStudentActivity(req, res) {
       FROM submissions
       WHERE assessment_id = $1
         AND student_id = $2
-        AND school_id = $3
       LIMIT 1
       `,
-      [assessmentId, studentCtx.student_id, schoolId]
+      [assessmentId, studentCtx.student_id]
     );
 
     const existing = existingQ.rows[0] || null;
@@ -410,18 +406,16 @@ export async function submitStudentActivity(req, res) {
 
     await client.query("BEGIN");
 
-    // ✅ حقن school_id أثناء إرسال الحل
     const insertSubmissionQ = await client.query(
       `
       INSERT INTO submissions
-        (school_id, assessment_id, student_id, status, note, submitted_at, created_at, updated_at)
+        (assessment_id, student_id, status, note, submitted_at, created_at, updated_at)
       VALUES
-        ($1, $2, $3, 'submitted', $4, NOW(), NOW(), NOW())
+        ($1, $2, 'submitted', $3, NOW(), NOW(), NOW())
       RETURNING id, submitted_at
       `,
-      [schoolId, assessmentId, studentCtx.student_id, text || null]
+      [assessmentId, studentCtx.student_id, text || null]
     );
-
     const submission = insertSubmissionQ.rows[0];
 
     if (file) {
@@ -469,43 +463,117 @@ function gradeWord(percent) {
 }
 
 // ✅ عرض درجات الطالب
+function detectGradeKind(row) {
+  const type = String(row.type || "").toLowerCase();
+  const examKind = String(row.exam_kind || "").toLowerCase();
+  const aggregateKind = String(row.aggregate_kind || "").toLowerCase();
+  const title = `${row.assessment_title || ""} ${row.title_short || ""}`.toLowerCase();
+
+  if (
+    type.includes("monthly") ||
+    examKind.includes("monthly") ||
+    title.includes("شهري") ||
+    title.includes("monthly")
+  ) {
+    return "monthly";
+  }
+
+  if (
+    type === "aggregate" ||
+    type.includes("aggregate") ||
+    type.includes("muhassala") ||
+    aggregateKind ||
+    title.includes("محصلة")
+  ) {
+    return "term_work";
+  }
+
+  if (
+    type.includes("activity") ||
+    type.includes("homework") ||
+    type.includes("assignment") ||
+    type.includes("task") ||
+    type.includes("participation") ||
+    title.includes("نشاط") ||
+    title.includes("واجب") ||
+    title.includes("تكليف")
+  ) {
+    return "activities";
+  }
+
+  if (
+    type.includes("exam") ||
+    type.includes("quiz") ||
+    examKind ||
+    title.includes("اختبار") ||
+    title.includes("امتحان")
+  ) {
+    return "exams";
+  }
+
+  return "other";
+}
+
+function gradeKindLabel(kind) {
+  const map = {
+    monthly: "اختبار شهري",
+    exams: "اختبار",
+    activities: "نشاط / تكليف",
+    term_work: "عمل فصلي / محصلة",
+    other: "تقييم",
+  };
+
+  return map[kind] || "تقييم";
+}
+
+function isAllowedGradeKind(kind, requestedType) {
+  if (!requestedType || requestedType === "all") return true;
+
+  if (requestedType === "monthly") return kind === "monthly";
+  if (requestedType === "exams") return kind === "exams" || kind === "monthly";
+  if (requestedType === "activities") return kind === "activities";
+  if (requestedType === "term_work") return kind === "term_work";
+
+  return true;
+}
+
 export async function listStudentGrades(req, res) {
   try {
     const userId = pickUserId(req);
     const schoolId = req.user?.school_id;
-    if (!userId || !schoolId) return res.status(401).json({ message: "غير مصرح." });
+
+    if (!userId || !schoolId) {
+      return res.status(401).json({ message: "غير مصرح." });
+    }
 
     const studentCtx = await getStudentContext(userId, schoolId);
+
     if (!studentCtx?.student_id) {
       return res.status(403).json({ message: "حساب الطالب غير موجود." });
     }
 
-    const type = String(req.query.type || "").trim();
+    const requestedType = String(req.query.type || "all").trim();
     const subjectId = req.query.subject_id ? Number(req.query.subject_id) : null;
     const q = String(req.query.q || "").trim();
 
     const params = [
-      studentCtx.student_id, 
-      studentCtx.academic_year_id, 
+      studentCtx.student_id,
+      studentCtx.academic_year_id,
       studentCtx.term,
-      schoolId
+      schoolId,
     ];
-    
+
     const where = [
-      `ag.student_id = $1`, 
-      `ag.is_published = true`,
+      `ag.student_id = $1`,
+      `COALESCE(ag.is_published, false) = true`,
       `ta.academic_year_id = $2`,
       `ta.term = $3`,
       `ag.school_id = $4`,
-      `a.school_id = $4`
+      `a.school_id = $4`,
+      `(a.status IN ('published', 'active', 'closed') OR a.published_at IS NOT NULL)`,
     ];
-    
-    let idx = 5;
 
-    if (type) {
-      params.push(type);
-      where.push(`a.type = $${idx++}`);
-    }
+    let idx = 5;
 
     if (subjectId) {
       params.push(subjectId);
@@ -525,14 +593,29 @@ export async function listStudentGrades(req, res) {
         ag.status,
         ag.score,
         ag.feedback,
+        ag.graded_at,
         ag.published_at,
+        ag.is_published,
 
         a.id AS assessment_id,
         a.title AS assessment_title,
+        a.title_short,
         a.type,
+        a.exam_kind,
+        a.aggregate_kind,
         a.max_score,
+        a.status AS assessment_status,
+        a.published_at AS assessment_published_at,
+        a.created_at AS assessment_created_at,
 
         ta.subject_id,
+        ta.academic_year_id,
+        ay.name AS academic_year_name,
+        ta.term,
+        ta.stage_id,
+        ta.grade_id,
+        ta.section_id,
+
         subj.name AS subject_name,
         t.full_name AS teacher_name,
 
@@ -543,33 +626,80 @@ export async function listStudentGrades(req, res) {
         END AS percentage
 
       FROM assessment_grades ag
-      JOIN assessments a ON a.id = ag.assessment_id
-      JOIN teacher_assignments ta ON ta.id = a.teacher_assignment_id
-      LEFT JOIN subjects subj ON subj.id = ta.subject_id
-      LEFT JOIN teachers t ON t.id = ta.teacher_id
+
+      JOIN assessments a
+        ON a.id = ag.assessment_id
+       AND a.school_id = ag.school_id
+
+      JOIN teacher_assignments ta
+        ON ta.id = a.teacher_assignment_id
+
+      LEFT JOIN academic_years ay
+        ON ay.id = ta.academic_year_id
+
+      LEFT JOIN subjects subj
+        ON subj.id = ta.subject_id
+
+      LEFT JOIN teachers t
+        ON t.id = ta.teacher_id
+       AND t.school_id = ag.school_id
 
       WHERE ${where.join(" AND ")}
-      ORDER BY COALESCE(ag.published_at, ag.updated_at, ag.created_at) DESC
+
+      ORDER BY
+        COALESCE(ag.published_at, ag.graded_at, a.published_at, a.created_at) DESC,
+        subj.name ASC NULLS LAST,
+        a.id DESC
       `,
       params
     );
 
-    const items = rows.map((row) => ({
-      ...row,
-      status_label:
-        row.status === "graded"
-          ? "تم نشر الدرجة"
-          : row.status === "absent"
-          ? "غائب"
-          : row.status === "excused"
-          ? "معذور"
-          : "تمت المعالجة",
-      grade_word: gradeWord(row.percentage),
-    }));
+    let items = rows.map((row) => {
+      const kind = detectGradeKind(row);
 
-    return res.json({ items });
+      return {
+        ...row,
+        kind,
+        kind_label: gradeKindLabel(kind),
+        status_label:
+          row.status === "graded"
+            ? "تم نشر الدرجة"
+            : row.status === "absent"
+            ? "غائب"
+            : row.status === "excused"
+            ? "معذور"
+            : "تمت المعالجة",
+        grade_word: gradeWord(row.percentage),
+      };
+    });
+
+    items = items.filter((item) => isAllowedGradeKind(item.kind, requestedType));
+
+    const gradedItems = items.filter((item) => item.status === "graded");
+    const percentages = gradedItems
+      .map((item) => Number(item.percentage))
+      .filter((value) => Number.isFinite(value));
+
+    const average =
+      percentages.length > 0
+        ? percentages.reduce((sum, value) => sum + value, 0) / percentages.length
+        : null;
+
+    return res.json({
+      items,
+      summary: {
+        total_count: items.length,
+        graded_count: gradedItems.length,
+        absent_count: items.filter((item) => item.status === "absent").length,
+        excused_count: items.filter((item) => item.status === "excused").length,
+        average_percentage: average,
+        average_grade_word: gradeWord(average),
+      },
+    });
   } catch (e) {
     console.error("listStudentGrades error:", e);
-    return res.status(e.status || 500).json({ message: e.message || "خطأ في السيرفر" });
+    return res.status(e.status || 500).json({
+      message: e.message || "خطأ في السيرفر",
+    });
   }
 }

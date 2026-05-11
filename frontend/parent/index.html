@@ -424,12 +424,14 @@
       <form class="form-card" id="parentGradesForm">
         <label>
           <span>نوع الدرجات</span>
-          <select id="grType">
-            <option value="term_results">نتائج نهاية الفصل</option>
-            <option value="monthly" disabled>الاختبارات الشهرية - لاحقًا</option>
-            <option value="monthly_work" disabled>الأعمال الشهرية - لاحقًا</option>
-            <option value="term_work" disabled>الأعمال الفصلية - لاحقًا</option>
-          </select>
+     <select id="grType">
+  <option value="term_results">نتائج نهاية الفصل</option>
+  <option value="all">كل الدرجات المنشورة</option>
+  <option value="monthly">الاختبارات الشهرية</option>
+  <option value="exams">الاختبارات</option>
+  <option value="activities">الأنشطة والتكليفات</option>
+  <option value="term_work">الأعمال الفصلية</option>
+</select>
         </label>
 
         <label>
@@ -1084,6 +1086,5 @@
 <script src="js/parent-notifications.js" defer></script>
 <script src="js/feesmodal.js" defer></script>
 <script src="js/parent-activities.js" defer></script>
-<script src="js/parent-grades.js?v=1"></script>
-</body>
+<script src="js/parent-grades.js?v=5"></script></body>
 </html>

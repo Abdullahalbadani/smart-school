@@ -67,6 +67,7 @@ export async function getChildActivities(req, res) {
 
     // 3. جلب الأنشطة والاختبارات المطروحة لهذه الشعبة (مع حماية المدرسة)
     // ولي الأمر يرى فقط الأنشطة "المنشورة" أو "المغلقة" (لا يرى المسودات)
+    // 3. جلب الأنشطة والاختبارات المطروحة لهذه الشعبة (مع حماية المدرسة)
     const { rows } = await pool.query(
       `
       SELECT 
@@ -93,8 +94,7 @@ export async function getChildActivities(req, res) {
         AND (ta.section_id = $4 OR (ta.section_id IS NULL AND ta.grade_id = $5))
         AND a.type NOT IN ('continuous_assessment', 'midterm_muhassala', 'final_muhassala')
         AND a.status IN ('published', 'closed')
-        AND a.school_id = $6
-        AND ta.school_id = $6
+        AND a.school_id = $6  -- ✅ نكتفي بالفلترة من جدول الأنشطة
       ORDER BY COALESCE(a.due_at, a.created_at) DESC
       `,
       [
@@ -103,7 +103,7 @@ export async function getChildActivities(req, res) {
         studentCtx.term,
         studentCtx.section_id,
         studentCtx.grade_id,
-        schoolId // ✅ تمرير الـ school_id كمتغير سادس
+        schoolId 
       ]
     );
 

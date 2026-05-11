@@ -79,6 +79,7 @@ import activityRoutes from './routes/activityRoutes.js';
 import monthlyCertificatesRoutes from "./routes/monthlyCertificatesRoutes.js";
 import studentTermResultsRoutes from "./routes/studentTermResultsRoutes.js";
 import parentTermResultsRoutes from "./routes/parentTermResultsRoutes.js";
+import parentGradesRoutes from "./routes/parentGradesRoutes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -206,6 +207,7 @@ app.use("/api/notifications/admin", authMiddleware, notificationsAdminRoutes);
 app.use("/api/notifications", authMiddleware, notificationsInboxRoutes);
 app.use("/api/teacher/notifications", authMiddleware, teacherNotificationsSendRoutes);
 app.use("/api/student/notifications", authMiddleware, studentNotificationsRoutes);
+app.use("/api/parent/grades", parentGradesRoutes);
 app.use("/api/parent/notifications", authMiddleware, parentNotificationsRoutes);
 app.use("/api/student/term-results", studentTermResultsRoutes);
 
@@ -218,7 +220,8 @@ app.use("/api/parent/term-results", parentTermResultsRoutes);
 app.use("/api/student", authMiddleware, studentPortalRoutes);
 
 app.use("/api/parent/attendance", authMiddleware, parentAttendanceRoutes);
-app.use("/api/parent/permissions", authMiddleware, parentPermissionsRoutes);
+
+app.use("/api/parent", authMiddleware, parentPermissionsRoutes);
 app.use("/api/parent", authMiddleware, parentPortalRoutes);
 app.use("/api/parent", authMiddleware, parentRoutes);
 
@@ -244,6 +247,7 @@ app.use("/api", authMiddleware, parentFeesPortalRoutes);
 app.use("/api", authMiddleware, metaRoutes);
 app.use("/api", authMiddleware, parentsRoutes);
 app.use("/api", authMiddleware, continuingRoutes);
+
 
 // معالج الأخطاء (يجب أن يكون في النهاية دائماً)
 app.use(errorHandler);
