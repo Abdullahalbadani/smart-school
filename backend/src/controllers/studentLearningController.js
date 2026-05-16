@@ -469,6 +469,7 @@ function detectGradeKind(row) {
   const aggregateKind = String(row.aggregate_kind || "").toLowerCase();
   const title = `${row.assessment_title || ""} ${row.title_short || ""}`.toLowerCase();
 
+  // الاختبارات الشهرية أولًا
   if (
     type.includes("monthly") ||
     examKind.includes("monthly") ||
@@ -478,6 +479,7 @@ function detectGradeKind(row) {
     return "monthly";
   }
 
+  // الأعمال الفصلية / المحصلة
   if (
     type === "aggregate" ||
     type.includes("aggregate") ||
@@ -488,19 +490,7 @@ function detectGradeKind(row) {
     return "term_work";
   }
 
-  if (
-    type.includes("activity") ||
-    type.includes("homework") ||
-    type.includes("assignment") ||
-    type.includes("task") ||
-    type.includes("participation") ||
-    title.includes("نشاط") ||
-    title.includes("واجب") ||
-    title.includes("تكليف")
-  ) {
-    return "activities";
-  }
-
+  // الاختبارات قبل الأنشطة حتى لا تدخل كلمة مثل "اختبار نصفي" ضمن النشاطات
   if (
     type.includes("exam") ||
     type.includes("quiz") ||
@@ -511,9 +501,24 @@ function detectGradeKind(row) {
     return "exams";
   }
 
+  // الأنشطة والتكليفات
+  if (
+    type.includes("activity") ||
+    type.includes("classwork") ||
+    type.includes("homework") ||
+    type.includes("assignment") ||
+    type.includes("task") ||
+    type.includes("participation") ||
+    title.includes("نشاط") ||
+    title.includes("نشاط صفي") ||
+    title.includes("واجب") ||
+    title.includes("تكليف")
+  ) {
+    return "activities";
+  }
+
   return "other";
 }
-
 function gradeKindLabel(kind) {
   const map = {
     monthly: "اختبار شهري",

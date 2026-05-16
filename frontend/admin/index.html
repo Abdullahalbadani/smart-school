@@ -1422,54 +1422,55 @@
         </div>
       </div>
     </div>
-<!-- <script src="http://127.0.0.1:5000/socket.io/socket.io.js"></script> -->
-    <script src="js/admin.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/users-permissions.js"></script>
-    <script src="js/student-register.js?v=20251218"></script>
+   <script src="/frontend/shared/config.js?v=4"></script>
+<script src="/frontend/shared/profile-account.js?v=4"></script>
 
-    <script src="js/viewstudent.js"></script>
-    <script src="js/studentRenew.js"></script>
-    <!-- <script src="js/fees-pages.js"></script> -->
-    <script src="js/weeklySchedule.js"></script>
-    <script src="js/examSchedule.js"></script>
-    <script src="js/staffRegister.js?v=999"></script>
-    <script src="js/assignTeachers.js"></script>
-    <script src="js/schoolSettings.js"></script>
-<script src="js/permissionsWidget.js"></script>
-<script src="js/adminTeacherAttendance.js"></script>
-<script src="js/adminTeacherPermits.js"></script>
-<script src="js/attendanceReports.js"></script>
-<script src="js/inbox.js"></script>
-<script src="js/notificationsSend.js"></script>
-<script src="js/notificationsLog.js"></script>
-<script src="js/navbarNotificationsBell.js"></script>
-<script src="js/feespay.js"></script>
-<script src="js/feesReports.js"></script>
-<script src="js/fees-settings.js"></script>
-<script src="js/monthlyWork.js"></script>
-<script src="js/monthlyReports.js"></script>
-<script src="js/monthlyCertificates.js"></script>
-<script src="js/termResults.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 
-    <script src="/frontend/shared/profile-account.js" defer></script>
+<script src="js/admin.js?v=4"></script>
+<script src="js/main.js?v=4"></script>
+<script src="js/users-permissions.js?v=4"></script>
+<script src="js/student-register.js?v=20251218"></script>
 
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
-    ></script>
-    <script
-      defer
-      src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"
-    ></script>
-    <script src="http://127.0.0.1:5000/socket.io/socket.io.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="js/viewstudent.js?v=5"></script>
+<script src="js/studentRenew.js?v=6"></script>
+<!-- <script src="js/fees-pages.js"></script> -->
+<script src="js/weeklySchedule.js?v=4"></script>
+<script src="js/examSchedule.js?v=4"></script>
+<script src="js/staffRegister.js?v=999"></script>
+<script src="js/assignTeachers.js?v=5"></script>
+<script src="js/schoolSettings.js?v=4"></script>
+<script src="js/permissionsWidget.js?v=4"></script>
+<script src="js/adminTeacherAttendance.js?v=4"></script>
+<script src="js/adminTeacherPermits.js?v=5"></script>
+<script src="js/attendanceReports.js?v=4"></script>
+<script src="js/inbox.js?v=4"></script>
+<script src="js/notificationsSend.js?v=4"></script>
+<script src="js/notificationsLog.js?v=4"></script>
+<script src="js/navbarNotificationsBell.js?v=4"></script>
+<script src="js/feespay.js?v=4"></script>
+<script src="js/feesReports.js?v=4"></script>
+<script src="js/fees-settings.js?v=4"></script>
+<script src="js/monthlyWork.js?v=4"></script>
+<script src="js/monthlyReports.js?v=4"></script>
+<script src="js/monthlyCertificates.js?v=4"></script>
+<script src="js/termResults.js?v=4"></script>
+
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"
+></script>
+<script
+  defer
+  src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"
+></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   // الاستماع الفوري للإشعارات للإدارة
   document.addEventListener("DOMContentLoaded", () => {
     if (typeof io !== "undefined") {
-      const adminSocket = io("http://127.0.0.1:5000");
-      
+const adminSocket = io(window.location.origin);      
       adminSocket.on("connect", () => {
         console.log("🟢 [Socket] الإدارة متصلة بالسيرفر الحي بنجاح!");
       });

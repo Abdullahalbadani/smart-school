@@ -65,55 +65,81 @@
   // Anti-double-load guard
   // ==============================
   window.__EXAM_SCHEDULE_LOADS__ = (window.__EXAM_SCHEDULE_LOADS__ || 0) + 1;
-  console.log("examSchedule.js loaded x", window.__EXAM_SCHEDULE_LOADS__);
 
   if (window.__EXAM_SCHEDULE_JS_LOADED__) return;
   window.__EXAM_SCHEDULE_JS_LOADED__ = true;
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
+
+        let cleanPath = String(path || "").replace(/^\/+/, "");
+
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };
   function authHeaders() {
     const token = localStorage.getItem("token");
     return token ? { Authorization: "Bearer " + token } : {};
   }
 
-  async function apiGet(path) {
-    const r = await fetch(API_BASE + path, { headers: { ...authHeaders() } });
-    let data;
-    try {
-      data = await r.json();
-    } catch {
-      data = null;
-    }
-    if (!r.ok) {
-      const msg = data?.message || `API GET failed: ${path}`;
-      throw new Error(msg);
-    }
-    return data;
+async function apiGet(path) {
+  const r = await fetch(apiUrl(path), {
+    headers: { ...authHeaders() },
+  });
+
+  let data;
+  try {
+    data = await r.json();
+  } catch {
+    data = null;
   }
 
-  async function apiSend(path, method, body) {
-    const opts = { method, headers: { ...authHeaders() } };
-    if (body !== undefined) {
-      opts.headers["Content-Type"] = "application/json";
-      opts.body = JSON.stringify(body || {});
-    }
-    const r = await fetch(API_BASE + path, opts);
-    let data;
-    try {
-      data = await r.json();
-    } catch {
-      data = null;
-    }
-    if (!r.ok) {
-      const msg = data?.message || `API ${method} failed: ${path}`;
-      const err = new Error(msg);
-      err.payload = data;
-      err.status = r.status;
-      throw err;
-    }
-    return data;
+  if (!r.ok) {
+    const msg = data?.message || data?.error || `API GET failed: ${path}`;
+    throw new Error(msg);
   }
+
+  return data;
+}
+
+async function apiSend(path, method, body) {
+  const opts = {
+    method,
+    headers: { ...authHeaders() },
+  };
+
+  if (body !== undefined) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body || {});
+  }
+
+  const r = await fetch(apiUrl(path), opts);
+
+  let data;
+  try {
+    data = await r.json();
+  } catch {
+    data = null;
+  }
+
+  if (!r.ok) {
+    const msg = data?.message || data?.error || `API ${method} failed: ${path}`;
+    const err = new Error(msg);
+    err.payload = data;
+    err.status = r.status;
+    throw err;
+  }
+
+  return data;
+}
 
   // ==============================
   // Fallback meta

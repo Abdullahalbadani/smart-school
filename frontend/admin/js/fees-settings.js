@@ -5,12 +5,19 @@
   if (window.__FEES_SETTINGS_LOADED__) return;
   window.__FEES_SETTINGS_LOADED__ = true;
 
-  const API_BASE = "http://localhost:5000"; // نفس نمط student-register.js
+  const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
-  function toApiUrl(url) {
-    if (/^https?:\/\//i.test(url)) return url;
-    return API_BASE + (url.startsWith("/") ? url : "/" + url);
+function toApiUrl(url) {
+  if (/^https?:\/\//i.test(url)) return url;
+
+  let cleanPath = String(url || "").replace(/^\/+/, "");
+
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
   }
+
+  return `${API_BASE}/${cleanPath}`;
+}
 
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
@@ -28,8 +35,7 @@
     const token = getToken();
     const res = await fetch(toApiUrl(url), { headers: { Authorization: `Bearer ${token}` } });
     const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.message || "API error");
-    return data;
+if (!res.ok) throw new Error(data.message || data.error || "API error");    return data;
   }
 
   async function apiSend(method, url, body) {
@@ -40,8 +46,7 @@
       body: body ? JSON.stringify(body) : null,
     });
     const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.message || "API error");
-    return data;
+if (!res.ok) throw new Error(data.message || data.error || "API error");    return data;
   }
 
   function fillSelect(selectEl, items, opts = {}) {

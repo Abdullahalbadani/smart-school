@@ -1,8 +1,18 @@
 (function () {
   "use strict";
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
+function apiUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
 
+  let cleanPath = String(path || "").replace(/^\/+/, "");
+
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
+  }
+
+  return `${API_BASE}/${cleanPath}`;
+}
   const state = {
     meta: {},
     batch: null,
@@ -41,8 +51,7 @@
   }
 
   async function apiRequest(method, path, body) {
-    const url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
-    const headers = { Accept: "application/json" };
+const url = apiUrl(path);    const headers = { Accept: "application/json" };
 
     const token = getToken();
     if (token) headers.Authorization = `Bearer ${token}`;
@@ -63,7 +72,7 @@
     }
 
     if (!res.ok) {
-      throw new Error(data?.message || `فشل الاتصال بالسيرفر: ${res.status}`);
+throw new Error(data?.message || data?.error || `فشل الاتصال بالسيرفر: ${res.status}`);
     }
 
     return data;

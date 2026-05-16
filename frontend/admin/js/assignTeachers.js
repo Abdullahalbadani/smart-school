@@ -2,40 +2,57 @@
 (function () {
   "use strict";
 
-let API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
-  const $ = (sel, root = document) => root.querySelector(sel);
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
+
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
+
+        let cleanPath = String(path || "").replace(/^\/+/, "");
+
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };
+        const $ = (sel, root = document) => root.querySelector(sel);
 
   function authHeaders() {
     const token = localStorage.getItem("token");
     return token ? { Authorization: "Bearer " + token } : {};
   }
 
-  async function apiFetch(path, opts = {}) {
-    const url = path.startsWith("http") ? path : API_BASE + path;
-    const r = await fetch(url, {
-      ...opts,
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders(),
-        ...(opts.headers || {}),
-      },
-    });
+ async function apiFetch(path, opts = {}) {
+  const url = apiUrl(path);
 
-    const text = await r.text();
-    let data = null;
-    try {
-      data = text ? JSON.parse(text) : null;
-    } catch {
-      data = { raw: text };
-    }
+  const r = await fetch(url, {
+    ...opts,
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+      ...(opts.headers || {}),
+    },
+  });
 
-    if (!r.ok) {
-      const msg = data?.error || data?.message || `HTTP ${r.status}`;
-      throw new Error(msg);
-    }
-    return data;
+  const text = await r.text();
+
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { raw: text };
   }
 
+  if (!r.ok) {
+    const msg = data?.error || data?.message || `HTTP ${r.status}`;
+    throw new Error(msg);
+  }
+
+  return data;
+}
   function showToast(msg) {
     // لو عندك Toast عام في admin استخدمه. وإلا fallback:
     if (window.showToast) return window.showToast(msg);

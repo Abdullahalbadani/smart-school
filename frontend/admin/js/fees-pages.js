@@ -2,8 +2,22 @@
 (function () {
   "use strict";
 
-  const API_BASE = window.API_BASE || "http://localhost:5000/api";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
+
+        let cleanPath = String(path || "").replace(/^\/+/, "");
+
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -11,28 +25,37 @@
     return localStorage.getItem("token") || "";
   }
 
-  async function apiGet(path) {
-    const res = await fetch(API_BASE + path, {
-      headers: { Authorization: "Bearer " + getToken() },
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json.message || "Request failed");
-    return json.data ?? json;
+async function apiGet(path) {
+  const res = await fetch(apiUrl(path), {
+    headers: { Authorization: "Bearer " + getToken() },
+  });
+
+  const json = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(json.message || json.error || "Request failed");
   }
 
-  async function apiPost(path, body) {
-    const res = await fetch(API_BASE + path, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + getToken(),
-      },
-      body: JSON.stringify(body || {}),
-    });
-    const json = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(json.message || "Request failed");
-    return json.data ?? json;
+  return json.data ?? json;
+}
+ async function apiPost(path, body) {
+  const res = await fetch(apiUrl(path), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer " + getToken(),
+    },
+    body: JSON.stringify(body || {}),
+  });
+
+  const json = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(json.message || json.error || "Request failed");
   }
+
+  return json.data ?? json;
+}
 
   function money(n) {
     return Number(n || 0).toLocaleString("en-US");

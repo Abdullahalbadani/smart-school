@@ -140,37 +140,85 @@ const API_BASE = "/api";
 
   // ✅ تعديل: دالة الإرسال للسيرفر أصبحت تأخذ الـ Slug تلقائياً
   async function apiLogin(identifier, password) {
-    const slug = getSchoolSlug(); // استخراج المعرف من الرابط
+  const slug = getSchoolSlug();
 
-    if (!slug) {
-        throw new Error("لم نتمكن من تحديد هوية المدرسة من الرابط الحالي.");
-    }
-
-    const body = {
-      slug: slug, // ✅ تم الإرسال تلقائياً كما يطلبه الكنترولر في الباك إند
-      email: identifier,
-      username: identifier,
-      login: identifier, // لتوافق الأسماء التي قد يستخدمها الباك إند
-      password,
-    };
-
-    const r = await fetch(`${API_BASE}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-
-    const text = await r.text();
-    let data = null;
-    try { data = text ? JSON.parse(text) : null; } catch { data = { raw: text }; }
-
-    if (!r.ok) {
-      const msg = (data && (data.error || data.message)) || `Login failed (${r.status})`;
-      throw new Error(msg);
-    }
-    return data;
+  if (!slug) {
+    throw new Error("لم نتمكن من تحديد هوية المدرسة من الرابط الحالي.");
   }
 
+  const body = {
+    slug: slug,
+    email: identifier,
+    username: identifier,
+    login: identifier,
+    password,
+  };
+
+  const r = await fetch(`${API_BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  const text = await r.text();
+
+  let data = null;
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch {
+    data = { raw: text };
+  }
+
+  if (!r.ok) {
+    const msg =
+      (data && (data.error || data.message)) ||
+      `Login failed (${r.status})`;
+
+    // إذا الباكند رجع رابط التحويل نستخدمه مباشرة
+    if (data && data.redirect_url) {
+      clearSession();
+      window.location.replace(data.redirect_url);
+      return new Promise(() => {});
+    }
+
+    // حل احتياطي إذا الباكند رجع رسالة فقط بدون redirect_url
+    const shouldRedirectToExpiredPage =
+      r.status === 403 &&
+      (
+        msg.includes("غير مفعلة") ||
+        msg.includes("إيقاف") ||
+        msg.includes("موقوف") ||
+        msg.includes("انتهى") ||
+        msg.includes("منتهية") ||
+        msg.includes("انتهت") ||
+        msg.includes("اشتراك") ||
+        msg.includes("تجربة")
+      );
+
+    if (shouldRedirectToExpiredPage) {
+      clearSession();
+
+      const params = new URLSearchParams({
+        code: "SCHOOL_INACTIVE",
+        school: slug,
+        status: "inactive",
+        plan: "",
+        trial_ends_at: "",
+        subscription_ends_at: "",
+      });
+
+      window.location.replace(
+        `/frontend/subscription/expired.html?${params.toString()}`
+      );
+
+      return new Promise(() => {});
+    }
+
+    throw new Error(msg);
+  }
+
+  return data;
+}
   async function doLogin(getEls) {
     const { email, password, submit } = getEls();
 

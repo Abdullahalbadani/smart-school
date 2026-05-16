@@ -1,12 +1,14 @@
-// src/routes/continuingRoutes.js
 import express from "express";
-import authMiddleware from "../middleware/authMiddleware.js";
-import { ContinuingController } from "../controllers/continuingController.js";
+import {
+  getContinuingMeta,
+  listContinuingStudents,
+  registerContinuingStudents,
+} from "../controllers/continuingStudentsController.js";
 
 const router = express.Router();
 
-router.get("/continuing/eligible", authMiddleware, ContinuingController.getEligible);
-router.post("/continuing/preview", authMiddleware, ContinuingController.preview);
-router.post("/continuing/register-bulk", authMiddleware, ContinuingController.registerBulk);
+router.get("/continuing-students/meta", getContinuingMeta);
+router.get("/continuing-students/students", listContinuingStudents);
+router.post("/continuing-students/register", registerContinuingStudents);
 
 export default router;

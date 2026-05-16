@@ -2,8 +2,9 @@
 (function () {
   "use strict";
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
-  const $ = (id) => document.getElementById(id);
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
+
+ const $ = (id) => document.getElementById(id);
 
   const toast = (msg) =>
     typeof window.showToast === "function" ? window.showToast(msg) : alert(msg);
@@ -14,7 +15,8 @@
   }
 
   async function apiFetch(path, opts = {}) {
-    const url = path.startsWith("http") ? path : API_BASE + path;
+const cleanPath = String(path).replace(/^\/+/, "");
+const url = path.startsWith("http") ? path : `${API_BASE}/${cleanPath}`;
     const r = await fetch(url, {
       ...opts,
       headers: {

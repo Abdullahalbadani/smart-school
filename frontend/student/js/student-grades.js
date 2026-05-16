@@ -8,8 +8,15 @@
 
   const state = {
     student: null,
-    results: [],
-    activeIndex: 0,
+
+    mode: "term_results",
+
+    termResults: [],
+    activeTermIndex: 0,
+
+    assessmentItems: [],
+    assessmentSummary: null,
+
     loaded: false,
   };
 
@@ -52,8 +59,8 @@
   const tableBody = () => qs("#stu-gr-table-body");
   const emptyState = () => qs("#stu-gr-empty");
 
-  const resultSelect = () => qs("#stu-gr-filter-type");
-  const subjectFilter = () => qs("#stu-gr-filter-subject");
+  const typeSelect = () => qs("#stu-gr-filter-type");
+  const termSelect = () => qs("#stu-gr-filter-subject");
   const searchInput = () => qs("#stu-gr-filter-search");
   const refreshBtn = () => qs("#stu-gr-refresh");
 
@@ -134,6 +141,7 @@
 
   function statusLabel(status) {
     const map = {
+      graded: "مرصودة",
       passed: "ناجح",
       failed: "راسب",
       incomplete: "ناقص",
@@ -142,14 +150,15 @@
       excused: "معذور",
       not_approved: "غير معتمد",
       published: "منشورة",
+      pending: "قيد الانتظار",
     };
 
     return map[status] || status || "—";
   }
 
   function statusBadgeClass(status) {
-    if (status === "passed") return "ss-badge ss-badge--success";
-    if (status === "failed") return "ss-badge ss-badge--danger";
+    if (["passed", "graded"].includes(status)) return "ss-badge ss-badge--success";
+    if (["failed", "absent"].includes(status)) return "ss-badge ss-badge--danger";
     return "ss-badge ss-badge--soft";
   }
 
@@ -165,7 +174,7 @@
     return "ضعيف";
   }
 
-  function getResultTitle(result) {
+  function getTermResultTitle(result) {
     if (!result) return "—";
 
     return [
@@ -178,36 +187,33 @@
       .join(" - ");
   }
 
-  function activeResult() {
-    return state.results[state.activeIndex] || null;
+  function activeTermResult() {
+    return state.termResults[state.activeTermIndex] || null;
   }
 
   function configureExistingModal() {
     const title = qs("#stu-gr-title span") || qs("#stu-gr-title");
-    if (title) title.textContent = "نتائج نهاية الفصل";
+    if (title) title.textContent = "درجات الطالب";
 
     const subtitle = qs("#modal-grades .modal-subtitle");
     if (subtitle) {
       subtitle.textContent =
-        "النتائج المنشورة من الإدارة: درجات المواد، المحصلة، الاختبار، المجموع، التقدير والحالة.";
+        "يعرض نتائج نهاية الفصل وكل الدرجات المنشورة من اختبارات وأنشطة وتكليفات.";
     }
 
-    const typeLabel = resultSelect()?.closest(".field")?.querySelector(".field-label");
-    if (typeLabel) typeLabel.textContent = "النتيجة المنشورة";
+    const typeLabel = typeSelect()?.closest(".field")?.querySelector(".field-label");
+    if (typeLabel) typeLabel.textContent = "نوع الدرجات";
 
-    const subjectField = subjectFilter()?.closest(".field");
-    if (subjectField) subjectField.style.display = "none";
+    const termLabel = termSelect()?.closest(".field")?.querySelector(".field-label");
+    if (termLabel) termLabel.textContent = "النتيجة المنشورة";
 
     const searchField = searchInput()?.closest(".field");
     if (searchField) searchField.style.display = "none";
 
     const refreshText = refreshBtn()?.querySelector("span");
-    if (refreshText) refreshText.textContent = "تحديث النتيجة";
+    if (refreshText) refreshText.textContent = "تحديث الدرجات";
 
-    const form = qs("#stu-gr-filter-form");
-    if (form) {
-      form.style.gridTemplateColumns = "minmax(220px, 1fr) auto";
-    }
+    fillTypeSelect();
 
     const actions = qs("#stu-gr-filter-form .ss-actions");
     if (actions && !qs("#stu-gr-print")) {
@@ -215,15 +221,46 @@
       btn.type = "button";
       btn.className = "primary-btn";
       btn.id = "stu-gr-print";
-      btn.innerHTML = `<i class="ri-printer-line"></i><span>طباعة النتيجة</span>`;
+      btn.innerHTML = `<i class="ri-printer-line"></i><span>طباعة</span>`;
       actions.appendChild(btn);
     }
 
-    updateTableHeader();
-    updateSummaryLabels();
+    updateTermTableHeader();
+    updateTermSummaryLabels();
   }
 
-  function updateTableHeader() {
+  function fillTypeSelect() {
+    const select = typeSelect();
+    if (!select) return;
+
+    const current = select.value || state.mode || "term_results";
+
+    const options = [
+      ["term_results", "نتائج نهاية الفصل"],
+      ["all", "كل الدرجات المنشورة"],
+      ["monthly", "الاختبارات الشهرية"],
+      ["exams", "الاختبارات"],
+      ["activities", "الأنشطة والتكليفات"],
+      ["term_work", "الأعمال الفصلية / المحصلة"],
+    ];
+
+    select.innerHTML = options
+      .map(([value, label]) => `<option value="${value}">${label}</option>`)
+      .join("");
+
+    select.value = options.some(([value]) => value === current)
+      ? current
+      : "term_results";
+
+    state.mode = select.value;
+  }
+
+  function showTermSelector(show) {
+    const field = termSelect()?.closest(".field");
+    if (field) field.style.display = show ? "" : "none";
+  }
+
+  function updateTermTableHeader() {
     const headRow = qs("#stu-gr-table thead tr");
     if (!headRow) return;
 
@@ -238,7 +275,23 @@
     `;
   }
 
-  function updateSummaryLabels() {
+  function updateAssessmentTableHeader() {
+    const headRow = qs("#stu-gr-table thead tr");
+    if (!headRow) return;
+
+    headRow.innerHTML = `
+      <th>المادة</th>
+      <th>التقييم</th>
+      <th>النوع</th>
+      <th>الدرجة</th>
+      <th>النسبة</th>
+      <th>التقدير</th>
+      <th>الحالة</th>
+      <th>إجراء</th>
+    `;
+  }
+
+  function updateTermSummaryLabels() {
     const labels = qsa("#modal-grades .ss-summary-label");
 
     if (labels[0]) labels[0].textContent = "المجموع النهائي";
@@ -247,13 +300,22 @@
     if (labels[3]) labels[3].textContent = "الحالة / الترتيب";
   }
 
-  function fillResultSelect() {
-    const select = resultSelect();
+  function updateAssessmentSummaryLabels() {
+    const labels = qsa("#modal-grades .ss-summary-label");
+
+    if (labels[0]) labels[0].textContent = "عدد الدرجات";
+    if (labels[1]) labels[1].textContent = "متوسط النسبة";
+    if (labels[2]) labels[2].textContent = "التقدير التقريبي";
+    if (labels[3]) labels[3].textContent = "مرصود / غياب";
+  }
+
+  function fillTermSelect() {
+    const select = termSelect();
     if (!select) return;
 
     select.innerHTML = "";
 
-    if (!state.results.length) {
+    if (!state.termResults.length) {
       const option = document.createElement("option");
       option.value = "";
       option.textContent = "لا توجد نتائج منشورة";
@@ -261,17 +323,17 @@
       return;
     }
 
-    state.results.forEach((result, index) => {
+    state.termResults.forEach((result, index) => {
       const option = document.createElement("option");
       option.value = String(index);
-      option.textContent = getResultTitle(result);
+      option.textContent = getTermResultTitle(result);
       select.appendChild(option);
     });
 
-    select.value = String(state.activeIndex);
+    select.value = String(state.activeTermIndex);
   }
 
-  function updateSummary(result) {
+  function updateTermSummary(result) {
     if (!result) {
       countTotal() && (countTotal().textContent = "—");
       avgEl() && (avgEl().textContent = "—");
@@ -301,14 +363,32 @@
     listBadge() && (listBadge().textContent = `${result.subjects?.length || 0} مادة`);
   }
 
+  function updateAssessmentSummary(summary) {
+    const s = summary || {};
+
+    const avg =
+      s.average_percentage === null || s.average_percentage === undefined
+        ? "—"
+        : `${fmtNumber(s.average_percentage)}%`;
+
+    countTotal() && (countTotal().textContent = String(s.total_count || 0));
+    avgEl() && (avgEl().textContent = avg);
+    highestEl() &&
+      (highestEl().textContent =
+        s.average_grade_word || s.average_grade_label || "—");
+    lastPublishedEl() &&
+      (lastPublishedEl().textContent = `${s.graded_count || 0} / ${s.absent_count || 0}`);
+    listBadge() && (listBadge().textContent = `${s.total_count || 0} درجة`);
+  }
+
   function renderEmpty(message) {
     const tbody = tableBody();
     if (tbody) tbody.innerHTML = "";
 
     emptyState() && (emptyState().style.display = "");
-    emptyState() && (emptyState().textContent = message || "لا توجد نتائج منشورة حاليًا.");
+    emptyState() &&
+      (emptyState().textContent = message || "لا توجد درجات منشورة حاليًا.");
 
-    updateSummary(null);
     resetDetail();
   }
 
@@ -317,7 +397,7 @@
       detailEmpty() && (detailEmpty().style.display = "");
       detailEmpty() &&
         (detailEmpty().textContent =
-          "اختر مادة من الجدول لعرض تفاصيلها، أو حدّث النتيجة.");
+          "اختر عنصرًا من الجدول لعرض التفاصيل، أو حدّث الدرجات.");
       detailContent() && (detailContent().style.display = "none");
       detailBadge() && (detailBadge().textContent = "—");
       return;
@@ -353,8 +433,12 @@
     detailPublished() &&
       (detailPublished().textContent = `تاريخ النشر: ${fmtDate(result.published_at)}`);
 
-    detailScore() && (detailScore().textContent = result.total_score != null ? fmtNumber(result.total_score) : "—");
-    detailMax() && (detailMax().textContent = `/ ${result.max_score != null ? fmtNumber(result.max_score) : "—"}`);
+    detailScore() &&
+      (detailScore().textContent =
+        result.total_score != null ? fmtNumber(result.total_score) : "—");
+    detailMax() &&
+      (detailMax().textContent =
+        `/ ${result.max_score != null ? fmtNumber(result.max_score) : "—"}`);
     detailPercent() && (detailPercent().textContent = percentage);
     detailWord() && (detailWord().textContent = gradeLabel);
 
@@ -367,8 +451,8 @@
         `الحالة النهائية: ${statusText}. الترتيب في الشعبة: ${rank}. المواد الراسبة: ${result.failed_subjects || 0}. المواد الناقصة: ${result.missing_subjects || 0}.`);
   }
 
-  function renderSubjectDetail(subject) {
-    const result = activeResult();
+  function renderTermSubjectDetail(subject) {
+    const result = activeTermResult();
     if (!subject || !result) return;
 
     const aggregate = scoreWithMax(subject.aggregate_score, subject.aggregate_max_score);
@@ -397,8 +481,12 @@
     detailType() && (detailType().textContent = `مجموع المادة: ${total}`);
     detailPublished() && (detailPublished().textContent = `الفصل: ${result.term_label || "—"}`);
 
-    detailScore() && (detailScore().textContent = subject.total_score != null ? fmtNumber(subject.total_score) : "—");
-    detailMax() && (detailMax().textContent = `/ ${subject.max_score != null ? fmtNumber(subject.max_score) : "—"}`);
+    detailScore() &&
+      (detailScore().textContent =
+        subject.total_score != null ? fmtNumber(subject.total_score) : "—");
+    detailMax() &&
+      (detailMax().textContent =
+        `/ ${subject.max_score != null ? fmtNumber(subject.max_score) : "—"}`);
     detailPercent() && (detailPercent().textContent = percentage);
     detailWord() && (detailWord().textContent = gradeLabel);
 
@@ -410,7 +498,73 @@
       (detailStatus().textContent = `حالة المادة: ${statusText}.`);
   }
 
-  function renderTable(result) {
+  function renderAssessmentDetail(item) {
+    if (!item) return;
+
+    const title =
+      item.assessment_title ||
+      item.title_short ||
+      item.title ||
+      item.kind_label ||
+      "تقييم";
+
+    const percentage =
+      item.percentage === null || item.percentage === undefined
+        ? "—"
+        : `${fmtNumber(item.percentage)}%`;
+
+    const gradeWord =
+      item.grade_word ||
+      item.grade_label ||
+      gradeLabelFromPercentage(item.percentage);
+
+    const statusText = item.status_label || statusLabel(item.status);
+
+    const published =
+      item.published_at ||
+      item.grade_published_at ||
+      item.assessment_published_at ||
+      item.graded_at ||
+      item.assessment_created_at;
+
+    detailEmpty() && (detailEmpty().style.display = "none");
+    detailContent() && (detailContent().style.display = "");
+
+    detailBadge() && (detailBadge().textContent = statusText);
+    detailBadge() && (detailBadge().className = statusBadgeClass(item.status));
+
+    detailTitle() && (detailTitle().textContent = title);
+    detailSubject() &&
+      (detailSubject().textContent = `المادة: ${item.subject_name || "—"}`);
+    detailTeacher() &&
+      (detailTeacher().textContent = `المعلم: ${item.teacher_name || "—"}`);
+    detailType() &&
+      (detailType().textContent = `النوع: ${item.kind_label || item.type || "تقييم"}`);
+    detailPublished() &&
+      (detailPublished().textContent = `تاريخ النشر: ${fmtDate(published)}`);
+
+    detailScore() &&
+      (detailScore().textContent =
+        item.score != null ? fmtNumber(item.score) : "—");
+    detailMax() &&
+      (detailMax().textContent =
+        `/ ${item.max_score != null ? fmtNumber(item.max_score) : "—"}`);
+    detailPercent() && (detailPercent().textContent = percentage);
+    detailWord() && (detailWord().textContent = gradeWord);
+
+    detailFeedback() &&
+      (detailFeedback().textContent =
+        item.feedback || "لا توجد ملاحظات من المعلم.");
+
+    detailStatus() &&
+      (detailStatus().textContent = `حالة الدرجة: ${statusText}.`);
+  }
+
+  function renderTermTable(result) {
+    updateTermTableHeader();
+    updateTermSummaryLabels();
+    updateTermSummary(result);
+
     const tbody = tableBody();
     if (!tbody) return;
 
@@ -418,16 +572,15 @@
 
     const subjects = Array.isArray(result?.subjects) ? result.subjects : [];
 
-    updateSummary(result);
-
     if (!result || !subjects.length) {
       renderEmpty("لا توجد تفاصيل مواد لهذه النتيجة.");
+      updateTermSummary(result);
       return;
     }
 
     emptyState() && (emptyState().style.display = "none");
 
-    subjects.forEach((subject, index) => {
+    subjects.forEach((subject) => {
       const aggregate = scoreWithMax(subject.aggregate_score, subject.aggregate_max_score);
       const exam = scoreWithMax(subject.exam_score, subject.exam_max_score);
       const total = scoreWithMax(subject.total_score, subject.max_score);
@@ -456,7 +609,7 @@
       btn.type = "button";
       btn.className = "primary-btn";
       btn.innerHTML = `<i class="ri-eye-line"></i><span>تفاصيل</span>`;
-      btn.addEventListener("click", () => renderSubjectDetail(subject));
+      btn.addEventListener("click", () => renderTermSubjectDetail(subject));
 
       tr.lastElementChild.appendChild(btn);
       tbody.appendChild(tr);
@@ -465,38 +618,109 @@
     resetDetail(result);
   }
 
-  function renderActiveResult() {
-    const result = activeResult();
+  function renderAssessmentTable(items, summary) {
+    updateAssessmentTableHeader();
+    updateAssessmentSummaryLabels();
+    updateAssessmentSummary(summary);
 
-    if (!result) {
-      renderEmpty("لا توجد نتائج منشورة حاليًا.");
+    const tbody = tableBody();
+    if (!tbody) return;
+
+    tbody.innerHTML = "";
+
+    const rows = Array.isArray(items) ? items : [];
+
+    if (!rows.length) {
+      renderEmpty("لا توجد درجات منشورة من هذا النوع.");
+      updateAssessmentSummary(summary);
       return;
     }
 
-    renderTable(result);
+    emptyState() && (emptyState().style.display = "none");
+
+    rows.forEach((item) => {
+      const title =
+        item.assessment_title ||
+        item.title_short ||
+        item.title ||
+        item.kind_label ||
+        "تقييم";
+
+      const percentage =
+        item.percentage === null || item.percentage === undefined
+          ? "—"
+          : `${fmtNumber(item.percentage)}%`;
+
+      const gradeWord =
+        item.grade_word ||
+        item.grade_label ||
+        gradeLabelFromPercentage(item.percentage);
+
+      const statusText = item.status_label || statusLabel(item.status);
+
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${escapeHtml(item.subject_name || "—")}</td>
+        <td>${escapeHtml(title)}</td>
+        <td>${escapeHtml(item.kind_label || item.type || "تقييم")}</td>
+        <td>${escapeHtml(scoreWithMax(item.score, item.max_score))}</td>
+        <td>${escapeHtml(percentage)}</td>
+        <td>${escapeHtml(gradeWord)}</td>
+        <td>
+          <span class="${statusBadgeClass(item.status)}">
+            ${escapeHtml(statusText)}
+          </span>
+        </td>
+        <td></td>
+      `;
+
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "primary-btn";
+      btn.innerHTML = `<i class="ri-eye-line"></i><span>تفاصيل</span>`;
+      btn.addEventListener("click", () => renderAssessmentDetail(item));
+
+      tr.lastElementChild.appendChild(btn);
+      tbody.appendChild(tr);
+    });
+
+    resetDetail();
+  }
+
+  function renderActiveTermResult() {
+    const result = activeTermResult();
+
+    if (!result) {
+      renderEmpty("لا توجد نتائج نهاية فصل منشورة حاليًا.");
+      updateTermSummary(null);
+      return;
+    }
+
+    renderTermTable(result);
   }
 
   async function loadTermResults() {
-    try {
-      refreshBtn() && (refreshBtn().disabled = true);
+    refreshBtn() && (refreshBtn().disabled = true);
 
-      if (emptyState()) {
-        emptyState().style.display = "";
-        emptyState().textContent = "جاري تحميل النتيجة...";
-      }
+    try {
+      setLoading("جاري تحميل نتيجة نهاية الفصل...");
 
       const data = await apiGet("/student/term-results");
 
       state.loaded = true;
       state.student = data?.student || null;
-      state.results = Array.isArray(data?.results) ? data.results : [];
-      state.activeIndex = 0;
+      state.termResults = Array.isArray(data?.results) ? data.results : [];
+      state.assessmentItems = [];
+      state.activeTermIndex = 0;
 
-      fillResultSelect();
-      renderActiveResult();
+      showTermSelector(true);
+      fillTermSelect();
+      renderActiveTermResult();
       updateCardHint();
     } catch (e) {
       state.loaded = true;
+      showTermSelector(true);
+      fillTermSelect();
       renderEmpty(e.message || "تعذر تحميل النتيجة.");
       toast(e.message || "تعذر تحميل النتيجة", "error");
     } finally {
@@ -504,8 +728,56 @@
     }
   }
 
+  async function loadAssessmentGrades(type) {
+    refreshBtn() && (refreshBtn().disabled = true);
+
+    try {
+      setLoading("جاري تحميل الدرجات المنشورة...");
+
+      const data = await apiGet(`/student/learning/grades?type=${encodeURIComponent(type)}`);
+
+      state.loaded = true;
+      state.student = state.student || data?.student || null;
+      state.assessmentItems = Array.isArray(data?.items) ? data.items : [];
+      state.assessmentSummary = data?.summary || null;
+      state.termResults = [];
+
+      showTermSelector(false);
+      renderAssessmentTable(state.assessmentItems, state.assessmentSummary);
+      updateCardHintFromAssessments();
+    } catch (e) {
+      state.loaded = true;
+      showTermSelector(false);
+      renderEmpty(e.message || "تعذر تحميل الدرجات.");
+      toast(e.message || "تعذر تحميل الدرجات", "error");
+    } finally {
+      refreshBtn() && (refreshBtn().disabled = false);
+    }
+  }
+
+  function setLoading(message) {
+    const tbody = tableBody();
+    if (tbody) tbody.innerHTML = "";
+
+    emptyState() && (emptyState().style.display = "");
+    emptyState() && (emptyState().textContent = message || "جاري التحميل...");
+
+    resetDetail();
+  }
+
+  async function loadCurrentMode() {
+    const select = typeSelect();
+    state.mode = select?.value || "term_results";
+
+    if (state.mode === "term_results") {
+      await loadTermResults();
+    } else {
+      await loadAssessmentGrades(state.mode);
+    }
+  }
+
   function updateCardHint() {
-    const result = state.results[0];
+    const result = state.termResults[0];
     if (!result) return;
 
     const triggers = qsa('[data-open-modal="modal-grades"], [data-modal="modal-grades"]');
@@ -529,11 +801,37 @@
     }
   }
 
-  function printResult() {
-    const result = activeResult();
+  function updateCardHintFromAssessments() {
+    const summary = state.assessmentSummary || {};
+    const triggers = qsa('[data-open-modal="modal-grades"], [data-modal="modal-grades"]');
 
-    if (!result) {
-      toast("لا توجد نتيجة للطباعة", "error");
+    const avg =
+      summary.average_percentage === null || summary.average_percentage === undefined
+        ? "—"
+        : `${fmtNumber(summary.average_percentage)}%`;
+
+    for (const card of triggers) {
+      const small = card.querySelector("small");
+      const metric = card.querySelector(".metric");
+
+      if (small) {
+        small.textContent = `درجات منشورة: ${summary.total_count || 0}`;
+      }
+
+      if (metric) {
+        metric.textContent = `متوسط النسبة: ${avg}`;
+      }
+    }
+  }
+
+  function printResult() {
+    const hasData =
+      state.mode === "term_results"
+        ? state.termResults.length > 0
+        : state.assessmentItems.length > 0;
+
+    if (!hasData) {
+      toast("لا توجد درجات للطباعة", "error");
       return;
     }
 
@@ -558,11 +856,15 @@
   }
 
   function bindActions() {
-    refreshBtn()?.addEventListener("click", loadTermResults);
+    refreshBtn()?.addEventListener("click", loadCurrentMode);
 
-    resultSelect()?.addEventListener("change", (e) => {
-      state.activeIndex = Number(e.target.value) || 0;
-      renderActiveResult();
+    typeSelect()?.addEventListener("change", async () => {
+      await loadCurrentMode();
+    });
+
+    termSelect()?.addEventListener("change", (e) => {
+      state.activeTermIndex = Number(e.target.value) || 0;
+      renderActiveTermResult();
     });
 
     qs("#stu-gr-print")?.addEventListener("click", printResult);
@@ -574,9 +876,11 @@
         openModal("modal-grades");
 
         if (!state.loaded) {
-          await loadTermResults();
+          await loadCurrentMode();
+        } else if (state.mode === "term_results") {
+          renderActiveTermResult();
         } else {
-          renderActiveResult();
+          renderAssessmentTable(state.assessmentItems, state.assessmentSummary);
         }
       });
     });
@@ -585,9 +889,11 @@
       openModal("modal-grades");
 
       if (!state.loaded) {
-        await loadTermResults();
+        await loadCurrentMode();
+      } else if (state.mode === "term_results") {
+        renderActiveTermResult();
       } else {
-        renderActiveResult();
+        renderAssessmentTable(state.assessmentItems, state.assessmentSummary);
       }
     });
   }
@@ -605,15 +911,20 @@
     window.StudentGradesModal = {
       open: async () => {
         openModal("modal-grades");
-        if (!state.loaded) await loadTermResults();
-        else renderActiveResult();
+        if (!state.loaded) await loadCurrentMode();
+        else if (state.mode === "term_results") renderActiveTermResult();
+        else renderAssessmentTable(state.assessmentItems, state.assessmentSummary);
       },
-      reload: loadTermResults,
+      reload: loadCurrentMode,
     };
 
     // تحميل خفيف لتحديث كرت الدرجات إذا كان الطالب مسجلًا.
-    loadTermResults().catch(() => {});
+    loadCurrentMode().catch(() => {});
   }
 
-  document.addEventListener("DOMContentLoaded", init);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();

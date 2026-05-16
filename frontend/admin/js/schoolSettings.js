@@ -1,10 +1,28 @@
 (function () {
   "use strict";
 
-  let API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
-  if (API_BASE.startsWith("/")) API_BASE = "http://127.0.0.1:5000" + API_BASE;
-  const SERVER_URL = API_BASE.replace('/api', ''); // مسار السيرفر لجلب الصور
+ const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
+const SERVER_URL = String(window.API_ORIGIN || window.location.origin).replace(/\/+$/, "");
 
+function apiUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+
+  let cleanPath = String(path || "").replace(/^\/+/, "");
+
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
+  }
+
+  return `${API_BASE}/${cleanPath}`;
+}
+
+function assetUrl(path) {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const cleanPath = String(path).startsWith("/") ? String(path) : `/${path}`;
+  return `${SERVER_URL}${cleanPath}`;
+}
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
@@ -14,8 +32,8 @@
   }
 
   // دالة مخصصة لإرسال FormData (تُستخدم لرفع الصورة)
-  async function apiFetchFormData(path, formData) {
-    const url = path.startsWith("http") ? path : API_BASE + path;
+async function apiFetchFormData(path, formData) {
+  const url = apiUrl(path);
     const r = await fetch(url, {
       method: "POST", // أو PUT حسب الباك إند
       headers: { ...authHeaders() },
@@ -28,8 +46,8 @@
     return data;
   }
 
-  async function apiFetch(path, opts = {}) {
-    const url = path.startsWith("http") ? path : API_BASE + path;
+async function apiFetch(path, opts = {}) {
+  const url = apiUrl(path);
     const r = await fetch(url, {
       ...opts,
       headers: {
@@ -133,18 +151,26 @@
 const payload = {
   week_start_day: $("#acadWeekStart", root).value,
   working_days: selectedDays,
+
   monthly_exam_max: readNumber(root, "#acadMonthlyExamMax", 20),
+
   midterm_exam_max: readNumber(root, "#acadMidtermExamMax", 30),
   midterm_muhassala_max: readNumber(root, "#acadMidtermMuhassalaMax", 20),
   midterm_max: readNumber(root, "#acadMidMax", 50),
   midterm_pass: readNumber(root, "#acadMidPass", 20),
+
   final_exam_max: readNumber(root, "#acadFinalExamMax", 30),
   final_muhassala_max: readNumber(root, "#acadFinalMuhassalaMax", 20),
   final_term_max: readNumber(root, "#acadFinalTermMax", 50),
   final_max: readNumber(root, "#acadFinalMax", 100),
   final_pass: readNumber(root, "#acadFinalPass", 50),
-};
 
+  annual_failure_subjects_limit: readPositiveInt(
+    root,
+    "#acadAnnualFailureSubjectsLimit",
+    1
+  ),
+};
         await apiFetch("/admin/school-settings/academic", {
           method: "POST",
           body: JSON.stringify(payload)
@@ -350,7 +376,15 @@ function readNumber(root, selector, fallback = 0) {
   const n = Number(el?.value || fallback);
   return Number.isFinite(n) ? n : fallback;
 }
+function readPositiveInt(root, selector, fallback = 1) {
+  const el = $(selector, root);
+  const n = Number(el?.value || fallback);
 
+  if (!Number.isFinite(n)) return fallback;
+
+  const value = Math.trunc(n);
+  return value >= 1 ? value : fallback;
+}
 function setNumber(root, selector, value) {
   const el = $(selector, root);
   if (el) el.value = String(value);
@@ -418,8 +452,7 @@ function bindAcademicTotals(root) {
         // جلب الشعار إن وجد
         const logoUrl = user.logo_url || user.school?.logo_url;
         if (logoUrl && $("#profileLogoPreview", root) && $("#profileLogoText", root)) {
-            const fullLogoUrl = logoUrl.startsWith('http') ? logoUrl : `${SERVER_URL}${logoUrl}`;
-            $("#profileLogoPreview", root).src = fullLogoUrl;
+const fullLogoUrl = assetUrl(logoUrl);            $("#profileLogoPreview", root).src = fullLogoUrl;
             $("#profileLogoPreview", root).style.display = "block";
             $("#profileLogoText", root).style.display = "none";
         } else if ($("#profileLogoText", root)) {
@@ -517,6 +550,14 @@ setNumber(root, "#acadMidPass", s.midterm_pass_mark ?? s.midterm_pass ?? 20);
 setNumber(root, "#acadFinalExamMax", s.final_exam_max_grade ?? s.final_exam_max ?? 30);
 setNumber(root, "#acadFinalMuhassalaMax", s.final_muhassala_max_grade ?? s.final_muhassala_max ?? 20);
 setNumber(root, "#acadFinalPass", s.final_pass_mark ?? s.final_pass ?? 50);
+
+setNumber(
+  root,
+  "#acadAnnualFailureSubjectsLimit",
+  s.annual_failure_subjects_limit ??
+    s.annualFailureSubjectsLimit ??
+    1
+);
 
 recalcAcademicTotals(root);
         // تفعيل مربعات الاختيار للأيام (Checkboxes)
@@ -1440,4 +1481,13 @@ recalcAcademicTotals(root);
   document.addEventListener("DOMContentLoaded", boot);
   new MutationObserver(boot).observe(document.body, { childList: true, subtree: true });
 })();
-
+// منع تغيير حقول الأرقام عند تمرير عجلة الماوس
+document.addEventListener(
+  "wheel",
+  function (e) {
+    if (e.target && e.target.matches("input[type='number']")) {
+      e.target.blur();
+    }
+  },
+  { passive: true }
+);

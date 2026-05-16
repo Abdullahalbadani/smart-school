@@ -9,13 +9,9 @@
   /***********************
    * CONFIG (API + OPTIONS)
    ***********************/
-  const CONFIG = {
-    API_BASE:
-      window.location.port === "5501" || window.location.port === "5500"
-        ? "http://127.0.0.1:5000"
-        : "",
-    USE_MOCK_IF_API_FAILS: false,
-
+ const CONFIG = {
+  API_BASE: String(window.API_BASE || "/api").replace(/\/+$/, ""),
+  USE_MOCK_IF_API_FAILS: false,
     // لو تحب أن مدفوعات غير النقد (حوالة/محفظة) تكون Pending حتى يعتمدها الأدمن:
     REQUIRE_CONFIRM_FOR_NON_CASH: true,
 
@@ -37,11 +33,19 @@
    ***********************/
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-  function toApiUrl(p) {
-    if (!p) return CONFIG.API_BASE;
-    if (/^https?:\/\//i.test(p)) return p;
-    return `${CONFIG.API_BASE}${p}`;
+  function toApiUrl(path) {
+  if (!path) return CONFIG.API_BASE;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  let cleanPath = String(path).replace(/^\/+/, "");
+
+  // يمنع مشكلة /api/api لأن بعض المسارات داخل هذا الملف تبدأ بـ /api
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
   }
+
+  return `${CONFIG.API_BASE}/${cleanPath}`;
+}
 
   // (اختياري) لو نظامك يستخدم JWT مثل ملف الجرس
   function getStoredToken() {

@@ -44,14 +44,19 @@
       minute: "2-digit",
     }).format(d);
   }
-const API_BASE =
-  window.API_BASE_URL ||
-  localStorage.getItem("apiBaseUrl") ||
-  "http://127.0.0.1:5000"; // غيّره إذا الباكند عندك على منفذ آخر
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
 function toApiUrl(url) {
-  if (/^https?:\/\//i.test(url)) return url; // إذا الرابط كامل بالفعل
-  return `${API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+  if (/^https?:\/\//i.test(url)) return url;
+
+  let cleanPath = String(url || "").replace(/^\/+/, "");
+
+  // يمنع تكرار /api/api لأن الاستدعاءات هنا تبدأ بـ /api
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
+  }
+
+  return `${API_BASE}/${cleanPath}`;
 }
 async function apiRequest(url, options = {}) {
   const token = getToken();
@@ -62,7 +67,6 @@ async function apiRequest(url, options = {}) {
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const finalUrl = toApiUrl(url);
-  console.log("[API]", options.method || "GET", finalUrl);
 
   const res = await fetch(finalUrl, { ...options, headers });
 
@@ -252,7 +256,6 @@ async function apiRequest(url, options = {}) {
 
     try {
       await loadList();
-      console.log("✅ Admin Notifications Log Page initialized");
     } catch (err) {
       console.error("init notifications log error:", err);
       alert(err.message || "فشل تحميل سجل الإشعارات");

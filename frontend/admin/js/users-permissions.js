@@ -1,8 +1,18 @@
 // frontend/admin/js/users-permissions.js
-console.log("users-permissions.js loaded");
 
-const RBAC_API_BASE = "http://127.0.0.1:5000/api";
+const RBAC_API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
+function rbacApiUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+
+  let cleanPath = String(path || "").replace(/^\/+/, "");
+
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
+  }
+
+  return `${RBAC_API_BASE}/${cleanPath}`;
+}
 /* ==========================================
    أدوات مساعدة عامة
 ========================================== */
@@ -26,7 +36,7 @@ async function rbacApiRequest(path, options = {}) {
   };
 
   try {
-    const res = await fetch(`${RBAC_API_BASE}${path}`, finalOptions);
+   const res = await fetch(rbacApiUrl(path), finalOptions);
 
     // 1) انتهاء الجلسة / توكن غير صالح
     if (res.status === 401) {

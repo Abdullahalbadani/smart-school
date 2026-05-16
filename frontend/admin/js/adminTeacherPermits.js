@@ -4,18 +4,32 @@
 =========================== */
 (function () {
   "use strict";
-  if (window.__ADMIN_TEACHER_PERMITS_LOADED__) return;
-  window.__ADMIN_TEACHER_PERMITS_LOADED__ = true;
+ if (window.__ADMIN_TEACHER_PERMITS_LOADED__) return;
+window.__ADMIN_TEACHER_PERMITS_LOADED__ = true;
 
-  /* =========================
-     ENDPOINTS
-  ========================= */
-  const ENDPOINTS = {
-    list: "/api/admin/teacher-permits",
-    details: (id) => `/api/admin/teacher-permits/${id}`,
-    decision: (id) => `/api/admin/teacher-permits/${id}/decision`,
-  };
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
+
+        let cleanPath = String(path || "").replace(/^\/+/, "");
+
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };
+
+
+const ENDPOINTS = {
+  list: "/admin/teacher-permits",
+  details: (id) => `/admin/teacher-permits/${id}`,
+  decision: (id) => `/admin/teacher-permits/${id}/decision`,
+};
   /* =========================
      Helpers
   ========================= */
@@ -33,21 +47,32 @@
     localStorage.getItem("auth_token") ||
     "";
 
-  const apiFetch = async (url, opts = {}) => {
-    const BACKEND_URL = "http://localhost:5000"; 
-    const fullUrl = url.startsWith("http") ? url : BACKEND_URL + url;
+  const apiFetch = async (path, opts = {}) => {
+  const fullUrl = apiUrl(path);
 
-    const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
-    const token = getToken();
-    if (token && !headers.Authorization) headers.Authorization = `Bearer ${token}`;
-    
-    console.log("📡 جاري طلب البيانات من:", fullUrl);
-    const res = await fetch(fullUrl, { ...opts, headers });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data?.message || `HTTP ${res.status}`);
-    return data;
+  const headers = {
+    "Content-Type": "application/json",
+    ...(opts.headers || {}),
   };
 
+  const token = getToken();
+  if (token && !headers.Authorization) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(fullUrl, {
+    ...opts,
+    headers,
+  });
+
+  const data = await res.json().catch(() => ({}));
+
+  if (!res.ok) {
+    throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+  }
+
+  return data;
+};
   const esc = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
   const statusText = (s) => {

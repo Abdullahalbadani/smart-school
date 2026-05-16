@@ -1,7 +1,17 @@
-console.log("token-validation.js loaded ✅");
 
-const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
+function apiUrl(path) {
+  if (/^https?:\/\//i.test(path)) return path;
+
+  let cleanPath = String(path || "").replace(/^\/+/, "");
+
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
+  }
+
+  return `${API_BASE}/${cleanPath}`;
+}
 function isLoginPage() {
   const p = (location.pathname || "").toLowerCase();
   return p.includes("/frontend/login/");
@@ -28,8 +38,8 @@ async function validateToken() {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/auth/validate-token`, {
-      method: "GET",
+const res = await fetch(apiUrl("/auth/validate-token"), {
+        method: "GET",
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -45,8 +55,8 @@ async function validateToken() {
       // probe (اختياري) — عدّل المسار إذا عندك /auth/me مثلاً
       let probeOk = false;
       try {
-        const probe = await fetch(`${API_BASE}/users/me`, {
-          method: "GET",
+const probe = await fetch(apiUrl("/users/me"), {
+            method: "GET",
           headers: { Authorization: `Bearer ${token}` },
         });
 

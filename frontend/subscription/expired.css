@@ -1,0 +1,188 @@
+@import url("https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800;900&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: "Cairo", Tahoma, Arial, sans-serif;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(56, 189, 248, 0.18), transparent 32%),
+    radial-gradient(circle at 90% 15%, rgba(239, 68, 68, 0.14), transparent 28%),
+    linear-gradient(135deg, #07182d, #061426);
+  color: #fff;
+}
+
+.expired-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  border-radius: 999px;
+  filter: blur(18px);
+}
+
+.glow-a {
+  width: 340px;
+  height: 340px;
+  top: -120px;
+  right: -90px;
+  background: rgba(33, 150, 243, 0.25);
+}
+
+.glow-b {
+  width: 260px;
+  height: 260px;
+  bottom: -100px;
+  left: -80px;
+  background: rgba(239, 68, 68, 0.18);
+}
+
+.card {
+  position: relative;
+  z-index: 2;
+  width: min(680px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 32px;
+  padding: 36px;
+  background:
+    radial-gradient(circle at top right, rgba(56, 189, 248, 0.12), transparent 35%),
+    rgba(255, 255, 255, 0.96);
+  color: #101828;
+  box-shadow: 0 24px 70px rgba(0, 20, 50, 0.35);
+  text-align: center;
+}
+
+.logo {
+  width: 70px;
+  height: 70px;
+  margin: 0 auto 18px;
+  border-radius: 22px;
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(145deg, #1565c0, #38bdf8);
+  box-shadow: 0 18px 38px rgba(33, 150, 243, 0.3);
+}
+
+.badge {
+  width: fit-content;
+  margin: 0 auto 14px;
+  border-radius: 999px;
+  padding: 8px 14px;
+  color: #b91c1c;
+  background: #fee2e2;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(28px, 5vw, 44px);
+  line-height: 1.25;
+}
+
+p {
+  color: #667085;
+  line-height: 1.8;
+}
+
+.school-box {
+  margin: 22px auto 16px;
+  border: 1px solid #dce8f7;
+  background: #f5f9ff;
+  border-radius: 20px;
+  padding: 16px;
+  text-align: right;
+}
+
+.school-box span,
+.info-grid span {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.school-box strong {
+  display: block;
+  margin-top: 6px;
+  color: #0f3765;
+  font-size: 20px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.info-grid div {
+  border: 1px solid #dce8f7;
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 14px;
+  text-align: right;
+}
+
+.info-grid strong {
+  display: block;
+  margin-top: 6px;
+  color: #101828;
+}
+
+.actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn {
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 18px;
+  text-decoration: none;
+  font-weight: 900;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.btn-primary {
+  color: #fff;
+  background: linear-gradient(135deg, #1565c0, #2196f3);
+}
+
+.btn-light {
+  color: #0f3765;
+  background: #e8f3ff;
+}
+
+.hint {
+  margin: 20px 0 0;
+  font-size: 13px;
+}
+
+@media (max-width: 620px) {
+  .card {
+    padding: 24px;
+    border-radius: 24px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}

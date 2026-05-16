@@ -12,8 +12,7 @@ const state = {
 };
 
   // فعّلها مؤقتًا للتشخيص إن أردت
-  const DEBUG_NOTIF_SEND = true;
-
+const DEBUG_NOTIF_SEND = false;
   /* =========================
      Helpers
   ========================== */
@@ -627,15 +626,20 @@ const state = {
     );
   }
 
-  const API_BASE =
-    window.API_BASE_URL ||
-    localStorage.getItem("apiBaseUrl") ||
-    "http://127.0.0.1:5000";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
-  function toApiUrl(url) {
-    if (/^https?:\/\//i.test(url)) return url;
-    return `${API_BASE}${url.startsWith("/") ? "" : "/"}${url}`;
+function toApiUrl(url) {
+  if (/^https?:\/\//i.test(url)) return url;
+
+  let cleanPath = String(url || "").replace(/^\/+/, "");
+
+  // يمنع تكرار /api/api لأن بعض المسارات في هذا الملف تبدأ بـ /api
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
   }
+
+  return `${API_BASE}/${cleanPath}`;
+}
 
   async function apiRequest(url, options = {}) {
     const token = getToken();
@@ -646,7 +650,6 @@ const state = {
     if (token) headers.Authorization = `Bearer ${token}`;
 
     const finalUrl = toApiUrl(url);
-    console.log("[API]", options.method || "GET", finalUrl);
 
     const res = await fetch(finalUrl, {
       ...options,

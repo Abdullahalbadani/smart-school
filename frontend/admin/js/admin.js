@@ -7,11 +7,16 @@ console.log("admin.js loaded");
 // ==============================
 // إعدادات عامة / ثوابت
 // ==============================
-const API_BASE = "http://127.0.0.1:5000/api";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
+const API_ORIGIN = String(
+  window.API_ORIGIN || API_BASE.replace(/\/api$/, "") || window.location.origin
+).replace(/\/+$/, "");
+
 const THEME_KEY = "smart_school_theme";
 
-// ✅ مهم: بعض الصفحات/الملفات تعتمد على window.API_BASE
+// نحافظ على القيم عالمية لباقي الملفات
 window.API_BASE = API_BASE;
+window.API_ORIGIN = API_ORIGIN;
 
 let currentUser = null;
 window.USER_PERMISSIONS = [];
@@ -28,8 +33,8 @@ function logoutToLogin(reason) {
 // ✅ API helper عام (اختياري) — يفيدك لو حبيت تستخدمه بملفات أخرى
 window.apiFetchSafe = async function (path, opts = {}) {
   const token = localStorage.getItem("token");
-  const url = path.startsWith("http") ? path : API_BASE + path;
-
+const cleanPath = String(path).replace(/^\/+/, "");
+const url = path.startsWith("http") ? path : `${API_BASE}/${cleanPath}`;
   const r = await fetch(url, {
     ...opts,
     headers: {
@@ -82,9 +87,9 @@ window.setupSchoolBranding = function() {
         if (nameEl) nameEl.textContent = schoolName;
 
         if (logoImg && logoUrl) {
-            const SERVER_URL = window.API_BASE.replace('/api', '');
-            const finalUrl = logoUrl.startsWith('http') ? logoUrl : (SERVER_URL + logoUrl);
-            
+           const serverUrl = window.API_ORIGIN || window.location.origin;
+const cleanLogoUrl = logoUrl.startsWith("/") ? logoUrl : `/${logoUrl}`;
+const finalUrl = logoUrl.startsWith("http") ? logoUrl : `${serverUrl}${cleanLogoUrl}`;
             logoImg.src = finalUrl;
             logoImg.style.display = 'block';
             if (logoText) logoText.style.display = 'none';
@@ -375,6 +380,12 @@ if (window.attendanceReports) {
   typeof window.initMonthlyReportsScreen === "function"
 ) {
   requestAnimationFrame(() => window.initMonthlyReportsScreen());
+}
+      if (
+  normalizedKey === "studentRenew" &&
+  typeof window.initContinuingStudentsScreen === "function"
+) {
+  requestAnimationFrame(() => window.initContinuingStudentsScreen());
 }
     } catch (e) {
       console.warn("Page init failed:", normalizedKey, e);
@@ -991,7 +1002,150 @@ window.openTeacherPermitsPage = function() {
       console.warn("Eagle Eye Error:", e.message);
     }
   };
+function showImpersonationBanner() {
+  let user = null;
 
+  try {
+    user = JSON.parse(localStorage.getItem("user") || "{}");
+  } catch (error) {
+    user = null;
+  }
+
+  const isImpersonated =
+    user?.is_impersonated === true ||
+    localStorage.getItem("platform_return_url");
+
+  if (!isImpersonated) return;
+
+  if (document.getElementById("impersonationBanner")) return;
+
+  const schoolName =
+    user?.school_name_ar ||
+    user?.school_name_en ||
+    user?.school_slug ||
+    "هذه المدرسة";
+
+  const banner = document.createElement("div");
+  banner.id = "impersonationBanner";
+
+  banner.innerHTML = `
+    <div class="impersonation-banner-content">
+      <div>
+        <strong>أنت الآن داخل لوحة ${schoolName} كمالك النظام</strong>
+        <span>هذه جلسة مؤقتة للدعم والمراجعة. لا تشارك هذه الجلسة مع أي شخص.</span>
+      </div>
+
+      <button id="returnToPlatformBtn" type="button">
+        الرجوع إلى لوحة المالك
+      </button>
+    </div>
+  `;
+
+  const style = document.createElement("style");
+  style.id = "impersonationBannerStyle";
+
+  style.textContent = `
+    #impersonationBanner {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 999999;
+      background: linear-gradient(135deg, #07182d, #0f4c81);
+      color: #fff;
+      padding: 10px 18px;
+      box-shadow: 0 10px 30px rgba(0, 20, 50, 0.25);
+      font-family: inherit;
+    }
+
+    .impersonation-banner-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      direction: rtl;
+    }
+
+    .impersonation-banner-content strong {
+      display: block;
+      font-size: 14px;
+      font-weight: 900;
+      margin-bottom: 3px;
+    }
+
+    .impersonation-banner-content span {
+      display: block;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.78);
+    }
+
+    #returnToPlatformBtn {
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 16px;
+      background: #ffffff;
+      color: #0f3765;
+      font-weight: 900;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+    }
+
+    #returnToPlatformBtn:hover {
+      transform: translateY(-1px);
+    }
+
+    body {
+      padding-top: 64px !important;
+    }
+
+    @media (max-width: 700px) {
+      .impersonation-banner-content {
+        align-items: stretch;
+        flex-direction: column;
+      }
+
+      #returnToPlatformBtn {
+        width: 100%;
+      }
+
+      body {
+        padding-top: 108px !important;
+      }
+    }
+  `;
+
+  document.head.appendChild(style);
+  document.body.prepend(banner);
+
+  document
+    .getElementById("returnToPlatformBtn")
+    .addEventListener("click", () => {
+      const returnUrl =
+        localStorage.getItem("platform_return_url") ||
+        "/frontend/super-admin/index.html";
+
+      // نحذف جلسة المدرسة فقط، ونترك platform_token كما هو
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      localStorage.removeItem("school");
+      localStorage.removeItem("school_id");
+      localStorage.removeItem("school_slug");
+      localStorage.removeItem("role");
+      localStorage.removeItem("permissions");
+      localStorage.removeItem("platform_return_url");
+
+      window.location.href = returnUrl;
+    });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", showImpersonationBanner);
+} else {
+  showImpersonationBanner();
+}
   /* =========================
     تهيئة عامة + استقبال السحر الحي
   ========================== */
@@ -1024,7 +1178,39 @@ window.playAdminAlertSound = function(type) {
     console.error("خطأ في تشغيل الصوت:", err);
   }
 };
+(function installSubscriptionRedirectInterceptor() {
+  if (window.__subscriptionRedirectInterceptorInstalled) return;
+  window.__subscriptionRedirectInterceptorInstalled = true;
 
+  const originalFetch = window.fetch;
+
+  window.fetch = async function (...args) {
+    const response = await originalFetch(...args);
+
+    if (response.status === 403) {
+      try {
+        const cloned = response.clone();
+        const data = await cloned.json();
+
+        if (data && data.redirect_url) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          localStorage.removeItem("school");
+          localStorage.removeItem("school_id");
+          localStorage.removeItem("school_slug");
+          localStorage.removeItem("role");
+          localStorage.removeItem("permissions");
+
+          window.location.href = data.redirect_url;
+        }
+      } catch (error) {
+        // ignore non-json responses
+      }
+    }
+
+    return response;
+  };
+})();
 /* =========================
   تهيئة عامة + استقبال السحر الحي
 ========================== */
@@ -1050,8 +1236,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ⚡ استقبال السحر الحي في الإدارة (Real-Time)
   if (typeof io !== "undefined") {
-    const adminSocket = io(window.API_BASE ? window.API_BASE.replace("/api", "") : "http://127.0.0.1:5000");
-    
+const adminSocket = io(window.API_ORIGIN || window.location.origin);    
     adminSocket.on("connect", () => {
       console.log("🟢 [Socket] الإدارة متصلة بالسيرفر الحي وتستمع لإشعارات المعلمين!");
     });

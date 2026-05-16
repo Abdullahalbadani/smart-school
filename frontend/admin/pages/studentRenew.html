@@ -1,148 +1,206 @@
-<section class="cr-page" id="cr-page" data-page="continuing-register">
-  <!-- رأس الصفحة -->
-  <div class="cr-head">
-    <div class="cr-title">
-      <div class="cr-badge">📌</div>
-      <div>
-        <h2>تسجيل المستمرين</h2>
-        <p>ترحيل الطلاب للسنة الجديدة مع تحكم كامل بالصف والشعبة والمعاينة قبل التنفيذ.</p>
-      </div>
-    </div>
-
-    <div class="cr-head-actions">
-      <button class="cr-btn cr-btn-ghost" id="cr-btn-preview" type="button">معاينة</button>
-      <button class="cr-btn cr-btn-primary" id="cr-btn-run" type="button">تنفيذ الترحيل</button>
+<section class="cs-page" id="continuingStudentsPage" dir="rtl">
+  <div class="cs-hero">
+    <div>
+      <h1>تسجيل المستمرين</h1>
+      <p>
+        تسجيل الطلاب الموجودين في سنة دراسية جديدة بدون إنشاء طالب جديد.
+        التسجيل سنوي فقط، ولا يوجد ترحيل من فصل إلى فصل.
+      </p>
     </div>
   </div>
 
-  <!-- شريط الإعدادات -->
-  <div class="cr-bar">
-    <div class="cr-grid">
-      <label class="cr-field">
-        <span>السنة المصدر</span>
-        <select id="cr-fromYear"></select>
-      </label>
+  <div class="cs-alert" id="csAlert"></div>
 
-      <label class="cr-field">
-        <span>السنة الهدف</span>
-        <select id="cr-toYear"></select>
-      </label>
+  <div class="cs-grid">
+    <div class="cs-panel">
+      <h2>بيانات المصدر</h2>
 
-      <label class="cr-field">
-        <span>المرحلة/الصف</span>
-        <select id="cr-grade"></select>
-      </label>
-
-      <label class="cr-field">
-        <span>الشعبة</span>
-        <select id="cr-section"></select>
-      </label>
-
-      <label class="cr-field cr-search">
-        <span>بحث</span>
-        <input id="cr-q" type="search" placeholder="ابحث بالاسم أو الرقم..." />
-      </label>
-    </div>
-
-    <div class="cr-options">
-      <div class="cr-seg" role="tablist" aria-label="وضع الترحيل">
-        <button class="cr-seg-btn is-active" data-mode="AUTO">ترقية تلقائية</button>
-        <button class="cr-seg-btn" data-mode="KEEP">نفس الصف</button>
-        <button class="cr-seg-btn" data-mode="MANUAL">يدوي</button>
-      </div>
-
-      <div class="cr-inline">
-        <label class="cr-check">
-          <input type="checkbox" id="cr-keepSection" checked />
-          <span>حافظ على نفس الشعبة إن وجدت</span>
+      <div class="cs-fields">
+        <label>
+          <span>السنة الحالية</span>
+          <select id="csFromYear"></select>
         </label>
 
-        <div class="cr-inline-field">
-          <span>شعبة افتراضية</span>
-          <select id="cr-defaultSection"></select>
-        </div>
+        <label>
+          <span>المرحلة الحالية</span>
+          <select id="csFromStage"></select>
+        </label>
 
-        <button class="cr-btn" id="cr-btn-refresh" type="button">تحديث القائمة</button>
+        <label>
+          <span>الصف الحالي</span>
+          <select id="csFromGrade"></select>
+        </label>
+
+        <label>
+          <span>الشعبة الحالية</span>
+          <select id="csFromSection"></select>
+        </label>
       </div>
     </div>
 
-    <div class="cr-help">
-      <span class="cr-pill">✅ passed = يترقّى</span>
-      <span class="cr-pill">⚠️ failed = يعيد نفس الصف</span>
-      <span class="cr-pill">⏳ pending = غير مؤهل</span>
-      <span class="cr-pill">🚫 graduated/transferred/withdrawn = غير مؤهل</span>
+    <div class="cs-panel">
+      <h2>السنة الدراسية الجديدة</h2>
+
+      <div class="cs-fields">
+        <label>
+          <span>السنة الجديدة</span>
+          <select id="csToYear"></select>
+        </label>
+      </div>
+
+      <div class="cs-note">
+        سيتم إنشاء تسجيل سنوي جديد للطلاب في السنة المختارة.
+        قيمة الفصل تحفظ داخليًا كـ <strong>الفصل الأول</strong> فقط لأن التسجيل في المدرسة سنوي وليس فصليًا.
+      </div>
     </div>
   </div>
 
-  <!-- شريط أدوات جماعي -->
-  <div class="cr-bulk sr-hidden" id="cr-bulk">
-    <div class="cr-bulk-left">
-      <strong id="cr-selectedCount">0</strong>
-      <span>طالب محدد</span>
+  <div class="cs-grid">
+    <div class="cs-panel">
+      <h2>وجهة الناجحين</h2>
+      <p class="cs-panel-sub">
+        الطلاب الناجحون في نتيجة نهاية السنة سيتم ترحيلهم إلى هذه المرحلة والصف والشعبة.
+      </p>
+
+      <div class="cs-fields">
+        <label>
+          <span>المرحلة</span>
+          <select id="csPromoteStage"></select>
+        </label>
+
+        <label>
+          <span>الصف</span>
+          <select id="csPromoteGrade"></select>
+        </label>
+
+        <label>
+          <span>الشعبة</span>
+          <select id="csPromoteSection"></select>
+        </label>
+      </div>
     </div>
 
-    <div class="cr-bulk-actions">
-      <select id="cr-bulk-grade"></select>
-      <select id="cr-bulk-section"></select>
+    <div class="cs-panel">
+      <h2>وجهة الراسبين</h2>
+      <p class="cs-panel-sub">
+        الطلاب الراسبون في نتيجة نهاية السنة سيتم تسجيلهم هنا لإعادة السنة.
+      </p>
 
-      <button class="cr-btn" id="cr-bulk-apply" type="button">تطبيق للمحدد</button>
-      <button class="cr-btn cr-btn-ghost" id="cr-bulk-clear" type="button">إلغاء التحديد</button>
+      <div class="cs-fields">
+        <label>
+          <span>المرحلة</span>
+          <select id="csRepeatStage"></select>
+        </label>
+
+        <label>
+          <span>الصف</span>
+          <select id="csRepeatGrade"></select>
+        </label>
+
+        <label>
+          <span>الشعبة</span>
+          <select id="csRepeatSection"></select>
+        </label>
+      </div>
     </div>
   </div>
 
-  <!-- جدول الطلاب -->
-  <div class="cr-tableWrap">
-    <table class="cr-table">
-      <thead>
-        <tr>
-          <th class="cr-col-check"><input type="checkbox" id="cr-checkAll" /></th>
-          <th>الطالب</th>
-          <th>الحالي</th>
-          <th>الوجهة (الصف/الشعبة)</th>
-          <th>الحالة</th>
-          <th>إجراءات</th>
-        </tr>
-      </thead>
-      <tbody id="cr-tbody">
-        <tr>
-          <td colspan="6" class="cr-empty">اختر السنة المصدر والسنة الهدف ثم اضغط "تحديث القائمة".</td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="cs-actions">
+    <button type="button" class="cs-btn cs-btn-primary" id="csLoadBtn">
+      عرض الطلاب
+    </button>
+
+    <button type="button" class="cs-btn" id="csSelectReadyBtn">
+      تحديد الجاهزين
+    </button>
+
+    <button type="button" class="cs-btn" id="csSelectPassedBtn">
+      تحديد الناجحين
+    </button>
+
+    <button type="button" class="cs-btn" id="csSelectFailedBtn">
+      تحديد الراسبين
+    </button>
+
+    <button type="button" class="cs-btn" id="csClearBtn">
+      إلغاء التحديد
+    </button>
+
+    <button type="button" class="cs-btn cs-btn-success" id="csRegisterBtn" disabled>
+      تسجيل المستمرين
+    </button>
   </div>
 
-  <!-- Drawer تفاصيل الطالب -->
-  <aside class="cr-drawer sr-hidden" id="cr-drawer" aria-hidden="true">
-    <div class="cr-drawer-head">
+  <div class="cs-summary">
+    <div>
+      <span>إجمالي الطلاب</span>
+      <strong id="csTotalCount">0</strong>
+    </div>
+
+    <div>
+      <span>جاهزون</span>
+      <strong id="csReadyCount">0</strong>
+    </div>
+
+    <div>
+      <span>ناجحون</span>
+      <strong id="csPassedCount">0</strong>
+    </div>
+
+    <div>
+      <span>راسبون</span>
+      <strong id="csFailedCount">0</strong>
+    </div>
+
+    <div>
+      <span>يحتاجون مراجعة</span>
+      <strong id="csReviewCount">0</strong>
+    </div>
+
+    <div>
+      <span>مسجلون مسبقًا</span>
+      <strong id="csAlreadyCount">0</strong>
+    </div>
+
+    <div>
+      <span>المختارون</span>
+      <strong id="csSelectedCount">0</strong>
+    </div>
+  </div>
+
+  <div class="cs-table-card">
+    <div class="cs-table-head">
       <div>
-        <h3 id="cr-drawer-name">—</h3>
-        <p id="cr-drawer-sub">—</p>
+        <h2>قائمة الطلاب</h2>
+        <p id="csStudentsMeta">اختر بيانات السنة الحالية والسنة الجديدة ثم اضغط عرض الطلاب.</p>
       </div>
-      <button class="cr-x" id="cr-drawer-close" type="button">✕</button>
     </div>
 
-    <div class="cr-drawer-body" id="cr-drawer-body"></div>
+    <div class="cs-table-wrap" id="csTableWrap" style="display:none;">
+      <table class="cs-table">
+        <thead>
+          <tr>
+            <th>
+              <input type="checkbox" id="csCheckAll" />
+            </th>
+            <th>م</th>
+            <th>الكود</th>
+            <th>اسم الطالب</th>
+            <th>الرقم</th>
+            <th>نتيجة نهاية السنة</th>
+            <th>القرار</th>
+            <th>الوجهة</th>
+            <th>الحالة</th>
+            <th>ملاحظة</th>
+          </tr>
+        </thead>
 
-    <div class="cr-drawer-foot">
-      <button class="cr-btn cr-btn-ghost" id="cr-drawer-cancel" type="button">إغلاق</button>
-      <button class="cr-btn cr-btn-primary" id="cr-drawer-save" type="button">حفظ التعديلات</button>
+        <tbody id="csStudentsBody"></tbody>
+      </table>
     </div>
-  </aside>
 
-  <!-- Modal المعاينة -->
-  <div class="cr-modal sr-hidden" id="cr-modal" aria-hidden="true">
-    <div class="cr-modal-card">
-      <div class="cr-modal-head">
-        <h3>معاينة الترحيل</h3>
-        <button class="cr-x" id="cr-modal-close" type="button">✕</button>
-      </div>
-
-      <div class="cr-modal-body" id="cr-previewBody"></div>
-
-      <div class="cr-modal-foot">
-        <button class="cr-btn cr-btn-ghost" id="cr-modal-cancel" type="button">إغلاق</button>
-        <button class="cr-btn cr-btn-primary" id="cr-modal-confirm" type="button">تنفيذ الآن</button>
-      </div>
+    <div class="cs-empty" id="csEmpty">
+      لا توجد بيانات معروضة حاليًا.
     </div>
   </div>
 </section>

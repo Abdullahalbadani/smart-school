@@ -9,13 +9,68 @@
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const toast = (msg, type = "info") => {
-    const fn = window.toast || window.Toast || window.showToast || null;
-    if (typeof fn === "function") return fn(msg, type);
-    if (type === "error") console.error(msg);
-    else console.log(msg);
+    const fn = window.showToast || window.toast || window.Toast || null;
+
+    if (typeof fn === "function") {
+      fn(msg, type);
+      return;
+    }
+
+    let el = document.getElementById("global-soft-toast");
+
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "global-soft-toast";
+      el.style.position = "fixed";
+      el.style.bottom = "24px";
+      el.style.left = "50%";
+      el.style.transform = "translateX(-50%)";
+      el.style.zIndex = "99999";
+      el.style.padding = "10px 18px";
+      el.style.borderRadius = "999px";
+      el.style.fontSize = "13px";
+      el.style.fontWeight = "800";
+      el.style.color = "#fff";
+      el.style.boxShadow = "0 16px 40px rgba(15,23,42,.28)";
+      el.style.opacity = "0";
+      el.style.pointerEvents = "none";
+      el.style.transition = "opacity .25s ease, transform .25s ease";
+      document.body.appendChild(el);
+    }
+
+    el.textContent = msg || "حدث خطأ غير متوقع.";
+    el.style.background =
+      type === "error"
+        ? "linear-gradient(135deg,#ef4444,#991b1b)"
+        : type === "success"
+          ? "linear-gradient(135deg,#22c55e,#15803d)"
+          : "linear-gradient(135deg,#2563eb,#0f172a)";
+
+    requestAnimationFrame(() => {
+      el.style.opacity = "1";
+      el.style.transform = "translateX(-50%) translateY(-4px)";
+    });
+
+    clearTimeout(el._timer);
+    el._timer = setTimeout(() => {
+      el.style.opacity = "0";
+      el.style.transform = "translateX(-50%) translateY(0)";
+    }, 2800);
   };
 
-  const API_BASE = window.__API_BASE__ || "http://127.0.0.1:5000";
+  const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
+
+  function apiUrl(path) {
+    if (/^https?:\/\//i.test(path)) return path;
+
+    let cleanPath = String(path || "").replace(/^\/+/, "");
+
+    if (cleanPath.startsWith("api/")) {
+      cleanPath = cleanPath.slice(4);
+    }
+
+    return `${API_BASE}/${cleanPath}`;
+  }
 
   const getToken = () =>
     localStorage.getItem("token") ||
@@ -25,14 +80,20 @@
     "";
 
   const api = async (method, url, body) => {
-    const fullUrl = url.startsWith("http") ? url : `${API_BASE}${url}`;
-    const token = getToken();
+    const fullUrl = apiUrl(url);
+    const currentToken = getToken();
 
-    const headers = {};
+    const headers = {
+      Accept: "application/json",
+    };
+
     if (!(body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
     }
-    if (token) headers.Authorization = `Bearer ${token}`;
+
+    if (currentToken) {
+      headers.Authorization = `Bearer ${currentToken}`;
+    }
 
     const opt = {
       method,
@@ -44,13 +105,48 @@
       opt.body = body instanceof FormData ? body : JSON.stringify(body);
     }
 
-    const res = await fetch(fullUrl, opt);
-    const ct = res.headers.get("content-type") || "";
-    const isJson = ct.includes("application/json");
-    const data = isJson ? await res.json().catch(() => ({})) : null;
+    let res;
+
+    try {
+      res = await fetch(fullUrl, opt);
+    } catch (_) {
+      throw new Error("تعذر الاتصال بالخادم. تحقق من الاتصال أو حاول لاحقًا.");
+    }
+
+    const text = await res.text();
+    let data = null;
+
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (_) {
+      data = { raw: text };
+    }
+
+    if (res.status === 401) {
+      toast("انتهت الجلسة، الرجاء تسجيل الدخول مرة أخرى.", "error");
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("auth_token");
+      localStorage.removeItem("user");
+
+      setTimeout(() => {
+        window.location.href = "/frontend/login/login.html";
+      }, 900);
+
+      throw new Error("انتهت الجلسة، الرجاء تسجيل الدخول مرة أخرى.");
+    }
+
+    if (res.status === 403) {
+      throw new Error("لا تملك صلاحية تنفيذ هذه العملية.");
+    }
 
     if (!res.ok) {
-      const msg = (data && (data.message || data.error)) || `Request failed (${res.status})`;
+      const msg =
+        data?.message ||
+        data?.error ||
+        (data?.raw ? "رد غير متوقع من الخادم." : `فشل الطلب (${res.status})`);
+
       const err = new Error(msg);
       err.status = res.status;
       err.data = data;
@@ -70,54 +166,66 @@
 
   const fmtDT = (value) => {
     if (!value) return "—";
+
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return "—";
+
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
+
     return `${y}-${m}-${day} ${hh}:${mm}`;
   };
 
   const dtLocalToISO = (value) => {
     if (!value) return null;
+
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return null;
+
     return d.toISOString();
   };
 
   const toLocalDatetimeValue = (value) => {
     if (!value) return "";
+
     const d = new Date(value);
     if (Number.isNaN(d.getTime())) return "";
+
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(d.getMinutes()).padStart(2, "0");
+
     return `${y}-${m}-${day}T${hh}:${mm}`;
   };
 
   const durationText = (mins) => {
     const n = Number(mins || 0);
     if (!Number.isFinite(n) || n <= 0) return "00:00:00";
+
     const sec = n * 60;
     const hh = String(Math.floor(sec / 3600)).padStart(2, "0");
     const mm = String(Math.floor((sec % 3600) / 60)).padStart(2, "0");
     const ss = String(sec % 60).padStart(2, "0");
+
     return `${hh}:${mm}:${ss}`;
   };
-const positiveNumber = (value) => {
-  const n = Number(value);
-  return Number.isFinite(n) && n > 0 ? n : null;
-};
 
-const isAggregateType = (type) =>
-  ["midterm_muhassala", "final_muhassala"].includes(String(type || ""));
+  const positiveNumber = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
 
-const isOfficialExamType = (type) =>
-  ["monthly_exam", "midterm_exam", "final_exam"].includes(String(type || ""));
+  const isAggregateType = (type) =>
+    ["midterm_muhassala", "final_muhassala"].includes(String(type || ""));
+
+  const isOfficialExamType = (type) =>
+    ["monthly_exam", "midterm_exam", "final_exam"].includes(String(type || ""));
+
   const makeButton = (label, icon, className = "") => {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -191,6 +299,7 @@ const isOfficialExamType = (type) =>
         aggregate: "محصلة",
         live_online: "نشاط أونلاين مباشر",
       };
+
       return map[itemOrType] || itemOrType || "—";
     }
 
@@ -200,14 +309,17 @@ const isOfficialExamType = (type) =>
       if (meta.examKind === "monthly") {
         return meta.sequenceNo ? `اختبار شهري ${meta.sequenceNo}` : "اختبار شهري";
       }
+
       if (meta.examKind === "midterm") return "اختبار نصفي";
       if (meta.examKind === "final") return "اختبار نهائي";
+
       return "اختبار";
     }
 
     if (meta.canonicalType === "aggregate") {
       if (meta.aggregateKind === "midterm") return "محصلة النصفي";
       if (meta.aggregateKind === "final") return "محصلة النهائي";
+
       return "محصلة";
     }
 
@@ -223,25 +335,27 @@ const isOfficialExamType = (type) =>
       at_home: "بالبيت",
       submission: "يتطلب تسليم",
     };
+
     return map[mode] || mode || "—";
   };
 
-const statusLabel = (status) => {
-  const map = {
-    draft: "مسودة",
-    active: "نشط",
-    published: "منشور",
-    closed: "مغلق",
-    reopened: "مفتوح للتعديل",
-    scheduled: "مُجدول/قادم",
-    running: "جارٍ الآن",
-    finished: "انتهى وقت الاختبار",
-    upcoming: "مُجدول",
-    missing_score: "لم تضبط الدرجة",
-    blocked: "ينتظر ضبط الدرجة",
+  const statusLabel = (status) => {
+    const map = {
+      draft: "مسودة",
+      active: "نشط",
+      published: "منشور",
+      closed: "مغلق",
+      reopened: "مفتوح للتعديل",
+      scheduled: "مُجدول/قادم",
+      running: "جارٍ الآن",
+      finished: "انتهى وقت الاختبار",
+      upcoming: "مُجدول",
+      missing_score: "لم تضبط الدرجة",
+      blocked: "ينتظر ضبط الدرجة",
+    };
+
+    return map[status] || status || "—";
   };
-  return map[status] || status || "—";
-};
 
   const setButtonText = (btn, label) => {
     const span = btn?.querySelector("span");
@@ -254,24 +368,24 @@ const statusLabel = (status) => {
   };
 
   const officialStatusText = (ctx) => {
-  const availability = String(ctx?.availability || "");
-  const end = ctx?.ends_at_time ? String(ctx.ends_at_time).slice(0, 5) : "—";
-  const start = ctx?.starts_at_time ? String(ctx.starts_at_time).slice(0, 5) : "—";
+    const availability = String(ctx?.availability || "");
+    const end = ctx?.ends_at_time ? String(ctx.ends_at_time).slice(0, 5) : "—";
+    const start = ctx?.starts_at_time ? String(ctx.starts_at_time).slice(0, 5) : "—";
 
-  if (availability === "missing_score") {
-    return ctx?.message || "درجة الاختبار غير مضبوطة من إعدادات المدرسة.";
-  }
+    if (availability === "missing_score") {
+      return ctx?.message || "درجة الاختبار غير مضبوطة من إعدادات المدرسة.";
+    }
 
-  if (availability === "running") {
-    return `الاختبار جارٍ الآن، ينتهي الساعة ${end}.`;
-  }
+    if (availability === "running") {
+      return `الاختبار جارٍ الآن، ينتهي الساعة ${end}.`;
+    }
 
-  if (availability === "finished") {
-    return "انتهى وقت الاختبار، يمكنك فتح رصد الدرجات.";
-  }
+    if (availability === "finished") {
+      return "انتهى وقت الاختبار، يمكنك فتح رصد الدرجات.";
+    }
 
-  return `يبدأ الساعة ${start}.`;
-};
+    return `يبدأ الساعة ${start}.`;
+  };
 
   const officialScheduleText = (ctx) => {
     const start = ctx?.starts_at ? fmtDT(ctx.starts_at) : "—";
@@ -313,15 +427,14 @@ const statusLabel = (status) => {
     max_score: ctx.max_score ?? "—",
     starts_at: ctx.starts_at || null,
     due_at: ctx.due_at || null,
-status:
-  ctx.availability === "missing_score"
-    ? "blocked"
-    : ctx.availability === "finished"
-      ? "finished"
-      : "running",
-availability: ctx.availability || null,
-can_grade: ctx.can_grade === true && !!positiveNumber(ctx.max_score),    availability: ctx.availability || null,
-    can_grade: ctx.can_grade === true,
+    status:
+      ctx.availability === "missing_score"
+        ? "blocked"
+        : ctx.availability === "finished"
+          ? "finished"
+          : "running",
+    availability: ctx.availability || null,
+    can_grade: ctx.can_grade === true && !!positiveNumber(ctx.max_score),
     source_type: ctx.source_type || "",
     source_id: ctx.source_id || "",
     scope_label: scope ? scopeText(scope) : "—",
@@ -334,6 +447,12 @@ can_grade: ctx.can_grade === true && !!positiveNumber(ctx.max_score),    availab
       throw new Error(ctx?.message || "لا يمكن فتح رصد الدرجات قبل انتهاء وقت الاختبار.");
     }
 
+    const maxScore = positiveNumber(ctx.max_score);
+
+    if (!maxScore) {
+      throw new Error(ctx?.message || "درجة الاختبار غير مضبوطة من إعدادات المدرسة.");
+    }
+
     const formData = new FormData();
     const title = ctx.title || ctx.exam_title || "اختبار رسمي";
 
@@ -341,17 +460,17 @@ can_grade: ctx.can_grade === true && !!positiveNumber(ctx.max_score),    availab
     formData.append("title", title);
     formData.append("type", ctx.legacy_type || ctx.type || "monthly_exam");
     formData.append("mode", "in_class");
-const maxScore = positiveNumber(ctx.max_score);
-
-if (!maxScore) {
-  throw new Error(ctx?.message || "درجة الاختبار غير مضبوطة من إعدادات المدرسة.");
-}
-
-formData.append("max_score", String(maxScore));    formData.append("description", ctx.message || "");
+    formData.append("max_score", String(maxScore));
+    formData.append("description", ctx.message || "");
     formData.append("duration_minutes", ctx.duration_minutes != null ? String(ctx.duration_minutes) : "");
 
-    if (ctx.starts_at) formData.append("starts_at", dtLocalToISO(toLocalDatetimeValue(ctx.starts_at)) || ctx.starts_at);
-    if (ctx.due_at) formData.append("due_at", dtLocalToISO(toLocalDatetimeValue(ctx.due_at)) || ctx.due_at);
+    if (ctx.starts_at) {
+      formData.append("starts_at", dtLocalToISO(toLocalDatetimeValue(ctx.starts_at)) || ctx.starts_at);
+    }
+
+    if (ctx.due_at) {
+      formData.append("due_at", dtLocalToISO(toLocalDatetimeValue(ctx.due_at)) || ctx.due_at);
+    }
 
     formData.append("submission_kind", "none");
     formData.append("allow_late_submission", "false");
@@ -367,24 +486,6 @@ formData.append("max_score", String(maxScore));    formData.append("description"
     return api("POST", "/api/teacher/assessments", formData);
   };
 
-  const openModal = (id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add("is-open");
-    el.style.display = "flex";
-    el.setAttribute("aria-hidden", "false");
-    document.body.classList.add("modal-open");
-    setTimeout(() => el.focus?.(), 0);
-  };
-
-  const closeModal = (modalEl) => {
-    if (!modalEl) return;
-    modalEl.classList.remove("is-open");
-    modalEl.style.display = "none";
-    modalEl.setAttribute("aria-hidden", "true");
-    document.body.classList.remove("modal-open");
-  };
-
   // =========================================================
   // State
   // =========================================================
@@ -395,6 +496,33 @@ formData.append("max_score", String(maxScore));    formData.append("description"
     officialExamContext: null,
     defaultModeOptionsHTML: "",
     defaultTypeOptionsHTML: "",
+    liveTimer: null,
+  };
+
+  const openModal = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    el.classList.add("is-open");
+    el.style.display = "flex";
+    el.setAttribute("aria-hidden", "false");
+    document.body.classList.add("modal-open");
+
+    setTimeout(() => el.focus?.(), 0);
+  };
+
+  const closeModal = (modalEl) => {
+    if (!modalEl) return;
+
+    if (state.liveTimer) {
+      clearInterval(state.liveTimer);
+      state.liveTimer = null;
+    }
+
+    modalEl.classList.remove("is-open");
+    modalEl.style.display = "none";
+    modalEl.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("modal-open");
   };
 
   // =========================================================
@@ -407,7 +535,6 @@ formData.append("max_score", String(maxScore));    formData.append("description"
   const listView = () => qs("#asm-view-list");
   const createView = () => qs("#asm-view-create");
 
-  // List
   const filterTerm = () => qs("#asm-filter-term");
   const filterScope = () => qs("#asm-filter-scope");
   const filterType = () => qs("#asm-filter-type");
@@ -423,7 +550,6 @@ formData.append("max_score", String(maxScore));    formData.append("description"
   const sumPublished = () => qs("#asm-sum-published");
   const sumClosed = () => qs("#asm-sum-closed");
 
-  // Create
   const createForm = () => qs("#asm-create-form");
   const createTerm = () => qs("#asm-create-term");
   const createScope = () => qs("#asm-create-scope");
@@ -478,10 +604,12 @@ formData.append("max_score", String(maxScore));    formData.append("description"
   // =========================================================
   const scopeText = (scope) => {
     const parts = [];
+
     if (scope.stage_name) parts.push(scope.stage_name);
     if (scope.grade_name) parts.push(scope.grade_name);
     if (scope.section_name) parts.push(`شعبة: ${scope.section_name}`);
     if (scope.subject_name) parts.push(`مادة: ${scope.subject_name}`);
+
     return parts.join(" • ");
   };
 
@@ -489,6 +617,7 @@ formData.append("max_score", String(maxScore));    formData.append("description"
     if (!selectEl) return;
 
     selectEl.innerHTML = "";
+
     const opt0 = document.createElement("option");
     opt0.value = "";
     opt0.textContent = placeholder;
@@ -505,13 +634,16 @@ formData.append("max_score", String(maxScore));    formData.append("description"
 
   const getSelectedScopeId = (selectEl) => {
     if (!selectEl?.value) return null;
+
     const n = Number(selectEl.value);
     return Number.isFinite(n) && n > 0 ? n : null;
   };
 
   const getSelectedScopeObject = (selectEl) => {
     const opt = selectEl?.selectedOptions?.[0];
+
     if (!opt?.dataset?.scope) return null;
+
     try {
       return JSON.parse(opt.dataset.scope);
     } catch {
@@ -525,6 +657,7 @@ formData.append("max_score", String(maxScore));    formData.append("description"
 
     const data = await api("GET", `/api/teacher/scopes?term=${encodeURIComponent(term)}`);
     const items = Array.isArray(data?.items) ? data.items : [];
+
     state.scopesByTerm.set(term, items);
     return items;
   };
@@ -533,6 +666,7 @@ formData.append("max_score", String(maxScore));    formData.append("description"
     if (!termEl || !scopeEl) return;
 
     const term = Number(termEl.value || 0) || null;
+
     scopeEl.disabled = true;
     fillScopeSelect(scopeEl, [], "— اختر الفصل أولًا —");
 
@@ -550,29 +684,29 @@ formData.append("max_score", String(maxScore));    formData.append("description"
   // =========================================================
   // Official exam detection
   // =========================================================
- const restoreDefaultSelectOptions = () => {
-  const typeEl = typeSelect();
-  const modeEl = modeSelect();
+  const restoreDefaultSelectOptions = () => {
+    const typeEl = typeSelect();
+    const modeEl = modeSelect();
 
-  const currentType = typeEl?.value || "";
-  const currentMode = modeEl?.value || "";
+    const currentType = typeEl?.value || "";
+    const currentMode = modeEl?.value || "";
 
-  if (typeEl && state.defaultTypeOptionsHTML && typeEl.innerHTML !== state.defaultTypeOptionsHTML) {
-    typeEl.innerHTML = state.defaultTypeOptionsHTML;
+    if (typeEl && state.defaultTypeOptionsHTML && typeEl.innerHTML !== state.defaultTypeOptionsHTML) {
+      typeEl.innerHTML = state.defaultTypeOptionsHTML;
 
-    if (currentType && Array.from(typeEl.options).some((o) => o.value === currentType)) {
-      typeEl.value = currentType;
+      if (currentType && Array.from(typeEl.options).some((o) => o.value === currentType)) {
+        typeEl.value = currentType;
+      }
     }
-  }
 
-  if (modeEl && state.defaultModeOptionsHTML && modeEl.innerHTML !== state.defaultModeOptionsHTML) {
-    modeEl.innerHTML = state.defaultModeOptionsHTML;
+    if (modeEl && state.defaultModeOptionsHTML && modeEl.innerHTML !== state.defaultModeOptionsHTML) {
+      modeEl.innerHTML = state.defaultModeOptionsHTML;
 
-    if (currentMode && Array.from(modeEl.options).some((o) => o.value === currentMode)) {
-      modeEl.value = currentMode;
+      if (currentMode && Array.from(modeEl.options).some((o) => o.value === currentMode)) {
+        modeEl.value = currentMode;
+      }
     }
-  }
-};
+  };
 
   const clearOfficialContext = () => {
     state.officialExamContext = null;
@@ -641,29 +775,33 @@ formData.append("max_score", String(maxScore));    formData.append("description"
         } else {
           const s = new Date(data.starts_at || data.start_at || data.exam_starts_at || "");
           const e = new Date(data.due_at || data.end_at || data.exam_ends_at || "");
+
           if (!Number.isNaN(s.getTime()) && !Number.isNaN(e.getTime()) && e > s) {
             durationInput().value = String(Math.round((e - s) / 60000));
           }
         }
       }
 
-     if (maxScoreInput()) {
-  const maxScore = positiveNumber(data.max_score);
-  maxScoreInput().value = maxScore ? String(maxScore) : "";
-}
+      if (maxScoreInput()) {
+        const maxScore = positiveNumber(data.max_score);
+        maxScoreInput().value = maxScore ? String(maxScore) : "";
+      }
 
-  if (titleInput() && !String(titleInput().value || "").trim()) {
-  const detectedTitle = String(data.title || data.exam_title || "").trim();
+      if (titleInput() && !String(titleInput().value || "").trim()) {
+        const detectedTitle = String(data.title || data.exam_title || "").trim();
 
-  titleInput().value = detectedTitle || typeLabel({
-    type: data.legacy_type || data.type,
-    canonical_type: data.canonical_type,
-    exam_kind: data.exam_kind,
-    sequence_no: data.sequence_no,
-  });
-}
+        titleInput().value =
+          detectedTitle ||
+          typeLabel({
+            type: data.legacy_type || data.type,
+            canonical_type: data.canonical_type,
+            exam_kind: data.exam_kind,
+            sequence_no: data.sequence_no,
+          });
+      }
 
       const selectEl = typeSelect();
+
       if (selectEl && (data.legacy_type || data.type)) {
         const targetType = data.legacy_type || data.type;
         const opt = Array.from(selectEl.options).find((o) => o.value === targetType);
@@ -676,8 +814,7 @@ formData.append("max_score", String(maxScore));    formData.append("description"
       }
 
       applyCreateRules();
-    } catch (err) {
-      console.error("official exam detect error:", err);
+    } catch (_) {
       applyCreateRules();
     }
   };
@@ -687,11 +824,13 @@ formData.append("max_score", String(maxScore));    formData.append("description"
   // =========================================================
   const updateSmartContextText = () => {
     const scope = getSelectedScopeObject(createScope());
+
     if (!scope || !smartContextText()) {
       if (smartContextText()) {
         smartContextText().textContent =
           "اختر النطاق أولًا، وسيتم بناء التقييم داخل المادة والشعبة الخاصة بك.";
       }
+
       return;
     }
 
@@ -725,24 +864,25 @@ formData.append("max_score", String(maxScore));    formData.append("description"
     if (timerValue()) timerValue().textContent = value;
     if (timerHelp()) timerHelp().textContent = help;
   };
-const applyCreateRules = () => {
-  const currentType = String(typeSelect()?.value || "");
-  const currentMode = String(modeSelect()?.value || "");
-  const isOfficialLocked = !!state.officialExamContext?.matched;
 
-  if (!isOfficialLocked) {
-    restoreDefaultSelectOptions();
+  const applyCreateRules = () => {
+    const currentType = String(typeSelect()?.value || "");
+    const currentMode = String(modeSelect()?.value || "");
+    const isOfficialLocked = !!state.officialExamContext?.matched;
 
-    if (typeSelect() && currentType && Array.from(typeSelect().options).some((o) => o.value === currentType)) {
-      typeSelect().value = currentType;
+    if (!isOfficialLocked) {
+      restoreDefaultSelectOptions();
+
+      if (typeSelect() && currentType && Array.from(typeSelect().options).some((o) => o.value === currentType)) {
+        typeSelect().value = currentType;
+      }
+
+      if (modeSelect() && currentMode && Array.from(modeSelect().options).some((o) => o.value === currentMode)) {
+        modeSelect().value = currentMode;
+      }
     }
 
-    if (modeSelect() && currentMode && Array.from(modeSelect().options).some((o) => o.value === currentMode)) {
-      modeSelect().value = currentMode;
-    }
-  }
-
-  const type = String(typeSelect()?.value || "");
+    const type = String(typeSelect()?.value || "");
     const modeSelectEl = modeSelect();
     const modeField = modeSelectEl?.closest(".field");
     const submissionBox = submissionSettingsBox();
@@ -751,10 +891,8 @@ const applyCreateRules = () => {
     const filesField = filesInput()?.closest(".field");
     const descField = descriptionInput()?.closest(".field");
     const maxScoreField = maxScoreInput()?.closest(".field");
-
     const saveBtnSpan = qs("#asm-save-draft span");
 
-    // reset base
     if (typeSelect()) typeSelect().disabled = false;
     if (createScope()) createScope().disabled = false;
     if (maxScoreInput()) maxScoreInput().disabled = false;
@@ -775,12 +913,10 @@ const applyCreateRules = () => {
     if (publishBtn()) publishBtn().style.display = "inline-flex";
     if (saveBtnSpan) saveBtnSpan.textContent = "حفظ كمسودة";
 
-    // default safe mode
     if (type && !modeSelectEl?.value) {
       modeSelectEl.value = "in_class";
     }
 
-    // classwork
     if (type === "classwork") {
       if (modeField) modeField.style.display = "none";
       if (submissionBox) submissionBox.style.display = "none";
@@ -792,15 +928,13 @@ const applyCreateRules = () => {
 
       if (publishBtn()) publishBtn().style.display = "none";
       if (saveBtnSpan) saveBtnSpan.textContent = "بدء النشاط";
-    }
-
-    // homework
-    else if (type === "homework") {
+    } else if (type === "homework") {
       if (modeSelectEl) {
         modeSelectEl.innerHTML = `
           <option value="home_submission">واجب مع تسليم إلكتروني</option>
           <option value="home_no_submission">واجب بدون تسليم</option>
         `;
+
         if (!["home_submission", "home_no_submission"].includes(modeSelectEl.value)) {
           modeSelectEl.value = "home_submission";
         }
@@ -809,40 +943,36 @@ const applyCreateRules = () => {
       if (submissionBox) {
         submissionBox.style.display = modeSelectEl?.value === "home_submission" ? "" : "none";
       }
-    }
-
-    // live online
-    else if (type === "live_online") {
+    } else if (type === "live_online") {
       if (modeField) modeField.style.display = "none";
       if (submissionBox) submissionBox.style.display = "none";
       if (modeSelectEl) modeSelectEl.value = "live_online";
-    }
-
-    // official exams detected from admin timetable
-else if (isOfficialExamType(type) && state.officialExamContext?.matched) {      if (modeField) modeField.style.display = "none";
+    } else if (isAggregateType(type)) {
+      if (modeField) modeField.style.display = "none";
       if (submissionBox) submissionBox.style.display = "none";
       if (filesField) filesField.style.display = "none";
-else if (isAggregateType(type)) {
-  if (modeField) modeField.style.display = "none";
-  if (submissionBox) submissionBox.style.display = "none";
-  if (filesField) filesField.style.display = "none";
-  if (startAtField) startAtField.style.display = "none";
-  if (dueAtField) dueAtField.style.display = "none";
+      if (startAtField) startAtField.style.display = "none";
+      if (dueAtField) dueAtField.style.display = "none";
 
-  if (modeSelectEl) modeSelectEl.value = "in_class";
+      if (modeSelectEl) modeSelectEl.value = "in_class";
 
-  if (maxScoreInput()) {
-    maxScoreInput().value = "";
-    maxScoreInput().placeholder = "تؤخذ من إعدادات المدرسة";
-    maxScoreInput().disabled = true;
-  }
+      if (maxScoreInput()) {
+        maxScoreInput().value = "";
+        maxScoreInput().placeholder = "تؤخذ من إعدادات المدرسة";
+        maxScoreInput().disabled = true;
+      }
 
-  if (publishBtn()) publishBtn().style.display = "none";
-  if (saveBtnSpan) {
-    saveBtnSpan.textContent =
-      type === "midterm_muhassala" ? "حفظ محصلة النصفي" : "حفظ محصلة النهائي";
-  }
-}
+      if (publishBtn()) publishBtn().style.display = "none";
+
+      if (saveBtnSpan) {
+        saveBtnSpan.textContent =
+          type === "midterm_muhassala" ? "حفظ محصلة النصفي" : "حفظ محصلة النهائي";
+      }
+    } else if (isOfficialExamType(type) && state.officialExamContext?.matched) {
+      if (modeField) modeField.style.display = "none";
+      if (submissionBox) submissionBox.style.display = "none";
+      if (filesField) filesField.style.display = "none";
+
       if (modeSelectEl) modeSelectEl.value = "in_class";
       if (typeSelect()) typeSelect().disabled = true;
       if (createScope()) createScope().disabled = true;
@@ -850,27 +980,34 @@ else if (isAggregateType(type)) {
       if (startAtInput()) startAtInput().disabled = true;
       if (dueAtInput()) dueAtInput().disabled = true;
       if (durationInput()) durationInput().disabled = true;
-if (publishBtn()) publishBtn().style.display = "none";
 
-const canOpenOfficialGrades = state.officialExamContext?.can_grade === true;
+      if (publishBtn()) publishBtn().style.display = "none";
 
-if (saveDraftBtn()) {
-  saveDraftBtn().disabled = !canOpenOfficialGrades;
-  saveDraftBtn().style.display = "inline-flex";
-  saveDraftBtn().title = canOpenOfficialGrades
-    ? "فتح رصد درجات الاختبار"
-    : officialStatusText(state.officialExamContext);
-}
+      const canOpenOfficialGrades =
+        state.officialExamContext?.can_grade === true &&
+        !!positiveNumber(state.officialExamContext?.max_score);
 
-if (saveBtnSpan) {
-  saveBtnSpan.textContent = canOpenOfficialGrades
-    ? "فتح رصد درجات الاختبار"
-    : "ينتظر انتهاء الاختبار";
-}
+      if (saveDraftBtn()) {
+        saveDraftBtn().disabled = !canOpenOfficialGrades;
+        saveDraftBtn().style.display = "inline-flex";
+        saveDraftBtn().title = canOpenOfficialGrades
+          ? "فتح رصد درجات الاختبار"
+          : officialStatusText(state.officialExamContext);
+      }
+
+      if (saveBtnSpan) {
+        saveBtnSpan.textContent = canOpenOfficialGrades
+          ? "فتح رصد درجات الاختبار"
+          : "ينتظر انتهاء الاختبار";
+      }
     }
 
-    // home submission box for generic types
-    if (modeSelectEl?.value === "home_submission" && submissionBox && submissionBox.style.display === "none" && type !== "classwork") {
+    if (
+      modeSelectEl?.value === "home_submission" &&
+      submissionBox &&
+      submissionBox.style.display === "none" &&
+      type !== "classwork"
+    ) {
       submissionBox.style.display = "";
     }
 
@@ -879,7 +1016,9 @@ if (saveBtnSpan) {
 
   const showCreateStatus = (message = "", visible = true) => {
     const el = createStatusBox();
+
     if (!el) return;
+
     el.textContent = message;
     el.style.display = visible ? "" : "none";
   };
@@ -900,6 +1039,7 @@ if (saveBtnSpan) {
     lateUntil() && (lateUntil().value = "");
     filesInput() && (filesInput().value = "");
     editIdInput() && (editIdInput().value = "");
+
     showCreateStatus("", false);
 
     if (createForm()) {
@@ -944,8 +1084,7 @@ if (saveBtnSpan) {
 
       const scope = getSelectedScopeObject(filterScope());
       return [makeOfficialPreviewItem(data, term, teacher_assignment_id, scope), ...items];
-    } catch (err) {
-      console.error("official context list error:", err);
+    } catch (_) {
       return items;
     }
   };
@@ -953,6 +1092,7 @@ if (saveBtnSpan) {
   const renderAssessmentRows = (items) => {
     const tbody = tableBody();
     const empty = emptyState();
+
     if (!tbody || !empty) return;
 
     tbody.innerHTML = "";
@@ -998,8 +1138,16 @@ if (saveBtnSpan) {
       tr.innerHTML = `
         <td>
           <strong>${escapeHtml(item.title || "")}</strong>
-          ${isOfficialExam ? '<span title="اختبار رسمي من الجدول" style="color:#0ea5e9; font-size:0.8rem; margin-right:4px;"><i class="ri-shield-star-line"></i></span>' : ""}
-          ${isOfficialPreview ? `<div class="muted" style="font-size:.8rem;margin-top:.25rem;">${escapeHtml(officialStatusText(item._official_context))}</div>` : ""}
+          ${
+            isOfficialExam
+              ? '<span title="اختبار رسمي من الجدول" style="color:#0ea5e9; font-size:0.8rem; margin-right:4px;"><i class="ri-shield-star-line"></i></span>'
+              : ""
+          }
+          ${
+            isOfficialPreview
+              ? `<div class="muted" style="font-size:.8rem;margin-top:.25rem;">${escapeHtml(officialStatusText(item._official_context))}</div>`
+              : ""
+          }
         </td>
         <td>${escapeHtml(typeLabel(item))}</td>
         <td>${escapeHtml(scopeLabel)}</td>
@@ -1008,7 +1156,13 @@ if (saveBtnSpan) {
         <td>${escapeHtml(schedule)}</td>
         <td>${escapeHtml(String(submissionsLabel))}</td>
         <td>
-          <span class="ss-badge ${item.status === "active" || item.status === "finished" ? "ss-badge--success" : item.status === "scheduled" || item.status === "running" ? "ss-badge--info" : ""}">
+          <span class="ss-badge ${
+            item.status === "active" || item.status === "finished"
+              ? "ss-badge--success"
+              : item.status === "scheduled" || item.status === "running"
+                ? "ss-badge--info"
+                : ""
+          }">
             ${escapeHtml(statusLabel(item.status))}
           </span>
         </td>
@@ -1017,6 +1171,7 @@ if (saveBtnSpan) {
 
       const tdActions = tr.lastElementChild;
       const wrap = document.createElement("div");
+
       wrap.style.display = "flex";
       wrap.style.gap = ".35rem";
       wrap.style.flexWrap = "wrap";
@@ -1028,21 +1183,24 @@ if (saveBtnSpan) {
       if (isOfficialExam) {
         publishBtnEl.style.display = "none";
         closeBtn.style.display = "none";
-        gradesBtn.title = isOfficialPreview ? officialStatusText(item._official_context) : "رصد درجات الاختبار الرسمي.";
+        gradesBtn.title = isOfficialPreview
+          ? officialStatusText(item._official_context)
+          : "رصد درجات الاختبار الرسمي.";
       }
 
       if (isOfficialPreview) {
         const canOpen = item.can_grade === true;
-      setButtonText(
-  gradesBtn,
-  item.availability === "missing_score" || item.status === "blocked"
-    ? "اضبط الدرجة"
-    : canOpen
-      ? "فتح الدرجات"
-      : "جارٍ الاختبار"
-);
 
-gradesBtn.disabled = !canOpen;
+        setButtonText(
+          gradesBtn,
+          item.availability === "missing_score" || item.status === "blocked"
+            ? "اضبط الدرجة"
+            : canOpen
+              ? "فتح الدرجات"
+              : "جارٍ الاختبار"
+        );
+
+        gradesBtn.disabled = !canOpen;
 
         gradesBtn.addEventListener("click", async () => {
           try {
@@ -1105,10 +1263,12 @@ gradesBtn.disabled = !canOpen;
           await loadList();
         } catch (err) {
           toast(err.message || "فشل نشر التقييم", "error");
+          publishBtnEl.disabled = false;
         }
       });
 
       closeBtn.disabled = item.status !== "published";
+
       closeBtn.addEventListener("click", async () => {
         try {
           closeBtn.disabled = true;
@@ -1117,6 +1277,7 @@ gradesBtn.disabled = !canOpen;
           await loadList();
         } catch (err) {
           toast(err.message || "فشل إغلاق التقييم", "error");
+          closeBtn.disabled = false;
         }
       });
 
@@ -1140,23 +1301,27 @@ gradesBtn.disabled = !canOpen;
     if (!teacher_assignment_id) return toast("اختر نطاق التدريس.", "error");
 
     const params = new URLSearchParams();
+
     params.set("teacher_assignment_id", String(teacher_assignment_id));
     params.set("status", status);
+
     if (type && type !== "all") params.set("type", type);
     if (q) params.set("q", q);
 
     try {
-      loadListBtn() && (loadListBtn().disabled = true);
+      if (loadListBtn()) loadListBtn().disabled = true;
+
       const data = await api("GET", `/api/teacher/assessments?${params.toString()}`);
       const baseItems = Array.isArray(data?.items) ? data.items : [];
       const items = await attachOfficialContextToList(baseItems, { term, teacher_assignment_id });
+
       state.listItems = items;
       renderAssessmentRows(items);
     } catch (err) {
       toast(err.message || "فشل تحميل التقييمات", "error");
       renderAssessmentRows([]);
     } finally {
-      loadListBtn() && (loadListBtn().disabled = false);
+      if (loadListBtn()) loadListBtn().disabled = false;
     }
   };
 
@@ -1170,31 +1335,39 @@ gradesBtn.disabled = !canOpen;
     const title = String(titleInput()?.value || "").trim();
     const type = String(typeSelect()?.value || "").trim();
     const mode = String(modeSelect()?.value || "").trim();
-const maxScoreRaw = String(maxScoreInput()?.value || "").trim();
-const max_score = maxScoreRaw ? Number(maxScoreRaw) : null;
-const isAggregate = isAggregateType(type);
+    const maxScoreRaw = String(maxScoreInput()?.value || "").trim();
+    const max_score = maxScoreRaw ? Number(maxScoreRaw) : null;
+    const isAggregate = isAggregateType(type);
+
     if (!teacher_assignment_id) throw new Error("اختر نطاق التدريس.");
     if (!title) throw new Error("عنوان التقييم مطلوب.");
     if (!type) throw new Error("نوع التقييم مطلوب.");
     if (!mode) throw new Error("طريقة التنفيذ مطلوبة.");
-if (!isAggregate && (!Number.isFinite(max_score) || max_score <= 0)) {
-  throw new Error("الدرجة النهائية غير صحيحة.");
-}
+
+    if (!isAggregate && (!Number.isFinite(max_score) || max_score <= 0)) {
+      throw new Error("الدرجة النهائية غير صحيحة.");
+    }
+
     formData.append("teacher_assignment_id", String(teacher_assignment_id));
     formData.append("title", title);
     formData.append("type", type);
     formData.append("mode", mode);
-if (Number.isFinite(max_score) && max_score > 0) {
-  formData.append("max_score", String(max_score));
-}    formData.append("description", String(descriptionInput()?.value || "").trim());
+
+    if (Number.isFinite(max_score) && max_score > 0) {
+      formData.append("max_score", String(max_score));
+    }
+
+    formData.append("description", String(descriptionInput()?.value || "").trim());
     formData.append("duration_minutes", durationInput()?.value || "");
 
     const starts_at = dtLocalToISO(startAtInput()?.value || "");
     const due_at = dtLocalToISO(dueAtInput()?.value || "");
+
     if (starts_at) formData.append("starts_at", starts_at);
     if (due_at) formData.append("due_at", due_at);
 
     const files = filesInput()?.files;
+
     if (files && files.length > 0) {
       for (let i = 0; i < files.length; i += 1) {
         formData.append("files", files[i]);
@@ -1205,36 +1378,45 @@ if (Number.isFinite(max_score) && max_score > 0) {
       "submission_kind",
       mode === "home_submission" ? String(submissionKind()?.value || "mixed") : "none"
     );
- formData.append(
-  "allow_late_submission",
-  mode === "home_submission" && String(latePolicy()?.value || "no") === "soft" ? "true" : "false"
-);
 
-const lateUntilValue = String(lateUntil()?.value || "").trim();
-if (lateUntilValue) {
-  formData.append("late_until", dtLocalToISO(lateUntilValue) || lateUntilValue);
-}
+    formData.append(
+      "allow_late_submission",
+      mode === "home_submission" && String(latePolicy()?.value || "no") === "soft" ? "true" : "false"
+    );
 
-if (state.officialExamContext?.canonical_type === "exam") {
-  if (state.officialExamContext.can_grade !== true) {
-    throw new Error(state.officialExamContext.message || "لا يمكن فتح رصد الدرجات قبل انتهاء وقت الاختبار.");
-  }
+    const lateUntilValue = String(lateUntil()?.value || "").trim();
 
-  formData.append("exam_kind", state.officialExamContext.exam_kind || "");
-  formData.append("is_system_generated", "true");
-  formData.append("source_type", state.officialExamContext.source_type || officialSourceType()?.value || "");
-  formData.append("source_id", String(state.officialExamContext.source_id || officialSourceId()?.value || ""));
+    if (lateUntilValue) {
+      formData.append("late_until", dtLocalToISO(lateUntilValue) || lateUntilValue);
+    }
 
-  if (state.officialExamContext.sequence_no != null) {
-    formData.append("sequence_no", String(state.officialExamContext.sequence_no));
-  }
-}
+    if (state.officialExamContext?.canonical_type === "exam") {
+      if (state.officialExamContext.can_grade !== true) {
+        throw new Error(state.officialExamContext.message || "لا يمكن فتح رصد الدرجات قبل انتهاء وقت الاختبار.");
+      }
+
+      const officialMaxScore = positiveNumber(state.officialExamContext.max_score);
+
+      if (!officialMaxScore) {
+        throw new Error(state.officialExamContext.message || "درجة الاختبار غير مضبوطة من إعدادات المدرسة.");
+      }
+
+      formData.append("exam_kind", state.officialExamContext.exam_kind || "");
+      formData.append("is_system_generated", "true");
+      formData.append("source_type", state.officialExamContext.source_type || officialSourceType()?.value || "");
+      formData.append("source_id", String(state.officialExamContext.source_id || officialSourceId()?.value || ""));
+
+      if (state.officialExamContext.sequence_no != null) {
+        formData.append("sequence_no", String(state.officialExamContext.sequence_no));
+      }
+    }
 
     return formData;
   };
 
   const maybeWarnAboutFiles = () => {
     const files = filesInput()?.files;
+
     if (files && files.length) {
       toast("تم إنشاء التقييم مع المرفقات المرفوعة.", "info");
     }
@@ -1242,11 +1424,16 @@ if (state.officialExamContext?.canonical_type === "exam") {
 
   const createAssessment = async (publishAfter = false) => {
     const payload = buildCreatePayload();
+
     showCreateStatus("جارٍ حفظ التقييم والمرفقات...", true);
 
     const created = await api("POST", "/api/teacher/assessments", payload);
+
     state.lastCreatedAssessmentId = Number(created?.id || 0) || null;
-    editIdInput() && (editIdInput().value = String(state.lastCreatedAssessmentId || ""));
+
+    if (editIdInput()) {
+      editIdInput().value = String(state.lastCreatedAssessmentId || "");
+    }
 
     maybeWarnAboutFiles();
 
@@ -1256,9 +1443,11 @@ if (state.officialExamContext?.canonical_type === "exam") {
     }
 
     showCreateStatus(publishAfter ? "تم حفظ التقييم ونشره." : "تم حفظ التقييم كمسودة.", true);
+
     return created;
   };
-   const uniqueTerms = () => {
+
+  const uniqueTerms = () => {
     const values = [
       Number(filterTerm()?.value || 0),
       Number(createTerm()?.value || 0),
@@ -1294,8 +1483,8 @@ if (state.officialExamContext?.canonical_type === "exam") {
               context: data,
             };
           }
-        } catch (err) {
-          console.error("auto official exam scan error:", err);
+        } catch (_) {
+          // تجاهل الفحص الفاشل لهذا النطاق وجرب النطاق التالي
         }
       }
     }
@@ -1345,11 +1534,13 @@ if (state.officialExamContext?.canonical_type === "exam") {
     await loadList();
     return true;
   };
+
   // =========================================================
   // Events
   // =========================================================
   const bindModalClose = () => {
     const m = modal();
+
     if (!m) return;
 
     qsa("[data-close-modal]", m).forEach((btn) => {
@@ -1369,7 +1560,7 @@ if (state.officialExamContext?.canonical_type === "exam") {
     listTabBtn()?.addEventListener("click", () => setTab("list"));
     createTabBtn()?.addEventListener("click", () => setTab("create"));
 
-      openCreateBtn()?.addEventListener("click", async () => {
+    openCreateBtn()?.addEventListener("click", async () => {
       const prefillTerm = filterTerm()?.value || "";
       const prefillScope = filterScope()?.value || "";
 
@@ -1378,9 +1569,7 @@ if (state.officialExamContext?.canonical_type === "exam") {
       if (!prefillTerm || !prefillScope) {
         const shownOfficial = await autoShowCurrentOfficialExam({ preferCreate: true });
 
-        if (shownOfficial) {
-          return;
-        }
+        if (shownOfficial) return;
       }
 
       setTab("create");
@@ -1441,14 +1630,19 @@ if (state.officialExamContext?.canonical_type === "exam") {
       const type = typeSelect()?.value;
       const duration = Number(durationInput()?.value || 0);
 
-      // نشاط صفي مباشر مع عداد
       if (type === "classwork" && duration > 0) {
-        if (!getSelectedScopeId(createScope())) return toast("اختر نطاق التدريس أولًا", "error");
-        if (!titleInput()?.value) return toast("أدخل عنوان النشاط", "error");
+        if (!getSelectedScopeId(createScope())) {
+          return toast("اختر نطاق التدريس أولًا", "error");
+        }
+
+        if (!titleInput()?.value) {
+          return toast("أدخل عنوان النشاط", "error");
+        }
 
         if (createForm()) createForm().style.display = "none";
 
         const statusBox = createStatusBox();
+
         if (statusBox) {
           statusBox.style.display = "block";
           statusBox.style.padding = "4rem 1rem";
@@ -1460,12 +1654,14 @@ if (state.officialExamContext?.canonical_type === "exam") {
 
         let seconds = duration * 60;
 
-        const liveTimer = setInterval(async () => {
-          const m = Math.floor(seconds / 60)
-            .toString()
-            .padStart(2, "0");
-          const s = (seconds % 60).toString().padStart(2, "0");
+        if (state.liveTimer) {
+          clearInterval(state.liveTimer);
+          state.liveTimer = null;
+        }
 
+        state.liveTimer = setInterval(async () => {
+          const m = Math.floor(seconds / 60).toString().padStart(2, "0");
+          const s = (seconds % 60).toString().padStart(2, "0");
           const color = seconds <= 60 ? "#ef4444" : "#f59e0b";
 
           if (statusBox) {
@@ -1474,12 +1670,15 @@ if (state.officialExamContext?.canonical_type === "exam") {
               <div style="font-size: 6rem; font-weight: 900; color: ${color}; font-family: monospace; letter-spacing: 5px;">
                 ${m}:${s}
               </div>
-              <p class="muted" style="margin-top: 1.5rem; font-size: 1.2rem;">عند انتهاء الوقت سيتم الحفظ تلقائيًا والانتقال إلى رصد الدرجات.</p>
+              <p class="muted" style="margin-top: 1.5rem; font-size: 1.2rem;">
+                عند انتهاء الوقت سيتم الحفظ تلقائيًا والانتقال إلى رصد الدرجات.
+              </p>
             `;
           }
 
           if (seconds <= 0) {
-            clearInterval(liveTimer);
+            clearInterval(state.liveTimer);
+            state.liveTimer = null;
 
             if (statusBox) {
               statusBox.innerHTML = `<h2 style="font-size: 2rem; color: #10b981;">انتهى الوقت! جارٍ حفظ النشاط...</h2>`;
@@ -1492,6 +1691,7 @@ if (state.officialExamContext?.canonical_type === "exam") {
               closeModal(modal());
             } catch (err) {
               toast(err.message || "حدث خطأ أثناء الحفظ التلقائي", "error");
+
               if (createForm()) createForm().style.display = "";
               if (statusBox) statusBox.style.display = "none";
             }
@@ -1504,34 +1704,37 @@ if (state.officialExamContext?.canonical_type === "exam") {
       }
 
       try {
-        saveDraftBtn() && (saveDraftBtn().disabled = true);
-        publishBtn() && (publishBtn().disabled = true);
-     await createAssessment(false);
+        if (saveDraftBtn()) saveDraftBtn().disabled = true;
+        if (publishBtn()) publishBtn().disabled = true;
 
-if (state.officialExamContext?.matched) {
-  toast("تم تجهيز الاختبار الرسمي، سيتم فتح رصد الدرجات.", "success");
-  goToGradingBtn()?.click();
-  return;
-}
+        await createAssessment(false);
 
-toast("تم حفظ التقييم كمسودة.", "success");
-setTab("list");
-await loadList();
+        if (state.officialExamContext?.matched) {
+          toast("تم تجهيز الاختبار الرسمي، سيتم فتح رصد الدرجات.", "success");
+          goToGradingBtn()?.click();
+          return;
+        }
+
+        toast("تم حفظ التقييم كمسودة.", "success");
+        setTab("list");
+        await loadList();
       } catch (err) {
         toast(err.message || "فشل حفظ التقييم", "error");
         showCreateStatus(err.message || "فشل حفظ التقييم", true);
       } finally {
-        saveDraftBtn() && (saveDraftBtn().disabled = false);
-        publishBtn() && (publishBtn().disabled = false);
+        if (saveDraftBtn()) saveDraftBtn().disabled = false;
+        if (publishBtn()) publishBtn().disabled = false;
         applyCreateRules();
       }
     });
 
     publishBtn()?.addEventListener("click", async () => {
       try {
-        saveDraftBtn() && (saveDraftBtn().disabled = true);
-        publishBtn() && (publishBtn().disabled = true);
+        if (saveDraftBtn()) saveDraftBtn().disabled = true;
+        if (publishBtn()) publishBtn().disabled = true;
+
         await createAssessment(true);
+
         toast("تم نشر التقييم.", "success");
         setTab("list");
         await loadList();
@@ -1539,8 +1742,8 @@ await loadList();
         toast(err.message || "فشل نشر التقييم", "error");
         showCreateStatus(err.message || "فشل نشر التقييم", true);
       } finally {
-        saveDraftBtn() && (saveDraftBtn().disabled = false);
-        publishBtn() && (publishBtn().disabled = false);
+        if (saveDraftBtn()) saveDraftBtn().disabled = false;
+        if (publishBtn()) publishBtn().disabled = false;
       }
     });
 
@@ -1568,7 +1771,7 @@ await loadList();
   // =========================================================
   // Public API
   // =========================================================
-   const openList = async () => {
+  const openList = async () => {
     openModal("modal-assessments");
     setTab("list");
 
@@ -1578,6 +1781,7 @@ await loadList();
       await loadList();
     }
   };
+
   const openCreate = async (prefill = {}) => {
     openModal("modal-assessments");
     resetCreateForm();
@@ -1604,11 +1808,13 @@ await loadList();
     updateSmartContextText();
     await tryDetectOfficialExam();
   };
+
   let autoOfficialScanRunning = false;
   let autoOfficialScanDoneForOpen = false;
 
   const isAssessmentsModalOpen = () => {
     const m = modal();
+
     if (!m) return false;
 
     return (
@@ -1628,8 +1834,8 @@ await loadList();
     try {
       await autoShowCurrentOfficialExam({ preferCreate: false });
       autoOfficialScanDoneForOpen = true;
-    } catch (err) {
-      console.error("auto official scan on modal open error:", err);
+    } catch (_) {
+      // لا نوقف فتح المودال إذا فشل الفحص التلقائي
     } finally {
       autoOfficialScanRunning = false;
     }
@@ -1637,6 +1843,7 @@ await loadList();
 
   const watchAssessmentsModalOpen = () => {
     const m = modal();
+
     if (!m) return;
 
     const observer = new MutationObserver(() => {
@@ -1657,12 +1864,14 @@ await loadList();
     qsa("[data-modal-target='modal-assessments'], [data-open-modal='modal-assessments'], [href='#modal-assessments']").forEach((btn) => {
       btn.addEventListener("click", () => {
         autoOfficialScanDoneForOpen = false;
+
         setTimeout(() => {
           runAutoOfficialScanOnOpen();
         }, 250);
       });
     });
   };
+
   // =========================================================
   // Init
   // =========================================================
@@ -1675,7 +1884,7 @@ await loadList();
     state.defaultModeOptionsHTML = modeSelect()?.innerHTML || "";
     state.defaultTypeOptionsHTML = typeSelect()?.innerHTML || "";
 
-      bindModalClose();
+    bindModalClose();
     bindTabs();
     bindFilters();
     bindListActions();

@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>لوحة مالك النظام | Smart School</title>
+  <link rel="stylesheet" href="./super-admin.css" />
+</head>
+<body>
+  <main class="page">
+
+    <!-- Login -->
+    <section id="loginSection" class="login-section">
+      <div class="login-glow glow-a"></div>
+      <div class="login-glow glow-b"></div>
+
+      <div class="login-layout">
+        <aside class="login-brand-panel">
+          <div class="brand-mark">
+            <div class="logo-shield">S</div>
+            <div>
+              <h1>Smart School</h1>
+              <p>لوحة مالك النظام</p>
+            </div>
+          </div>
+
+          <div class="login-copy">
+            <span class="mini-pill">Super Admin Console</span>
+            <h2>مركز تحكم احترافي لإدارة المدارس والاشتراكات</h2>
+            <p>
+              راقب المدارس، فعّل التجارب، أوقف الاشتراكات، وتابع نمو النظام من واجهة واحدة مصممة بعناية.
+            </p>
+          </div>
+
+          <div class="login-stats">
+            <div>
+              <strong>Multi</strong>
+              <span>Schools</span>
+            </div>
+            <div>
+              <strong>SaaS</strong>
+              <span>Ready</span>
+            </div>
+            <div>
+              <strong>Live</strong>
+              <span>Control</span>
+            </div>
+          </div>
+        </aside>
+
+        <section class="login-card">
+          <div class="login-card-head">
+            <div class="logo-shield small">S</div>
+            <div>
+              <h3>تسجيل الدخول</h3>
+              <p>ادخل بيانات مالك النظام للوصول للوحة التحكم.</p>
+            </div>
+          </div>
+
+          <form id="loginForm" class="form">
+            <label>
+              البريد الإلكتروني
+              <input id="emailInput" type="email" placeholder="super@gmail.com" required />
+            </label>
+
+            <label>
+              كلمة المرور
+              <input id="passwordInput" type="password" placeholder="••••••••" required />
+            </label>
+
+            <button type="submit" class="btn btn-primary full">
+              دخول لوحة التحكم
+            </button>
+
+            <p id="loginMessage" class="message"></p>
+          </form>
+
+          <div class="login-footnote">
+            Smart School Platform · Secure Owner Access
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <!-- App -->
+    <section id="appSection" class="app hidden">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <div class="logo-shield small">S</div>
+          <div>
+            <h2>Smart School</h2>
+            <p>منصة الإدارة المركزية</p>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-link active" data-view="dashboardView">
+            <span class="nav-icon">⌂</span>
+            الرئيسية
+          </button>
+
+          <button class="nav-link" data-view="schoolsView">
+            <span class="nav-icon">▦</span>
+            المدارس
+          </button>
+          <button class="nav-link" data-view="alertsView">
+  <span class="nav-icon">!</span>
+  تنبيهات الاشتراك
+</button>
+
+<button class="nav-link" data-view="logsView">
+  <span class="nav-icon">≡</span>
+  سجل العمليات
+</button>
+        </nav>
+
+        <div class="system-card">
+          <span>حالة النظام</span>
+          <strong>متصل ومستقر</strong>
+          <p>جميع خدمات Super Admin تعمل.</p>
+        </div>
+
+        <button id="logoutBtn" class="btn btn-logout">تسجيل الخروج</button>
+      </aside>
+
+      <section class="content">
+
+        <header class="topbar">
+          <div>
+            <span class="section-label">لوحة التحكم</span>
+            <h1 id="pageTitle">الرئيسية</h1>
+            <p>إدارة المدارس، التجارب المجانية، الاشتراكات، التفعيل والإيقاف من مكان واحد.</p>
+          </div>
+
+          <button id="refreshBtn" class="btn btn-light">تحديث البيانات</button>
+        </header>
+
+        <!-- Dashboard -->
+        <div id="dashboardView" class="view">
+          <div class="stats-grid">
+            <div class="stat-card featured">
+              <div class="stat-icon">▦</div>
+              <span>إجمالي المدارس</span>
+              <strong id="totalSchools">0</strong>
+              <p>كل المدارس المسجلة في المنصة</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">✓</div>
+              <span>مدارس مفعلة</span>
+              <strong id="activeSchools">0</strong>
+              <p>تستطيع استخدام النظام</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">◷</div>
+              <span>تجربة مجانية</span>
+              <strong id="trialSchools">0</strong>
+              <p>مدارس داخل فترة التجربة</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">◆</div>
+              <span>اشتراك فعال</span>
+              <strong id="subscribedSchools">0</strong>
+              <p>مدارس مشتركة رسميًا</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">!</div>
+              <span>موقوفة</span>
+              <strong id="suspendedSchools">0</strong>
+              <p>تم إيقافها من مالك النظام</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">×</div>
+              <span>منتهية</span>
+              <strong id="expiredSchools">0</strong>
+              <p>انتهت التجربة أو الاشتراك</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">👥</div>
+              <span>الطلاب</span>
+              <strong id="totalStudents">0</strong>
+              <p>إجمالي الطلاب في كل المدارس</p>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-icon">◎</div>
+              <span>المعلمون</span>
+              <strong id="totalTeachers">0</strong>
+              <p>إجمالي المعلمين في المنصة</p>
+            </div>
+          </div>
+
+       <div class="dashboard-grid">
+  <section class="analytics-card">
+    <div class="panel-title-row">
+      <div>
+        <span class="section-label dark">بيانات حقيقية</span>
+        <h2>توزيع حالات المدارس</h2>
+      </div>
+    </div>
+
+    <div id="statusBars" class="status-bars"></div>
+  </section>
+
+  <section class="analytics-card">
+    <div class="panel-title-row">
+      <div>
+        <span class="section-label dark">ملخص النظام</span>
+        <h2>إحصائيات مباشرة</h2>
+      </div>
+    </div>
+
+    <div id="usageSummary" class="usage-summary"></div>
+  </section>
+</div>
+
+          <section class="panel">
+            <div class="panel-header">
+              <div>
+                <span class="section-label dark">Recent Schools</span>
+                <h2>آخر المدارس المسجلة</h2>
+              </div>
+            </div>
+
+            <div id="latestSchools" class="latest-list"></div>
+          </section>
+        </div>
+
+        <!-- Schools -->
+        <div id="schoolsView" class="view hidden">
+          <section class="panel">
+            <div class="panel-header schools-header">
+              <div>
+                <span class="section-label dark">Schools Management</span>
+                <h2>إدارة المدارس</h2>
+                <p>تحكم كامل في التجربة، الاشتراك، الإيقاف، وإعادة فتح المدرسة.</p>
+              </div>
+
+              <div class="filters">
+                <input id="searchInput" type="text" placeholder="بحث عن مدرسة..." />
+                <select id="statusFilter">
+                  <option value="">كل الحالات</option>
+                  <option value="trial">تجربة</option>
+                  <option value="active">اشتراك فعال</option>
+                  <option value="suspended">موقوفة</option>
+                  <option value="expired">منتهية</option>
+                  <option value="cancelled">ملغية</option>
+                </select>
+              </div>
+            </div>
+
+         <div id="schoolsTableBody" class="schools-grid"></div>
+
+            <div class="pagination">
+              <button id="prevPageBtn" class="btn btn-light">السابق</button>
+              <span id="pageInfo">صفحة 1</span>
+              <button id="nextPageBtn" class="btn btn-light">التالي</button>
+            </div>
+          </section>
+        </div>
+        <!-- Alerts -->
+<div id="alertsView" class="view hidden">
+  <section class="panel">
+    <div class="panel-header schools-header">
+      <div>
+        <span class="section-label dark">Subscription Alerts</span>
+        <h2>تنبيهات قرب انتهاء الاشتراك</h2>
+        <p>المدارس التي ستنتهي تجربتها أو اشتراكها قريبًا.</p>
+      </div>
+
+      <div class="filters">
+        <select id="alertsDaysFilter">
+          <option value="3">خلال 3 أيام</option>
+          <option value="7" selected>خلال 7 أيام</option>
+          <option value="15">خلال 15 يوم</option>
+          <option value="30">خلال 30 يوم</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="alertsList" class="alerts-list"></div>
+  </section>
+</div>
+
+<!-- Logs -->
+<div id="logsView" class="view hidden">
+  <section class="panel">
+    <div class="panel-header schools-header">
+      <div>
+        <span class="section-label dark">Activity Logs</span>
+        <h2>سجل عمليات Super Admin</h2>
+        <p>كل عمليات التفعيل، الإيقاف، الدخول كمدير، والإيقاف التلقائي.</p>
+      </div>
+
+      <div class="filters">
+        <input id="logsSearchInput" type="text" placeholder="بحث في السجل..." />
+        <select id="logsActionFilter">
+          <option value="">كل العمليات</option>
+          <option value="activate_trial">تفعيل تجربة</option>
+          <option value="activate_subscription">تفعيل اشتراك</option>
+          <option value="suspend_school">إيقاف مدرسة</option>
+          <option value="reactivate_school">فتح مدرسة</option>
+          <option value="impersonate_school_admin">دخول كمدير</option>
+          <option value="auto_expire_trial">انتهاء تجربة تلقائي</option>
+          <option value="auto_expire_subscription">انتهاء اشتراك تلقائي</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="activityLogsList" class="logs-list"></div>
+
+    <div class="pagination">
+      <button id="prevLogsPageBtn" class="btn btn-light">السابق</button>
+      <span id="logsPageInfo">صفحة 1</span>
+      <button id="nextLogsPageBtn" class="btn btn-light">التالي</button>
+    </div>
+  </section>
+</div>
+      </section>
+
+    </section>
+<div id="schoolDetailsModal" class="modal hidden">
+  <div class="modal-backdrop" onclick="closeSchoolDetailsModal()"></div>
+
+  <section class="modal-card">
+    <div class="modal-header">
+      <div>
+        <span class="section-label dark">School Profile</span>
+        <h2 id="detailsSchoolName">تفاصيل المدرسة</h2>
+        <p id="detailsSchoolMeta">—</p>
+      </div>
+
+      <button class="btn btn-light" onclick="closeSchoolDetailsModal()">إغلاق</button>
+    </div>
+
+    <div id="schoolDetailsContent" class="modal-body"></div>
+  </section>
+</div>
+    <div id="toast" class="toast hidden"></div>
+  </main>
+
+  <script src="./super-admin.js"></script>
+</body>
+</html>

@@ -6,16 +6,21 @@
 
   if (!bellBtn || !badgeEl) return; // مخفي بالصلاحية أو غير موجود
 
-  const API_BASE =
-    (window.location.port === "5501" || window.location.port === "5500")
-      ? "http://127.0.0.1:5000"
-      : "";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
-  function toApiUrl(path) {
-    if (!path) return API_BASE;
-    if (/^https?:\/\//i.test(path)) return path;
-    return `${API_BASE}${path}`;
+function toApiUrl(path) {
+  if (!path) return API_BASE;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  let cleanPath = String(path).replace(/^\/+/, "");
+
+  // يمنع تكرار /api/api لأن الاستدعاء الحالي يبدأ بـ /api
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
   }
+
+  return `${API_BASE}/${cleanPath}`;
+}
 
   function getStoredToken() {
     const possibleKeys = ["token", "accessToken", "authToken", "adminToken", "jwt"];

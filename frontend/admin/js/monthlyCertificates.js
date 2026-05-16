@@ -1,8 +1,22 @@
 (function () {
   "use strict";
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+  const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
+
+        let cleanPath = String(path || "").replace(/^\/+/, "");
+
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };
   const state = {
     certMeta: {},
     meta: {},
@@ -37,7 +51,7 @@
   }
 
   async function apiRequest(method, path, body) {
-    const url = `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+const url = apiUrl(path);
     const headers = { Accept: "application/json" };
 
     const token = getToken();

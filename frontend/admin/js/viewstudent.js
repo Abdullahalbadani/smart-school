@@ -10,8 +10,22 @@
 (function () {
   "use strict";
 
-  const API_BASE = window.API_BASE || "http://localhost:5000/api";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
+
+        let cleanPath = String(path || "").replace(/^\/+/, "");
+
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };
   const PUBLIC_BASE =
     window.STU_PUBLIC_BASE ||
     window.PUBLIC_APP_BASE ||
@@ -440,8 +454,7 @@
 
     // ===== Load lists =====
     async function loadStages() {
-      const res = await apiFetch(`${API_BASE}/stages`).catch(() => []);
-      const list = Array.isArray(res) ? res : res?.data || [];
+const res = await apiFetch(apiUrl("/stages")).catch(() => []);      const list = Array.isArray(res) ? res : res?.data || [];
       state.allStages = list;
 
       setSelect(stageEl, list, {
@@ -488,8 +501,7 @@
         return;
       }
 
-      const res = await apiFetch(`${API_BASE}/grades?stage_id=${encodeURIComponent(stageId)}`, {
-        signal: state.gradesAbort.signal,
+const res = await apiFetch(apiUrl(`/grades?stage_id=${encodeURIComponent(stageId)}`), {        signal: state.gradesAbort.signal,
       }).catch(() => []);
 
       const list = Array.isArray(res) ? res : res?.data || [];
@@ -518,8 +530,7 @@
         return;
       }
 
-      const res = await apiFetch(`${API_BASE}/sections?grade_id=${encodeURIComponent(gradeId)}`, {
-        signal: state.sectionsAbort.signal,
+const res = await apiFetch(apiUrl(`/sections?grade_id=${encodeURIComponent(gradeId)}`), {        signal: state.sectionsAbort.signal,
       }).catch(() => []);
 
       const list = Array.isArray(res) ? res : res?.data || [];
@@ -536,8 +547,8 @@
     }
 
     // ===== Students =====
-    function buildStudentsURL() {
-      const u = new URL(`${API_BASE}/students`);
+ function buildStudentsURL() {
+  const u = new URL(apiUrl("/students"), window.location.origin);
       const q = (state.filters.q || "").trim();
       if (q) u.searchParams.set("q", q);
 
@@ -836,16 +847,14 @@
 
     // ===== CRUD =====
     async function deleteStudent(id) {
-      await apiFetch(`${API_BASE}/students/${encodeURIComponent(id)}`, { method: "DELETE" });
-      toast("تم حذف الطالب ✅");
+await apiFetch(apiUrl(`/students/${encodeURIComponent(id)}`), { method: "DELETE" });      toast("تم حذف الطالب ✅");
       closeConfirm();
       closeDrawer();
       await loadStudents();
     }
 
     async function updateStudent(id, payload) {
-      const url = `${API_BASE}/students/${encodeURIComponent(id)}`;
-      try {
+const url = apiUrl(`/students/${encodeURIComponent(id)}`);      try {
         return await apiFetch(url, { method: "PUT", body: JSON.stringify(payload) });
       } catch (e1) {
         try {

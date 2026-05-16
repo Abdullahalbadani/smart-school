@@ -2,15 +2,23 @@
 (function () {
   "use strict";
 
-  console.log("✅ student-register.js loaded (parents search uses /api/parents?search=)");
 
   /* ===================== CONFIG ===================== */
-  const API_BASE = "http://localhost:5000"; // ✅ Backend origin (port 5000)
+/* ===================== CONFIG ===================== */
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
-  function toApiUrl(url) {
-    if (/^https?:\/\//i.test(url)) return url;
-    return API_BASE + (url.startsWith("/") ? url : "/" + url);
+function toApiUrl(url) {
+  if (/^https?:\/\//i.test(url)) return url;
+
+  let cleanPath = String(url || "").replace(/^\/+/, "");
+
+  // يمنع تكرار /api/api لأن بعض الاستدعاءات في هذا الملف تبدأ بـ /api
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
   }
+
+  return `${API_BASE}/${cleanPath}`;
+}
 
   /* ===================== Helpers ===================== */
   function $(selector, root) {
@@ -94,7 +102,7 @@
     });
 
     const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.message || "API error");
+   if (!res.ok) throw new Error(data.message || data.error || "API error");
     return data;
   }
 
@@ -112,7 +120,7 @@
     });
 
     const data = await safeJson(res);
-    if (!res.ok) throw new Error(data.message || "API error");
+    if (!res.ok) throw new Error(data.message || data.error || "API error");
     return data;
   }
 

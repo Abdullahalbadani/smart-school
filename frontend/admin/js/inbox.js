@@ -17,15 +17,20 @@
     searchDebounceTimer: null,
     eventsBound: false,
   };
-const API_BASE =
-  (window.location.port === "5501" || window.location.port === "5500")
-    ? "http://127.0.0.1:5000"
-    : "";
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
 function toApiUrl(path) {
   if (!path) return API_BASE;
   if (/^https?:\/\//i.test(path)) return path;
-  return `${API_BASE}${path}`;
+
+  let cleanPath = String(path).replace(/^\/+/, "");
+
+  // يمنع تكرار /api/api لأن بعض الاستدعاءات هنا تبدأ بـ /api
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
+  }
+
+  return `${API_BASE}/${cleanPath}`;
 }
   // ===== أدوات =====
   function qs(selector, root = document) {
@@ -663,7 +668,6 @@ if (typeof window.refreshNavbarNotificationCount === "function") {
 }
     }
 
-    console.log("✅ Admin Inbox initialized (API)");
   }
 
   function resetStateForReinit() {
@@ -673,10 +677,7 @@ if (typeof window.refreshNavbarNotificationCount === "function") {
     state.loading = false;
     clearTimeout(state.searchDebounceTimer);
     state.searchDebounceTimer = null;
-    // نُبقي filter/q كما هي لتحسين تجربة المستخدم عند إعادة فتح الصفحة
-    // إذا أردت التصفير الكامل:
-    // state.filter = "all";
-    // state.q = "";
+   
   }
 
   function resetAndInit() {
@@ -684,9 +685,7 @@ if (typeof window.refreshNavbarNotificationCount === "function") {
     init();
   }
 
-  // =========================================
-  // Public APIs (مفيد للربط لاحقًا مع Socket)
-  // =========================================
+ 
 
   window.initAdminInboxPage = resetAndInit;
 
@@ -717,7 +716,6 @@ if (typeof window.refreshNavbarNotificationCount === "function") {
 
       state.items.unshift(mapped);
 
-      // إذا لا يوجد عنصر محدد، حدده
       if (!state.selectedId) {
         state.selectedId = mapped.id;
       }
@@ -729,13 +727,11 @@ if (typeof window.refreshNavbarNotificationCount === "function") {
       await markNotificationAsRead(Number(id));
     },
 
-    // مفيد للجرس لاحقًا
     async fetchUnreadCount() {
       return fetchUnreadCountApi();
     },
   };
 
-  // محاولة تشغيل تلقائي إذا الصفحة موجودة مباشرة
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {

@@ -1,12 +1,10 @@
 (() => {
   "use strict";
 
-  const CONFIG = {
-API_BASE:
-  (window.location.port === "5501" || window.location.port === "5500")
-    ? "http://127.0.0.1:5000"
-    : "",
-        ENDPOINTS: {
+const CONFIG = {
+  API_BASE: String(window.API_BASE || "/api").replace(/\/+$/, ""),
+
+  ENDPOINTS: {
       academicYears: "/api/academic-years",
       grades: "/api/grades",
       classes: "/api/classes?gradeId=",
@@ -23,7 +21,15 @@ API_BASE:
 function toApiUrl(path) {
   if (!path) return CONFIG.API_BASE;
   if (/^https?:\/\//i.test(path)) return path;
-  return `${CONFIG.API_BASE}${path}`;
+
+  let cleanPath = String(path).replace(/^\/+/, "");
+
+  // يمنع تكرار /api/api لأن ENDPOINTS تبدأ بـ /api
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
+  }
+
+  return `${CONFIG.API_BASE}/${cleanPath}`;
 }
 
   function fmtDatePretty(iso) {

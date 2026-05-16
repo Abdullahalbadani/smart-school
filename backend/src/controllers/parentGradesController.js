@@ -65,6 +65,7 @@ function detectAssessmentKind(row) {
   const aggregateKind = String(row.aggregate_kind || "").toLowerCase();
   const title = `${row.title || ""} ${row.title_short || ""}`.toLowerCase();
 
+  // 1) الاختبارات الشهرية
   if (
     type.includes("monthly") ||
     examKind.includes("monthly") ||
@@ -74,6 +75,7 @@ function detectAssessmentKind(row) {
     return "monthly";
   }
 
+  // 2) الأعمال الفصلية / المحصلة
   if (
     type === "aggregate" ||
     type.includes("muhassala") ||
@@ -84,19 +86,8 @@ function detectAssessmentKind(row) {
     return "term_work";
   }
 
-  if (
-    type.includes("activity") ||
-    type.includes("homework") ||
-    type.includes("assignment") ||
-    type.includes("task") ||
-    type.includes("participation") ||
-    title.includes("نشاط") ||
-    title.includes("واجب") ||
-    title.includes("تكليف")
-  ) {
-    return "activities";
-  }
-
+  // 3) الاختبارات
+  // مهم: نضع الاختبارات قبل الأنشطة حتى لا تدخل "اختبار نصفي" ضمن النشاطات.
   if (
     type.includes("exam") ||
     type.includes("quiz") ||
@@ -105,6 +96,22 @@ function detectAssessmentKind(row) {
     title.includes("امتحان")
   ) {
     return "exams";
+  }
+
+  // 4) الأنشطة والتكليفات
+  if (
+    type.includes("activity") ||
+    type.includes("classwork") ||
+    type.includes("homework") ||
+    type.includes("assignment") ||
+    type.includes("task") ||
+    type.includes("participation") ||
+    title.includes("نشاط") ||
+    title.includes("نشاط صفي") ||
+    title.includes("واجب") ||
+    title.includes("تكليف")
+  ) {
+    return "activities";
   }
 
   return "other";

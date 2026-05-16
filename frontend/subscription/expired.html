@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>انتهى الاشتراك | Smart School</title>
+  <link rel="stylesheet" href="./expired.css" />
+</head>
+<body>
+  <main class="expired-page">
+    <div class="glow glow-a"></div>
+    <div class="glow glow-b"></div>
+
+    <section class="card">
+      <div class="logo">S</div>
+
+      <div class="badge" id="statusBadge">Subscription Required</div>
+
+      <h1 id="title">تم إيقاف الوصول للنظام</h1>
+
+      <p id="message">
+        لا يمكن الدخول إلى لوحة المدرسة حاليًا بسبب انتهاء الاشتراك أو إيقاف المدرسة من مالك النظام.
+      </p>
+
+      <div class="school-box">
+        <span>المدرسة</span>
+        <strong id="schoolName">—</strong>
+      </div>
+
+      <div class="info-grid">
+        <div>
+          <span>الحالة</span>
+          <strong id="statusText">—</strong>
+        </div>
+
+        <div>
+          <span>الخطة</span>
+          <strong id="planText">—</strong>
+        </div>
+
+        <div>
+          <span>نهاية التجربة</span>
+          <strong id="trialEndsAt">—</strong>
+        </div>
+
+        <div>
+          <span>نهاية الاشتراك</span>
+          <strong id="subscriptionEndsAt">—</strong>
+        </div>
+      </div>
+
+      <div class="actions">
+        <a href="/frontend/login/login.html" class="btn btn-light">
+          الرجوع لتسجيل الدخول
+        </a>
+
+        <button id="contactBtn" class="btn btn-primary">
+          تواصل مع مالك النظام
+        </button>
+      </div>
+
+      <p class="hint">
+        إذا كنت مدير المدرسة، يرجى التواصل مع مالك منصة Smart School لتجديد الاشتراك أو إعادة التفعيل.
+      </p>
+    </section>
+  </main>
+
+  <script src="./expired.js"></script>
+</body>
+</html>

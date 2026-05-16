@@ -16,30 +16,31 @@
      - Live Server 5501/5500 => backend 5000
      - مهم: credentials OMIT لتجنب CORS (لأننا نعتمد على Authorization token)
   ========================= */
-  const BACKEND_ORIGIN =
-    window.__BACKEND_ORIGIN__ ||
-    localStorage.getItem("BACKEND_ORIGIN") ||
-    (location.port === "5501" || location.port === "5500"
-      ? "http://127.0.0.1:5000"
-      : location.origin);
+/* =========================
+   API
+   يعتمد على frontend/shared/config.js
+========================= */
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
-  const API_BASE = BACKEND_ORIGIN.replace(/\/+$/, "") + "/api";
+const getToken = () =>
+  localStorage.getItem("token") ||
+  localStorage.getItem("access_token") ||
+  localStorage.getItem("accessToken") ||
+  localStorage.getItem("jwt") ||
+  localStorage.getItem("auth_token") ||
+  "";
 
-  const getToken = () =>
-    localStorage.getItem("token") ||
-    localStorage.getItem("access_token") ||
-    localStorage.getItem("accessToken") ||
-    localStorage.getItem("jwt") ||
-    localStorage.getItem("auth_token") ||
-    "";
+const buildUrl = (path) => {
+  if (/^https?:\/\//i.test(path)) return path;
 
-  const buildUrl = (path) => {
-    let p = String(path || "");
-    if (p.startsWith("http")) return p;
-    if (!p.startsWith("/")) p = "/" + p;
-    if (p.startsWith("/api/")) p = p.slice(4); // منع /api/api
-    return API_BASE + p;
-  };
+  let cleanPath = String(path || "").replace(/^\/+/, "");
+
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
+  }
+
+  return `${API_BASE}/${cleanPath}`;
+};
 
   const apiFetch = async (path, opts = {}) => {
     const url = buildUrl(path);

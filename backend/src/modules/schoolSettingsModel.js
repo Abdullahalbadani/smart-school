@@ -649,6 +649,7 @@ export async function updateSchoolProfile(
 }
 
 // جلب الإعدادات الأكاديمية (التقويم والدرجات)
+// جلب الإعدادات الأكاديمية (التقويم والدرجات)
 export async function getAcademicSettings(schoolId) {
   const r = await pool.query(
     `
@@ -664,7 +665,8 @@ export async function getAcademicSettings(schoolId) {
       final_muhassala_max_grade,
       final_term_max_grade,
       grading_scale AS final_max_grade,
-      pass_mark AS final_pass_mark
+      pass_mark AS final_pass_mark,
+      annual_failure_subjects_limit
     FROM school_settings
     WHERE school_id = $1
     `,
@@ -674,16 +676,21 @@ export async function getAcademicSettings(schoolId) {
   return r.rows[0] || {
     week_start_day: 6,
     working_days: ["sat", "sun", "mon", "tue", "wed"],
+
     monthly_exam_max_grade: 20,
+
     midterm_exam_max_grade: 30,
     midterm_muhassala_max_grade: 20,
     midterm_max_grade: 50,
     midterm_pass_mark: 20,
+
     final_exam_max_grade: 30,
     final_muhassala_max_grade: 20,
     final_term_max_grade: 50,
     final_max_grade: 100,
     final_pass_mark: 50,
+
+    annual_failure_subjects_limit: 1,
   };
 }
 export async function updateAcademicSettings(schoolId, data) {
@@ -702,6 +709,18 @@ export async function updateAcademicSettings(schoolId, data) {
   const midtermPass = toInt(data.midterm_pass) ?? 20;
   const finalPass = toInt(data.final_pass) ?? 50;
 
+  const annualFailureSubjectsLimitRaw = toInt(data.annual_failure_subjects_limit);
+  const annualFailureSubjectsLimit =
+    annualFailureSubjectsLimitRaw && annualFailureSubjectsLimitRaw > 0
+      ? annualFailureSubjectsLimitRaw
+      : 1;
+
+  const workingDays = Array.isArray(data.working_days)
+    ? data.working_days
+    : [];
+
+  const workingDaysJson = JSON.stringify(workingDays);
+
   const r = await pool.query(
     `
     INSERT INTO school_settings (
@@ -718,12 +737,13 @@ export async function updateAcademicSettings(schoolId, data) {
       final_term_max_grade,
       grading_scale,
       pass_mark,
+      annual_failure_subjects_limit,
       updated_at
     )
     VALUES (
       $1,
       $2,
-      $3,
+      $3::jsonb,
       $4,
       $5,
       $6,
@@ -734,6 +754,7 @@ export async function updateAcademicSettings(schoolId, data) {
       $11,
       $12,
       $13,
+      $14,
       NOW()
     )
     ON CONFLICT (school_id) DO UPDATE SET
@@ -749,23 +770,29 @@ export async function updateAcademicSettings(schoolId, data) {
       final_term_max_grade = EXCLUDED.final_term_max_grade,
       grading_scale = EXCLUDED.grading_scale,
       pass_mark = EXCLUDED.pass_mark,
+      annual_failure_subjects_limit = EXCLUDED.annual_failure_subjects_limit,
       updated_at = NOW()
     RETURNING *
     `,
     [
       schoolId,
       data.week_start_day,
-      data.working_days,
+      workingDaysJson,
+
       monthlyExamMax,
+
       midtermExamMax,
       midtermMuhassalaMax,
       midtermMax,
       midtermPass,
+
       finalExamMax,
       finalMuhassalaMax,
       finalTermMax,
       String(finalMax),
       finalPass,
+
+      annualFailureSubjectsLimit,
     ]
   );
 

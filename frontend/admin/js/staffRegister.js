@@ -2,10 +2,23 @@
 (function () {
   "use strict";
 
-  console.log("staffRegister.js loaded ✅");
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
-  const $ = (sel, root = document) => root.querySelector(sel);
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
+
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
+
+        let cleanPath = String(path || "").replace(/^\/+/, "");
+
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };  const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   function authHeaders() {
@@ -13,8 +26,8 @@
     return token ? { Authorization: "Bearer " + token } : {};
   }
 
-  async function apiFetch(path, opts = {}) {
-    const url = path.startsWith("http") ? path : API_BASE + path;
+ async function apiFetch(path, opts = {}) {
+  const url = apiUrl(path);
 
     const r = await fetch(url, {
       ...opts,
@@ -1068,7 +1081,6 @@
     if (state._inited) return;
     state._inited = true;
 
-    console.log("staffRegister init ✅");
 
     bindEvents();
     resetForm({ toForm: true });

@@ -571,22 +571,53 @@ export async function academicUpdate(req, res) {
     const schoolId = req.user?.school_id;
     if (!schoolId) return res.status(401).json({ error: "غير مصرح" });
 
-    const daysMap = { saturday: 6, sunday: 0, monday: 1 };
+    const daysMap = {
+      saturday: 6,
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+
+      sat: 6,
+      sun: 0,
+      mon: 1,
+      tue: 2,
+      wed: 3,
+      thu: 4,
+      fri: 5,
+    };
+
     const weekStartNum = daysMap[req.body.week_start_day] ?? 6;
+
+    const annualFailureSubjectsLimit =
+      toInt(
+        req.body.annual_failure_subjects_limit ??
+          req.body.annualFailureSubjectsLimit
+      ) || 1;
 
     const payload = {
       week_start_day: weekStartNum,
-      working_days: Array.isArray(req.body.working_days) ? req.body.working_days : [],
+      working_days: Array.isArray(req.body.working_days)
+        ? req.body.working_days
+        : [],
+
       monthly_exam_max: toInt(req.body.monthly_exam_max) || 20,
+
       midterm_exam_max: toInt(req.body.midterm_exam_max) || 30,
       midterm_muhassala_max: toInt(req.body.midterm_muhassala_max) || 20,
       midterm_max: toInt(req.body.midterm_max) || 50,
       midterm_pass: toInt(req.body.midterm_pass) || 20,
+
       final_exam_max: toInt(req.body.final_exam_max) || 30,
       final_muhassala_max: toInt(req.body.final_muhassala_max) || 20,
       final_term_max: toInt(req.body.final_term_max) || 50,
       final_max: toInt(req.body.final_max) || 100,
       final_pass: toInt(req.body.final_pass) || 50,
+
+      annual_failure_subjects_limit:
+        annualFailureSubjectsLimit > 0 ? annualFailureSubjectsLimit : 1,
     };
 
     const row = await updateAcademicSettings(schoolId, payload);

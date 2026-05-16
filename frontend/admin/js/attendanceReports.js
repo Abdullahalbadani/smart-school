@@ -10,41 +10,57 @@
   // =========================
   // Config
   // =========================
-  const API_ORIGIN = "http://127.0.0.1:5000";
-  const API_ADMIN_REPORTS = `${API_ORIGIN}/api/admin/reports`;
+// =========================
+// Config
+// =========================
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
-  const EP = {
-    // Reports (protected by authMiddleware in app.js)
-    studentsReport: `${API_ADMIN_REPORTS}/attendance/students`,
-    studentDetails: (id) => `${API_ADMIN_REPORTS}/attendance/students/${id}/details`,
-    teachersReport: `${API_ADMIN_REPORTS}/attendance/teachers`,
-    teacherDetails: (id) => `${API_ADMIN_REPORTS}/attendance/teachers/${id}/details`,
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
 
-    // Filters (public in app.js as you registered them)
-    years: [
-      `${API_ORIGIN}/api/academic-years`,
-      `${API_ORIGIN}/api/academic_years`,
-    ],
-    stages: [
-      `${API_ORIGIN}/api/stages`,
-    ],
-    gradesByStage: (stageId) => ([
-      `${API_ORIGIN}/api/grades?stage_id=${encodeURIComponent(stageId)}`,
-      `${API_ORIGIN}/api/grades?stageId=${encodeURIComponent(stageId)}`,
-    ]),
-    sectionsByGrade: (gradeId) => ([
-      `${API_ORIGIN}/api/sections?grade_id=${encodeURIComponent(gradeId)}`,
-      `${API_ORIGIN}/api/sections?gradeId=${encodeURIComponent(gradeId)}`,
-    ]),
+        let cleanPath = String(path || "").replace(/^\/+/, "");
 
-    // No clear route in your app.js for listing reasons; keep as empty fallback (won't break)
-    attendanceReasons: [
-      `${API_ORIGIN}/api/attendance-reasons`,
-      `${API_ORIGIN}/api/attendance_reasons`,
-      `${API_ORIGIN}/api/admin/attendance-reasons`,
-      `${API_ORIGIN}/api/admin/attendance_reasons`,
-    ],
-  };
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };
+
+const EP = {
+  // Reports
+  studentsReport: "/admin/reports/attendance/students",
+  studentDetails: (id) => `/admin/reports/attendance/students/${id}/details`,
+  teachersReport: "/admin/reports/attendance/teachers",
+  teacherDetails: (id) => `/admin/reports/attendance/teachers/${id}/details`,
+
+  // Filters
+  years: [
+    "/academic-years",
+    "/academic_years",
+  ],
+  stages: [
+    "/stages",
+  ],
+  gradesByStage: (stageId) => [
+    `/grades?stage_id=${encodeURIComponent(stageId)}`,
+    `/grades?stageId=${encodeURIComponent(stageId)}`,
+  ],
+  sectionsByGrade: (gradeId) => [
+    `/sections?grade_id=${encodeURIComponent(gradeId)}`,
+    `/sections?gradeId=${encodeURIComponent(gradeId)}`,
+  ],
+
+  attendanceReasons: [
+    "/attendance-reasons",
+    "/attendance_reasons",
+    "/admin/attendance-reasons",
+    "/admin/attendance_reasons",
+  ],
+};
 
   // =========================
   // State
@@ -116,20 +132,27 @@
     if (Array.isArray(data.results)) return data.results;
     return [];
   };
+const apiGet = async (path, params = {}) => {
+  const u = new URL(apiUrl(path), window.location.origin);
 
-  const apiGet = async (url, params = {}) => {
-    const u = new URL(url);
-    Object.entries(params || {}).forEach(([k, v]) => {
-      if (v === "" || v === null || v === undefined) return;
-      u.searchParams.set(k, String(v));
-    });
+  Object.entries(params || {}).forEach(([k, v]) => {
+    if (v === "" || v === null || v === undefined) return;
+    u.searchParams.set(k, String(v));
+  });
 
-    const res = await fetch(u.toString(), { headers: buildHeaders() });
-    const data = await parseJsonSafe(res);
-    const ok = normalizeSuccess(data, res.ok);
-    if (!ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-    return data;
-  };
+  const res = await fetch(u.toString(), {
+    headers: buildHeaders(),
+  });
+
+  const data = await parseJsonSafe(res);
+  const ok = normalizeSuccess(data, res.ok);
+
+  if (!ok) {
+    throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+  }
+
+  return data;
+};
 
   const apiGetFirstOk = async (urls, params = {}) => {
     let lastErr = null;

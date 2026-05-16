@@ -61,7 +61,7 @@ const attendanceReportsController = {
   // =========================================================
   async getStudentsAttendanceReport(req, res) {
     try {
-      const schoolId = req.user?.school_id; // ✅ Multi-tenant
+      const schoolId = req.user?.school_id; 
       if (!schoolId) return res.status(401).json({ success: false, message: "غير مصرح" });
 
       const year_id = toInt(req.query.year_id);
@@ -87,18 +87,16 @@ const attendanceReportsController = {
       const limit = clamp(toInt(req.query.limit, 25), 5, 300);
       const offset = (page - 1) * limit;
 
-      const params = [schoolId]; // $1
+      const params = [schoolId]; 
       const whereEnroll = [`se.school_id = $1`, `s.school_id = $1`];
       const whereSess = [`ses.school_id = $1`];
 
-      // Enrollment filters
       if (year_id) { params.push(year_id); whereEnroll.push(`se.academic_year_id = $${params.length}`); }
       if (term_id) { params.push(term_id); whereEnroll.push(`se.term = $${params.length}`); }
       if (stage_id) { params.push(stage_id); whereEnroll.push(`se.stage_id = $${params.length}`); }
       if (grade_id) { params.push(grade_id); whereEnroll.push(`se.grade_id = $${params.length}`); }
       if (section_id) { params.push(section_id); whereEnroll.push(`se.section_id = $${params.length}`); }
 
-      // ✅ فلترة قائمة الطلاب
       if (status || method) {
         let subConds = ["ae_sub.student_id = s.id", "ae_sub.school_id = $1", "ses_sub.school_id = $1"];
         if (status) subConds.push(`ae_sub.status = '${status}'`);
@@ -120,7 +118,6 @@ const attendanceReportsController = {
         whereEnroll.push(`(s.full_name ILIKE $${params.length} OR s.student_code::text ILIKE $${params.length})`);
       }
 
-      // ✅ إصلاح: Session filters (استخدام المصفوفة الصحيحة whereSess)
       if (year_id) { params.push(year_id); whereSess.push(`ses.academic_year_id = $${params.length}`); }
       if (term_id) { params.push(term_id); whereSess.push(`ses.term = $${params.length}`); }
       if (stage_id) { params.push(stage_id); whereSess.push(`ses.stage_id = $${params.length}`); }
@@ -223,7 +220,7 @@ const attendanceReportsController = {
   // 2) تفاصيل الطالب
   // =========================================================
   async getStudentAttendanceDetails(req, res) {
-    const schoolId = req.user?.school_id; // ✅ Multi-tenant
+    const schoolId = req.user?.school_id;
     if (!schoolId) return res.status(401).json({ success: false, message: "غير مصرح" });
 
     const studentId = toInt(req.params.id);
@@ -235,7 +232,7 @@ const attendanceReportsController = {
       const from = parseDate(req.query.from);
       const to = parseDate(req.query.to);
 
-      const params = [studentId, schoolId]; // $1, $2
+      const params = [studentId, schoolId]; 
       const whereSess = [`ses.school_id = $2`, `ae.school_id = $2`];
 
       if (year_id) { params.push(year_id); whereSess.push(`ses.academic_year_id = $${params.length}`); }
@@ -327,11 +324,11 @@ const attendanceReportsController = {
   },
 
   // =========================================================
-  // 3) تقارير المعلمين (الاستعلام النهائي المطابق للبيانات الفعلية)
+  // 3) تقارير المعلمين (تم التنظيف من tae.school_id)
   // =========================================================
   async getTeachersAttendanceReport(req, res) {
     try {
-      const schoolId = req.user?.school_id; // ✅ Multi-tenant
+      const schoolId = req.user?.school_id; 
       if (!schoolId) return res.status(401).json({ success: false, message: "غير مصرح" });
 
       const year_id = toInt(req.query.year_id);
@@ -354,9 +351,9 @@ const attendanceReportsController = {
       const limit = clamp(toInt(req.query.limit, 25), 5, 300);
       const offset = (page - 1) * limit;
 
-      const params = [schoolId]; // $1
+      const params = [schoolId]; 
       const whereTeacher = [`t.school_id = $1`];
-      const whereAttend = [`tae.school_id = $1`];
+      const whereAttend = [`tad.school_id = $1`]; // ✅ تم الإصلاح إلى tad
 
       if (teacher_id) { params.push(teacher_id); whereTeacher.push(`t.id = $${params.length}`); }
       if (search) { params.push(`%${search}%`); whereTeacher.push(`t.full_name ILIKE $${params.length}`); }
@@ -364,19 +361,13 @@ const attendanceReportsController = {
       if (from) { params.push(from); whereAttend.push(`tae.recorded_at::date >= $${params.length}::date`); }
       if (to) { params.push(to); whereAttend.push(`tae.recorded_at::date <= $${params.length}::date`); }
 
-      // ✅ فلترة المعلمين مع سحب `is_locked` من جدول `teacher_attendance_days` (tad)
       if (status || method || locked) {
-        let subConds = ["tae_sub.teacher_id = t.id", "tae_sub.school_id = $1"];
-        let subJoin = "";
+        let subJoin = `JOIN teacher_attendance_days tad_sub ON tad_sub.id = tae_sub.day_id`; // ✅ تأمين الـ JOIN دائماً
+        let subConds = ["tae_sub.teacher_id = t.id", "tad_sub.school_id = $1"]; // ✅ استخدام tad_sub
 
         if (status) subConds.push(`tae_sub.status = '${status}'`);
         if (method) subConds.push(`tae_sub.method = '${method}'`);
-        
-        if (locked) {
-          subJoin = `JOIN teacher_attendance_days tad_sub ON tad_sub.id = tae_sub.day_id`;
-          subConds.push(`tad_sub.is_locked = ${locked}`);
-          subConds.push(`tad_sub.school_id = $1`);
-        }
+        if (locked) subConds.push(`tad_sub.is_locked = ${locked}`);
 
         if (from) subConds.push(`tae_sub.recorded_at::date >= '${from}'::date`);
         if (to) subConds.push(`tae_sub.recorded_at::date <= '${to}'::date`);
@@ -388,12 +379,11 @@ const attendanceReportsController = {
         )`);
       }
 
-      let taeFilter = " AND tae.school_id = $1";
+      let taeFilter = " AND tad.school_id = $1"; // ✅ تم الإصلاح
       if (status) taeFilter += ` AND tae.status = '${status}'`;
       if (method) taeFilter += ` AND tae.method = '${method}'`;
       if (locked) taeFilter += ` AND tad.is_locked = ${locked}`;
 
-      // يتم دائماً عمل JOIN لجدول الأيام لأن is_locked موجود بداخله
       const baseSql = `
         WITH teacher_stats AS (
           SELECT
@@ -426,14 +416,15 @@ const attendanceReportsController = {
           (
             SELECT tae2.method 
             FROM teacher_attendance_entries tae2 
-            WHERE tae2.teacher_id = t.id AND tae2.school_id = $1 AND tae2.method IS NOT NULL AND tae2.method != ''
+            JOIN teacher_attendance_days tad2 ON tad2.id = tae2.day_id 
+            WHERE tae2.teacher_id = t.id AND tad2.school_id = $1 AND tae2.method IS NOT NULL AND tae2.method != ''
             ORDER BY tae2.recorded_at DESC LIMIT 1
           ) AS method,
           (
             SELECT tad2.is_locked 
             FROM teacher_attendance_entries tae2 
-            JOIN teacher_attendance_days tad2 ON tad2.id = tae2.day_id AND tad2.school_id = $1
-            WHERE tae2.teacher_id = t.id AND tae2.school_id = $1 AND tad2.is_locked IS NOT NULL
+            JOIN teacher_attendance_days tad2 ON tad2.id = tae2.day_id 
+            WHERE tae2.teacher_id = t.id AND tad2.school_id = $1 AND tad2.is_locked IS NOT NULL
             ORDER BY tae2.recorded_at DESC LIMIT 1
           ) AS is_locked
         FROM teachers t
@@ -456,10 +447,10 @@ const attendanceReportsController = {
   },
 
   // =========================================================
-  // 4) تفاصيل المعلم
+  // 4) تفاصيل المعلم (تم التنظيف أيضاً)
   // =========================================================
   async getTeacherAttendanceDetails(req, res) {
-    const schoolId = req.user?.school_id; // ✅ Multi-tenant
+    const schoolId = req.user?.school_id;
     if (!schoolId) return res.status(401).json({ success: false, message: "غير مصرح" });
 
     const teacherId = toInt(req.params.id);
@@ -472,17 +463,16 @@ const attendanceReportsController = {
       const from = parseDate(req.query.from) || range.from;
       const to = parseDate(req.query.to) || range.to;
 
-      const params = [teacherId, schoolId]; // $1, $2
-      const whereAttend = [`tae.school_id = $2`];
+      const params = [teacherId, schoolId]; 
+      const whereAttend = [`tad.school_id = $2`]; // ✅ تم الإصلاح إلى tad
       const wherePermits = [`tpr.school_id = $2`];
       const whereSubs = [`ls.school_id = $2`];
 
-      let yearJoin = "";
+      let yearJoin = "JOIN teacher_attendance_days tad ON tad.id = tae.day_id"; // ✅ تأمين الـ JOIN للجميع
       let yearCond = "";
       if (year_id) {
         params.push(year_id);
-        yearJoin = "JOIN teacher_attendance_days tad ON tad.id = tae.day_id";
-        yearCond = `AND tad.academic_year_id = $${params.length} AND tad.school_id = $2`;
+        yearCond = `AND tad.academic_year_id = $${params.length}`;
       }
 
       if (from) {

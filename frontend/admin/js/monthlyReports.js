@@ -7,8 +7,7 @@
     loading: false,
   };
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
-
+const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
   const $ = (selector, root = document) => root.querySelector(selector);
 
   function root() {
@@ -28,9 +27,16 @@
   }
 
   function apiUrl(path) {
-    if (path.startsWith("http")) return path;
-    return `${API_BASE}${path.startsWith("/") ? path : `/${path}`}`;
+  if (/^https?:\/\//i.test(path)) return path;
+
+  let cleanPath = String(path || "").replace(/^\/+/, "");
+
+  if (cleanPath.startsWith("api/")) {
+    cleanPath = cleanPath.slice(4);
   }
+
+  return `${API_BASE}/${cleanPath}`;
+}
 
   async function apiGet(path) {
     const res = await fetch(apiUrl(path), {
@@ -416,24 +422,7 @@ function renderApprovalInfo(data) {
     `;
   }
 
-  function renderData(data) {
-    const result = $("#mrResult", root());
-    const printBtn = $("#mrPrintBtn", root());
-
-    if (!result) return;
-
-    state.lastData = data;
-
-    if (printBtn) {
-      printBtn.disabled = false;
-    }
-
-    result.innerHTML = `
-      ${renderSummary(data)}
-      ${renderAssessmentsInfo(data)}
-      ${renderTable(data)}
-    `;
-  }
+ 
 function renderData(data) {
   const result = $("#mrResult", root());
 
@@ -650,11 +639,7 @@ $("#mrReturnBtn", rootEl).disabled = true;
       setMessage("اختر البيانات المطلوبة ثم اضغط عرض الأعمال.");
     });
 
-    $("#mrLoadBtn", rootEl)?.addEventListener("click", loadTermWorks);
-
-    $("#mrPrintBtn", rootEl)?.addEventListener("click", () => {
-      window.print();
-    });
+ 
     $("#mrLoadBtn", rootEl)?.addEventListener("click", loadTermWorks);
 
 $("#mrApproveBtn", rootEl)?.addEventListener("click", approveCurrentWorks);

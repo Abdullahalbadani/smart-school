@@ -4,10 +4,28 @@
 (function () {
   "use strict";
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
-  const SERVER_URL = API_BASE.replace('/api', '');
-  const $id = (id) => document.getElementById(id);
+  const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
 
+const apiUrl =
+  typeof window.apiUrl === "function"
+    ? window.apiUrl
+    : function (path = "") {
+        if (/^https?:\/\//i.test(path)) return path;
+
+        let cleanPath = String(path || "").replace(/^\/+/, "");
+
+        if (cleanPath.startsWith("api/")) {
+          cleanPath = cleanPath.slice(4);
+        }
+
+        return `${API_BASE}/${cleanPath}`;
+      };
+
+const SERVER_URL = String(
+  window.API_ORIGIN || window.location.origin
+).replace(/\/+$/, "");
+
+const $id = (id) => document.getElementById(id);
   function authHeaders() {
     const token = localStorage.getItem("token");
     return token ? { Authorization: "Bearer " + token } : {};
@@ -71,10 +89,9 @@
         if (currentSchoolId) schoolIdParam = `?schoolId=${currentSchoolId}`;
       }
 
-      const r = await fetch(`${API_BASE}/dashboard/stats${schoolIdParam}`, {
-        headers: { ...authHeaders() },
-      });
-
+      const r = await fetch(apiUrl(`/dashboard/stats${schoolIdParam}`), {
+  headers: { ...authHeaders() },
+});
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data?.message || "فشل تحميل الإحصائيات");
 
@@ -150,10 +167,10 @@
 
     try {
       // إرسال التاريخ في مسار الـ API كـ Query Parameter (?date=...)
-      const response = await fetch(`${API_BASE}/activities/recent?date=${selectedDate}`, {
-        method: 'GET',
-        headers: { ...authHeaders(), 'Content-Type': 'application/json' }
-      });
+     const response = await fetch(apiUrl(`/activities/recent?date=${selectedDate}`), {
+  method: "GET",
+  headers: { ...authHeaders(), "Content-Type": "application/json" },
+});
 
       const result = await response.json();
       if (!response.ok) throw new Error(result.message || 'فشل جلب البيانات');
@@ -168,11 +185,7 @@
 
       container.innerHTML = '';
 
-      const actionNamesAr = { 'CREATE': 'إضافة', 'UPDATE': 'تعديل', 'DELETE': 'حذف' };
-      const resourceNamesAr = {
-        'students': 'طالب', 'fees': 'بيانات مالية', 'roles': 'صلاحيات نظام',
-        'users': 'مستخدم', 'employees': 'موظف', 'schools': 'إعدادات المدرسة', 'system': 'تغيير بالنظام'
-      };
+      
 
 result.data.forEach(activity => {
         const dateObj = new Date(activity.created_at);
@@ -256,15 +269,15 @@ result.data.forEach(activity => {
       if (textEl && schoolName !== "Smart School") textEl.textContent = schoolName.charAt(0);
 
       if (logoUrl && imgEl && textEl) {
-        imgEl.src = logoUrl.startsWith('http') ? logoUrl : `${SERVER_URL}${logoUrl}`;
-        imgEl.style.display = "block";
+const cleanLogoUrl = logoUrl.startsWith("/") ? logoUrl : `/${logoUrl}`;
+imgEl.src = logoUrl.startsWith("http") ? logoUrl : `${SERVER_URL}${cleanLogoUrl}`;        imgEl.style.display = "block";
         textEl.style.display = "none";
       }
 
       // التحديث في الخلفية من السيرفر
-      const r = await fetch(`${API_BASE}/profile/me`, {
-        headers: { ...authHeaders() }
-      });
+     const r = await fetch(apiUrl("/profile/me"), {
+  headers: { ...authHeaders() },
+});
 
       if (r.ok) {
         const data = await r.json();
@@ -275,8 +288,13 @@ result.data.forEach(activity => {
         }
 
         if (schoolData.logo_url && imgEl && textEl) {
-           const freshLogoUrl = schoolData.logo_url.startsWith('http') ? schoolData.logo_url : `${SERVER_URL}${schoolData.logo_url}`;
-           imgEl.src = freshLogoUrl;
+const cleanFreshLogoUrl = schoolData.logo_url.startsWith("/")
+  ? schoolData.logo_url
+  : `/${schoolData.logo_url}`;
+
+const freshLogoUrl = schoolData.logo_url.startsWith("http")
+  ? schoolData.logo_url
+  : `${SERVER_URL}${cleanFreshLogoUrl}`;           imgEl.src = freshLogoUrl;
            imgEl.style.display = "block";
            textEl.style.display = "none";
            
