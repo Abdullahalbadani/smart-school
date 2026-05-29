@@ -2,7 +2,7 @@
 (function () {
   "use strict";
 
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+  const API_BASE = window.API_BASE || "/api";
   window.API_BASE = API_BASE;
 
   function authHeaders() {

@@ -214,7 +214,7 @@ function todayISO() {
   /* =========================
      ✅ API wrappers (ثابتة + أكثر صلابة)
   ========================= */
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+  const API_BASE = window.API_BASE || "/api";
 
   function authHeaders() {
     const token = localStorage.getItem("token");

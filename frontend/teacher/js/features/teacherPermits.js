@@ -24,7 +24,7 @@
   const BACKEND_ORIGIN =
     window.__BACKEND_ORIGIN__ ||
     localStorage.getItem("BACKEND_ORIGIN") ||
-    (location.port === "5501" ? "http://127.0.0.1:5000" : location.origin);
+    (location.port === "5501" ? window.location.origin : location.origin);
 
   const buildUrl = (path) => {
     let p = String(path || "");

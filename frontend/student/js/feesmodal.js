@@ -5,7 +5,7 @@
   window.__STUDENT_FEES_MODAL_LOADED__ = true;
 
   const API_BASE = String(
-    window.API_BASE || localStorage.getItem("API_BASE") || "http://127.0.0.1:5000/api"
+    window.API_BASE || localStorage.getItem("API_BASE") || "/api"
   ).replace(/\/+$/, "");
 
   const $ = (sel, root = document) => root.querySelector(sel);
@@ -207,7 +207,7 @@
  async function loadAndRender() {
     console.log("[student fees] loadAndRender");
 
-    const data = await apiGet(`http://127.0.0.1:5000/api/student/fees/overview`);
+    const data = await apiGet(`/api/student/fees/overview`);
     console.log("[student fees] overview response =", data);
 
     const subEl = $("#feesStudentSub");

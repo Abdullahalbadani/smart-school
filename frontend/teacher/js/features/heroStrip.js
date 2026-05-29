@@ -5,7 +5,7 @@
   /* =====================
      Config / Helpers
   ====================== */
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+  const API_BASE = window.API_BASE || "/api";
 
   const TT_LS_YEAR = "TT_YEAR_ID";
   const TT_LS_TERM = "TT_TERM";
@@ -217,7 +217,7 @@ safeSet("teacher-name-pill", `أ. ${name}`);
     
     try {
       // 🟢 المسار الصحيح مع كلمة permits
-      const url = (window.API_BASE || "http://127.0.0.1:5000/api") + `/teacher/permits/substitutions/${subId}/respond`;
+      const url = (window.API_BASE || "/api") + `/teacher/permits/substitutions/${subId}/respond`;
       const token = localStorage.getItem("token");
 
       const res = await fetch(url, {
@@ -268,7 +268,7 @@ safeSet("teacher-name-pill", `أ. ${name}`);
     // ⚡ السحر الحي (Socket.io) - التحديث الفوري للبطاقات بدون Refresh
     if (typeof io !== "undefined") {
       // 🟢 نحدد الرابط الصافي للسيرفر لتجنب أي تعارض
-      const socket = io("http://127.0.0.1:5000");
+      const socket = io();
       
       socket.on("connect", () => {
         console.log("🟢 [Socket] متصل بالسيرفر الحي بنجاح!");

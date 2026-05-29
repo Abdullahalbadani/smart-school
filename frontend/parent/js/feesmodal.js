@@ -4,7 +4,7 @@
   if (window.__PARENT_FEES_MODAL_LOADED__) return;
   window.__PARENT_FEES_MODAL_LOADED__ = true;
 
-  const API_BASE = "http://127.0.0.1:5000/api";
+  const API_BASE = "/api";
   const ACTIVE_CHILD_KEY = "parent_active_child_id";
 
   const $ = (sel, root = document) => root.querySelector(sel);

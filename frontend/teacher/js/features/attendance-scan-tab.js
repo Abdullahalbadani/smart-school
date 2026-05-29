@@ -66,7 +66,7 @@
   }
 
   // ---------- API wrappers (optional; not required for scan itself) ----------
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+  const API_BASE = window.API_BASE || "/api";
 
   function authHeaders() {
     const token = localStorage.getItem("token");

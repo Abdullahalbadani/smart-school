@@ -3,7 +3,7 @@
   "use strict";
 
   /* ===================== CONFIG ===================== */
-  const API_BASE = window.API_BASE || "http://127.0.0.1:5000/api";
+  const API_BASE = window.API_BASE || "/api";
   const THEME_KEY = "smart_theme";
   const ACTIVE_CHILD_KEY = "parent_active_child_id";
   const TAB_KEY = "parent_modal_tables_tab"; // weekly | exams

@@ -1,6 +1,6 @@
 (function () {
   // ✅ Backend origin
-  const BACKEND_ORIGIN = "http://127.0.0.1:5000";
+  const BACKEND_ORIGIN = window.location.origin;
 
   // ✅ Teacher notifications base
   const API_BASE = `${BACKEND_ORIGIN}/api/teacher/notifications`;

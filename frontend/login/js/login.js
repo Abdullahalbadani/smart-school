@@ -9,14 +9,33 @@ const API_BASE = "/api";
 
   // --- دالة استخراج معرف المدرسة (Slug) من الرابط ---
  function getSchoolSlug() {
-    const hostname = window.location.hostname;
-    const parts = hostname.split('.');
-    
-    // إذا كان الرابط يحتوي على subdomain (مثل nahda.localhost)
-    if (parts.length >= 2 && parts[parts.length - 1] === 'localhost') {
-        return parts[0]; // سيعيد nahda أو majd
+    const params = new URLSearchParams(window.location.search);
+    const fromQuery = String(params.get("school") || params.get("slug") || "").trim().toLowerCase();
+
+    if (fromQuery) {
+        localStorage.setItem("school_slug", fromQuery);
+        return fromQuery;
     }
-    return "smart-school"; // الافتراضي
+
+    const fromStorage = String(localStorage.getItem("school_slug") || "").trim().toLowerCase();
+    if (fromStorage) return fromStorage;
+
+    const hostname = window.location.hostname;
+    const parts = hostname.split(".");
+
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+        return "smart-school";
+    }
+
+    if (hostname.endsWith(".localhost")) {
+        return parts[0];
+    }
+
+    if (parts.length > 2 && !hostname.endsWith(".onrender.com")) {
+        return parts[0];
+    }
+
+    return "smart-school";
 }
 
   function $(sel, root = document) {

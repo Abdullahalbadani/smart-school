@@ -39,10 +39,9 @@ document.getElementById('schoolRegisterForm').addEventListener('submit', async (
     alert('تم تسجيل مدرستك بنجاح!');
 
     const slug = document.getElementById('slug').value.trim().toLowerCase();
-    const newDomain = `${slug}.${window.location.host}`;
-    const loginUrl = `http://${newDomain}/frontend/login/login.html`;
+    localStorage.setItem("school_slug", slug);
+    const loginUrl = `/frontend/login/login.html?school=${encodeURIComponent(slug)}`;
 
-    window.history.replaceState(null, '', loginUrl);
     window.location.replace(loginUrl);
 }else {
             if (result.details && Array.isArray(result.details)) {

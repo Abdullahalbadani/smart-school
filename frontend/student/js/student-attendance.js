@@ -8,7 +8,7 @@
   const $ = (id) => document.getElementById(id);
 
   const API_BASE = String(
-    window.API_BASE || localStorage.getItem("API_BASE") || "http://127.0.0.1:5000"
+    window.API_BASE || localStorage.getItem("API_BASE") || window.location.origin
   ).replace(/\/+$/, "");
 
   function toast(msg) {
