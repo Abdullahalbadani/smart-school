@@ -826,17 +826,17 @@ export async function createReopenRequest(req, res) {
     if (!(assessment.status === "closed" || gradeState.anyPublished)) {
       throw badRequest("يمكن طلب إعادة الفتح فقط بعد نشر الدرجات أو بعد إغلاق التقييم.");
     }
-
-    const existsQ = await pool.query(
-      `
-      SELECT id
-      FROM assessment_reopen_requests
-      WHERE assessment_id = $1
-        AND status = 'pending'
-      LIMIT 1
-      `,
-      [assessmentId]
-    );
+const existsQ = await pool.query(
+  `
+  SELECT id
+  FROM assessment_reopen_requests
+  WHERE school_id = $1
+    AND assessment_id = $2
+    AND status = 'pending'
+  LIMIT 1
+  `,
+  [schoolId, assessmentId]
+);
 
     if (existsQ.rows.length) {
       throw badRequest("يوجد طلب إعادة فتح معلق لهذا التقييم بالفعل.");

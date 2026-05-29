@@ -1,672 +1,78 @@
-<section id="monthlyCertificatesPage" class="mcert-page" dir="rtl">
-  <style>
-    .mcert-page {
-      padding: 18px;
-      color: #e5e7eb;
-    }
-
-    .mcert-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 14px;
-      flex-wrap: wrap;
-      margin-bottom: 18px;
-    }
-
-    .mcert-title h2 {
-      margin: 0;
-      font-size: 24px;
-      font-weight: 950;
-      color: #f8fafc;
-    }
-
-    .mcert-title p {
-      margin: 7px 0 0;
-      color: #94a3b8;
-      font-size: 13px;
-      font-weight: 800;
-    }
-
-    .mcert-card {
-      background: rgba(15, 23, 42, 0.84);
-      border: 1px solid rgba(148, 163, 184, 0.16);
-      border-radius: 20px;
-      box-shadow: 0 18px 45px rgba(2, 6, 23, 0.25);
-    }
-
-    .mcert-filters {
-      padding: 16px;
-      margin-bottom: 16px;
-    }
-
-    .mcert-filter-grid {
-      display: grid;
-      grid-template-columns: repeat(4, minmax(160px, 1fr));
-      gap: 12px;
-    }
-
-    .mcert-field {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
-
-    .mcert-field label {
-      color: #cbd5e1;
-      font-size: 12px;
-      font-weight: 900;
-    }
-
-    .mcert-field select,
-    .mcert-field input {
-      min-height: 42px;
-      border-radius: 14px;
-      border: 1px solid rgba(148, 163, 184, 0.22);
-      background: rgba(2, 6, 23, 0.62);
-      color: #f8fafc;
-      padding: 0 12px;
-      outline: none;
-      font-weight: 800;
-    }
-
-    .mcert-field select:focus,
-    .mcert-field input:focus {
-      border-color: rgba(59, 130, 246, 0.72);
-      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
-    }
-
-    .mcert-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 14px;
-    }
-
-    .mcert-btn {
-      min-height: 42px;
-      border: 0;
-      border-radius: 14px;
-      padding: 0 16px;
-      cursor: pointer;
-      font-weight: 950;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 7px;
-      color: white;
-      background: linear-gradient(135deg, #2563eb, #7c3aed);
-      transition: 0.18s ease;
-    }
-
-    .mcert-btn:hover {
-      transform: translateY(-1px);
-      filter: brightness(1.05);
-    }
-
-    .mcert-btn:disabled {
-      opacity: 0.52;
-      cursor: not-allowed;
-      transform: none;
-      filter: grayscale(0.35);
-    }
-
-    .mcert-btn-soft {
-      background: rgba(30, 41, 59, 0.92);
-      color: #e2e8f0;
-      border: 1px solid rgba(148, 163, 184, 0.18);
-    }
-
-    .mcert-btn-success {
-      background: linear-gradient(135deg, #16a34a, #22c55e);
-    }
-
-    .mcert-btn-danger {
-      background: linear-gradient(135deg, #dc2626, #f97316);
-    }
-
-    .mcert-alert {
-      display: none;
-      margin-bottom: 16px;
-      padding: 13px 15px;
-      border-radius: 16px;
-      font-weight: 900;
-      line-height: 1.8;
-      border: 1px solid rgba(148, 163, 184, 0.18);
-      background: rgba(30, 41, 59, 0.78);
-      color: #cbd5e1;
-    }
-
-    .mcert-alert.show {
-      display: block;
-    }
-
-    .mcert-alert.success {
-      background: rgba(20, 83, 45, 0.26);
-      border-color: rgba(74, 222, 128, 0.28);
-      color: #bbf7d0;
-    }
-
-    .mcert-alert.error {
-      background: rgba(127, 29, 29, 0.28);
-      border-color: rgba(248, 113, 113, 0.28);
-      color: #fecaca;
-    }
-
-    .mcert-grid {
-      display: grid;
-      grid-template-columns: minmax(360px, 0.9fr) minmax(420px, 1.1fr);
-      gap: 16px;
-      align-items: start;
-    }
-
-    .mcert-panel {
-      padding: 16px;
-    }
-
-    .mcert-panel-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-      flex-wrap: wrap;
-    }
-
-    .mcert-panel-head h3 {
-      margin: 0;
-      color: #f8fafc;
-      font-size: 17px;
-      font-weight: 950;
-    }
-
-    .mcert-muted {
-      color: #94a3b8;
-      font-size: 12px;
-      font-weight: 800;
-    }
-
-    .mcert-table-wrap {
-      overflow-x: auto;
-      border-radius: 16px;
-      border: 1px solid rgba(148, 163, 184, 0.12);
-    }
-
-    .mcert-table {
-      width: 100%;
-      min-width: 650px;
-      border-collapse: collapse;
-    }
-
-    .mcert-table th {
-      background: rgba(2, 6, 23, 0.58);
-      color: #cbd5e1;
-      font-size: 12px;
-      font-weight: 950;
-      text-align: right;
-      padding: 12px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.14);
-      white-space: nowrap;
-    }
-
-    .mcert-table td {
-      padding: 12px;
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-      color: #e2e8f0;
-      font-size: 13px;
-      font-weight: 800;
-      vertical-align: middle;
-    }
-
-    .mcert-table tr:hover td {
-      background: rgba(59, 130, 246, 0.06);
-    }
-
-    .mcert-student-name {
-      color: #f8fafc;
-      font-weight: 950;
-    }
-
-    .mcert-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 950;
-      white-space: nowrap;
-      border: 1px solid transparent;
-    }
-
-    .mcert-badge-issued {
-      color: #bbf7d0;
-      background: rgba(22, 163, 74, 0.14);
-      border-color: rgba(34, 197, 94, 0.2);
-    }
-
-    .mcert-badge-new {
-      color: #bfdbfe;
-      background: rgba(37, 99, 235, 0.16);
-      border-color: rgba(96, 165, 250, 0.24);
-    }
-
-    .mcert-badge-printed {
-      color: #fde68a;
-      background: rgba(202, 138, 4, 0.16);
-      border-color: rgba(250, 204, 21, 0.24);
-    }
-
-    .mcert-empty {
-      padding: 26px;
-      text-align: center;
-      color: #94a3b8;
-      font-weight: 900;
-      line-height: 1.9;
-    }
-.mcert-preview-shell {
-  background: rgba(2, 6, 23, 0.4);
-  border-radius: 18px;
-  padding: 14px;
-  overflow: auto;
-  max-height: 76vh;
-  border: 1px solid rgba(148, 163, 184, 0.12);
-}
-
-.mcert-certificate {
-  position: relative;
-  width: 100%;
-  max-width: 1080px;
-  aspect-ratio: 1.414 / 1;
-  margin: 0 auto 22px;
-  background:
-    radial-gradient(circle at 8% 86%, rgba(6, 78, 59, 0.11), transparent 22%),
-    linear-gradient(135deg, #ffffff 0%, #fbfaf5 58%, #f8fafc 100%);
-  color: #111827;
-  border-radius: 18px;
-  box-shadow: 0 24px 65px rgba(2, 6, 23, 0.28);
-  overflow: hidden;
-  font-family: "Cairo", "Tajawal", "Tahoma", "Arial", sans-serif;
-}
-
-.mcert-certificate * {
-  box-sizing: border-box;
-}
-
-.mcert-certificate::before {
-  content: "";
-  position: absolute;
-  inset: 20px;
-  border: 3px solid #c79a32;
-  border-radius: 16px;
-  pointer-events: none;
-  z-index: 2;
-}
-
-.mcert-certificate::after {
-  content: "";
-  position: absolute;
-  inset: 30px;
-  border: 1px solid rgba(6, 78, 59, 0.28);
-  border-radius: 12px;
-  pointer-events: none;
-  z-index: 2;
-}
-
-/* الزخرفة الخضراء العلوية */
-.mcert-deco-top {
-  position: absolute;
-  top: -64px;
-  right: -46px;
-  width: 360px;
-  height: 260px;
-  background: #064e3b;
-  border-bottom-left-radius: 190px;
-  z-index: 1;
-}
-
-.mcert-deco-top::before {
-  content: "";
-  position: absolute;
-  right: 86px;
-  bottom: 48px;
-  width: 290px;
-  height: 8px;
-  background: #d6aa3c;
-  transform: rotate(-45deg);
-  border-radius: 999px;
-}
-
-.mcert-deco-top::after {
-  content: "";
-  position: absolute;
-  right: 114px;
-  bottom: 76px;
-  width: 300px;
-  height: 5px;
-  background: #ffffff;
-  transform: rotate(-45deg);
-  border-radius: 999px;
-  opacity: 0.95;
-}
-
-/* الزخرفة السفلية */
-.mcert-deco-bottom {
-  position: absolute;
-  left: -90px;
-  bottom: -88px;
-  width: 330px;
-  height: 260px;
-  z-index: 1;
-}
-
-.mcert-deco-bottom::before,
-.mcert-deco-bottom::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  background: #064e3b;
-}
-
-.mcert-deco-bottom::before {
-  width: 230px;
-  height: 230px;
-  left: 0;
-  bottom: 0;
-}
-
-.mcert-deco-bottom::after {
-  width: 150px;
-  height: 150px;
-  left: 150px;
-  bottom: 72px;
-}
-
-.mcert-deco-line {
-  position: absolute;
-  left: 190px;
-  bottom: 150px;
-  width: 270px;
-  height: 8px;
-  background: #d6aa3c;
-  transform: rotate(-45deg);
-  border-radius: 999px;
-  z-index: 1;
-}
-
-/* الوسام */
-.mcert-medal-wrap {
-  position: absolute;
-  top: 218px;
-  right: 132px;
-  width: 170px;
-  height: 210px;
-  z-index: 4;
-}
-
-.mcert-medal-ribbon {
-  position: absolute;
-  left: 54px;
-  top: 96px;
-  width: 64px;
-  height: 96px;
-  background: linear-gradient(180deg, #f6df8d, #c49128);
-  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 74%, 0 100%);
-  box-shadow: 0 8px 14px rgba(2, 6, 23, 0.18);
-}
-
-.mcert-medal {
-  position: absolute;
-  top: 0;
-  left: 20px;
-  width: 132px;
-  height: 132px;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle at 32% 28%, #fff5b8 0%, #f1d367 32%, #d2a02e 62%, #9b650f 100%);
-  border: 5px solid #d3a33a;
-  box-shadow:
-    0 14px 26px rgba(2, 6, 23, 0.2),
-    inset 0 3px 9px rgba(255, 255, 255, 0.58);
-}
-
-.mcert-medal::before {
-  content: "★";
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  color: #064e3b;
-  font-size: 42px;
-  font-weight: 950;
-}
-
-/* المحتوى */
-.mcert-inner {
-  position: relative;
-  z-index: 3;
-  height: 100%;
-  padding: 48px 68px 44px;
-  display: grid;
-  grid-template-rows: auto 1fr auto;
-}
-
-.mcert-header-block {
-  text-align: center;
-  padding-top: 6px;
-}
-
-.mcert-school-name {
-  margin: 0;
-  color: #064e3b;
-  font-size: 28px;
-  line-height: 1.35;
-  font-weight: 950;
-}
-
-.mcert-school-admin {
-  margin-top: 4px;
-  color: #8b5e16;
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.mcert-main {
-  display: grid;
-  align-content: center;
-  justify-items: center;
-  padding: 10px 210px 10px 80px;
-  text-align: center;
-}
-
-.mcert-title-main {
-  margin: 0 0 22px;
-  color: #064e3b;
-  font-size: 38px;
-  line-height: 1.2;
-  font-weight: 950;
-  padding-bottom: 8px;
-  border-bottom: 2px solid rgba(15, 23, 42, 0.12);
-}
-
-.mcert-give-line {
-  color: #1f2937;
-  font-size: 22px;
-  font-weight: 850;
-  line-height: 1.8;
-}
-
-.mcert-student-display {
-  margin: 12px auto 16px;
-  color: #064e3b;
-  font-size: 42px;
-  font-weight: 950;
-  line-height: 1.28;
-  max-width: 100%;
-  padding: 0 18px 8px;
-  border-bottom: 2px solid rgba(17, 24, 39, 0.18);
-}
-
-.mcert-body-text {
-  max-width: 650px;
-  color: #1f2937;
-  font-size: 21px;
-  font-weight: 800;
-  line-height: 2.05;
-}
-
-.mcert-love-line {
-  margin-top: 12px;
-  color: #374151;
-  font-size: 20px;
-  font-weight: 900;
-}
-
-.mcert-footer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: end;
-  gap: 24px;
-  padding: 0 74px 4px;
-}
-
-.mcert-footer-item {
-  text-align: center;
-  color: #1f2937;
-  font-size: 15px;
-  font-weight: 850;
-}
-
-.mcert-footer-label {
-  margin-bottom: 12px;
-  color: #475569;
-  font-size: 15px;
-  font-weight: 900;
-}
-
-.mcert-signature-line {
-  height: 24px;
-  width: 170px;
-  border-bottom: 1px solid rgba(17, 24, 39, 0.42);
-  margin: 0 auto 8px;
-}
-
-.mcert-principal-name {
-  color: #111827;
-  font-size: 16px;
-  font-weight: 950;
-}
-
-.mcert-date-value {
-  color: #111827;
-  font-size: 16px;
-  font-weight: 950;
-}
-
-/* ختم خفيف اختياري */
-.mcert-stamp-watermark {
-  position: absolute;
-  bottom: 70px;
-  right: 110px;
-  width: 92px;
-  height: 92px;
-  display: grid;
-  place-items: center;
-  border: 2px dashed rgba(6, 78, 59, 0.28);
-  border-radius: 50%;
-  color: rgba(6, 78, 59, 0.38);
-  font-size: 14px;
-  font-weight: 950;
-  transform: rotate(-10deg);
-  z-index: 2;
-}
-
-/* في الشاشات الصغيرة لا نكسر الشهادة */
-@media (max-width: 1100px) {
-  .mcert-certificate {
-    min-width: 940px;
-  }
-}
-
-@page {
-  size: A4 landscape;
-  margin: 0;
-}
-
-@media print {
-  body * {
-    visibility: hidden !important;
-  }
-
-  #mcPrintArea,
-  #mcPrintArea * {
-    visibility: visible !important;
-  }
-
-  #mcPrintArea {
-    position: absolute;
-    inset: 0;
-    background: white !important;
-    padding: 0 !important;
-    margin: 0 !important;
-  }
-
-  .mcert-preview-shell {
-    max-height: none !important;
-    overflow: visible !important;
-    background: white !important;
-    border: 0 !important;
-    padding: 0 !important;
-  }
-
-  .mcert-certificate {
-    width: 297mm !important;
-    height: 210mm !important;
-    min-width: auto !important;
-    max-width: none !important;
-    aspect-ratio: auto !important;
-    margin: 0 !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    page-break-after: always;
-    break-after: page;
-  }
-
-  .mcert-certificate:last-child {
-    page-break-after: auto;
-    break-after: auto;
-  }
-}
-   
-  </style>
-
-  <div class="mcert-header">
-    <div class="mcert-title">
-      <h2>الشهادات الشهرية</h2>
-      <p>إصدار شهادات شكر وتقدير شهرية لطلاب تختارهم الإدارة فقط.</p>
-    </div>
-  </div>
-
-  <div class="mcert-card mcert-filters">
-    <div class="mcert-filter-grid">
-      <div class="mcert-field">
-        <label>السنة الدراسية</label>
-        <select id="mcAcademicYear"></select>
+<!-- frontend/admin/pages/monthlyCertificates.html -->
+<section id="monthlyCertificatesPage" class="cert-page" dir="rtl">
+  <header class="cert-hero">
+    <div class="cert-hero__content">
+      <div class="cert-eyebrow">
+        <i class="ri-award-line"></i>
+        <span>مركز الشهادات</span>
       </div>
 
-      <div class="mcert-field">
-        <label>الفصل الدراسي</label>
-        <select id="mcTerm">
+      <h2 id="certMainTitle">مركز الشهادات</h2>
+
+      <p id="certMainDesc">
+        إدارة الشهادات الشهرية، النصفية، والنهائية من مكان واحد.
+        اختر نوع الشهادة ثم حمّل الطلاب وحدد من تريد إصدار شهادات لهم.
+      </p>
+    </div>
+
+    <div class="cert-hero__side">
+      <div class="cert-stat-card">
+        <span>قاعدة النظام</span>
+        <strong>الإدارة تحدد الطلاب أولًا</strong>
+        <small>لن يتم إصدار شهادة لأي طالب إلا بعد اختياره من الإدارة.</small>
+      </div>
+    </div>
+  </header>
+
+  <div class="cert-tabs" role="tablist" aria-label="أنواع الشهادات">
+    <button class="cert-tab is-active" type="button" data-cert-tab="monthly">
+      <i class="ri-medal-line"></i>
+      <span>الشهرية</span>
+    </button>
+
+    <button class="cert-tab" type="button" data-cert-tab="midterm">
+      <i class="ri-file-list-3-line"></i>
+      <span>النصفية</span>
+    </button>
+
+    <button class="cert-tab" type="button" data-cert-tab="final">
+      <i class="ri-graduation-cap-line"></i>
+      <span>النهائية</span>
+    </button>
+  </div>
+
+  <div id="certAlert" class="cert-alert"></div>
+
+  <section class="cert-panel">
+    <div class="cert-panel-head">
+      <div>
+        <h3>الفلاتر الأساسية</h3>
+        <p id="certModeNote">
+          الشهادات الشهرية تحتاج السنة، الفصل، الشهر، المرحلة، الصف، والشعبة.
+        </p>
+      </div>
+    </div>
+
+    <div class="cert-filters">
+      <label class="cert-field">
+        <span>السنة الدراسية</span>
+        <select id="certAcademicYear">
+          <option value="">اختر السنة الدراسية</option>
+        </select>
+      </label>
+
+      <label class="cert-field cert-monthly-only">
+        <span>الفصل الدراسي</span>
+        <select id="certTerm">
           <option value="">اختر الفصل</option>
           <option value="1">الفصل الأول</option>
           <option value="2">الفصل الثاني</option>
         </select>
-      </div>
+      </label>
 
-      <div class="mcert-field">
-        <label>الشهر</label>
-        <select id="mcMonth">
+      <label class="cert-field cert-monthly-only">
+        <span>الشهر</span>
+        <select id="certMonth">
           <option value="">اختر الشهر</option>
           <option value="1">يناير</option>
           <option value="2">فبراير</option>
@@ -681,121 +87,122 @@
           <option value="11">نوفمبر</option>
           <option value="12">ديسمبر</option>
         </select>
-      </div>
+      </label>
 
-      <div class="mcert-field">
-        <label>المرحلة</label>
-        <select id="mcStage"></select>
-      </div>
+      <label class="cert-field">
+        <span>المرحلة</span>
+        <select id="certStage">
+          <option value="">اختر المرحلة</option>
+        </select>
+      </label>
 
-      <div class="mcert-field">
-        <label>الصف</label>
-        <select id="mcGrade"></select>
-      </div>
+      <label class="cert-field">
+        <span>الصف</span>
+        <select id="certGrade">
+          <option value="">اختر الصف</option>
+        </select>
+      </label>
 
-      <div class="mcert-field">
-        <label>الشعبة</label>
-        <select id="mcSection"></select>
-      </div>
-
-      <div class="mcert-field">
-        <label>بحث عن طالب</label>
-        <input id="mcSearch" type="search" placeholder="اكتب اسم الطالب أو الكود">
-      </div>
+      <label class="cert-field">
+        <span>الشعبة</span>
+        <select id="certSection">
+          <option value="">اختر الشعبة</option>
+        </select>
+      </label>
     </div>
 
-    <div class="mcert-actions">
-      <button type="button" class="mcert-btn mcert-btn-soft" id="mcLoadStudentsBtn">
-        <i class="ri-user-search-line"></i>
-        تحميل الطلاب
+    <div class="cert-actions-row">
+      <button id="certLoadStudentsBtn" class="cert-btn cert-btn-primary" type="button">
+        <i class="ri-team-line"></i>
+        <span>تحميل الطلاب</span>
       </button>
 
-      <button type="button" class="mcert-btn mcert-btn-success" id="mcSaveBtn" disabled>
-        <i class="ri-medal-line"></i>
-        حفظ شهادات المحددين
-      </button>
-
-      <button type="button" class="mcert-btn mcert-btn-soft" id="mcLoadIssuedBtn">
-        <i class="ri-file-list-3-line"></i>
-        عرض الشهادات المحفوظة
-      </button>
-
-      <button type="button" class="mcert-btn" id="mcPreviewBtn" disabled>
-        <i class="ri-eye-line"></i>
-        معاينة
-      </button>
-
-      <button type="button" class="mcert-btn" id="mcPrintBtn" disabled>
-        <i class="ri-printer-line"></i>
-        طباعة
+      <button id="certLoadIssuedBtn" class="cert-btn cert-btn-soft" type="button">
+        <i class="ri-folder-received-line"></i>
+        <span>عرض الشهادات المحفوظة</span>
       </button>
     </div>
-  </div>
+  </section>
 
-  <div id="mcAlert" class="mcert-alert"></div>
-
-  <div class="mcert-grid">
-    <div class="mcert-card mcert-panel">
-      <div class="mcert-panel-head">
+  <div class="cert-grid">
+    <section class="cert-panel">
+      <div class="cert-panel-head">
         <div>
-          <h3>الطلاب</h3>
-          <div class="mcert-muted" id="mcStudentsCount">لم يتم تحميل الطلاب بعد.</div>
+          <h3>الطلاب المتاحون للإصدار</h3>
+          <p id="certStudentsCount">لم يتم تحميل الطلاب بعد.</p>
         </div>
-        <label class="mcert-muted">
-          <input type="checkbox" id="mcSelectAll">
-          تحديد الكل
+
+        <label class="cert-check-all">
+          <input id="certSelectAll" type="checkbox" />
+          <span>تحديد الكل المتاح</span>
         </label>
       </div>
 
-      <div id="mcStudentsTableWrap" class="mcert-table-wrap" style="display:none;">
-        <table class="mcert-table">
-          <thead>
-            <tr>
-              <th>اختيار</th>
-              <th>الطالب</th>
-              <th>الكود</th>
-              <th>رقم القيد</th>
-              <th>الحالة</th>
-            </tr>
-          </thead>
-          <tbody id="mcStudentsBody"></tbody>
-        </table>
+      <div class="cert-search">
+        <i class="ri-search-line"></i>
+        <input id="certSearch" type="search" placeholder="بحث باسم الطالب أو رقمه..." />
       </div>
 
-      <div id="mcStudentsEmpty" class="mcert-empty">
+      <div id="certStudentsEmpty" class="cert-empty">
         اختر الفلاتر ثم اضغط تحميل الطلاب.
       </div>
-    </div>
 
-    <div class="mcert-card mcert-panel">
-      <div class="mcert-panel-head">
-        <div>
-          <h3>الشهادات المحفوظة والمعاينة</h3>
-          <div class="mcert-muted" id="mcIssuedCount">لا توجد شهادات معروضة.</div>
-        </div>
-      </div>
-
-      <div id="mcIssuedTableWrap" class="mcert-table-wrap" style="display:none; margin-bottom:14px;">
-        <table class="mcert-table">
-          <thead>
-            <tr>
-              <th>اختيار</th>
-              <th>الطالب</th>
-              <th>الكود</th>
-              <th>الإصدار</th>
-              <th>الطباعة</th>
-              <th>إجراء</th>
-            </tr>
-          </thead>
-          <tbody id="mcIssuedBody"></tbody>
+      <div id="certStudentsTableWrap" class="cert-table-wrap" style="display:none;">
+        <table class="cert-table">
+          <thead id="certStudentsHead"></thead>
+          <tbody id="certStudentsBody"></tbody>
         </table>
       </div>
 
-      <div id="mcPrintArea" class="mcert-preview-shell">
-        <div class="mcert-empty">
-          بعد حفظ الشهادات أو تحديد شهادات محفوظة، اضغط معاينة.
+      <div class="cert-actions-row cert-actions-row--footer">
+        <button id="certSaveBtn" class="cert-btn cert-btn-primary" type="button" disabled>
+          <i class="ri-award-line"></i>
+          <span>إصدار شهادات للمحددين</span>
+        </button>
+
+        <button id="certPreviewBtn" class="cert-btn cert-btn-soft" type="button" disabled>
+          <i class="ri-eye-line"></i>
+          <span>معاينة</span>
+        </button>
+
+        <button id="certPrintBtn" class="cert-btn cert-btn-success" type="button" disabled>
+          <i class="ri-printer-line"></i>
+          <span>طباعة</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="cert-panel">
+      <div class="cert-panel-head">
+        <div>
+          <h3>الشهادات المحفوظة</h3>
+          <p id="certIssuedCount">لا توجد شهادات محفوظة.</p>
         </div>
       </div>
-    </div>
+
+      <div id="certIssuedTableWrap" class="cert-table-wrap" style="display:none;">
+        <table class="cert-table">
+          <thead id="certIssuedHead"></thead>
+          <tbody id="certIssuedBody"></tbody>
+        </table>
+      </div>
+
+      <div class="cert-empty cert-empty-soft">
+        الشهادات التي تم إصدارها ستظهر هنا بعد الضغط على “عرض الشهادات المحفوظة”.
+      </div>
+    </section>
   </div>
+
+  <section class="cert-panel cert-preview-panel">
+    <div class="cert-panel-head">
+      <div>
+        <h3>معاينة الشهادات</h3>
+        <p>اختر طلابًا أو شهادات محفوظة ثم اضغط معاينة.</p>
+      </div>
+    </div>
+
+    <div id="certPrintArea" class="cert-print-area">
+      <div class="cert-empty">لا توجد شهادات للمعاينة.</div>
+    </div>
+  </section>
 </section>

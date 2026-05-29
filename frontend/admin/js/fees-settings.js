@@ -73,7 +73,27 @@ if (!res.ok) throw new Error(data.message || data.error || "API error");    retu
     box.textContent = text;
     setTimeout(() => (box.hidden = true), 3500);
   }
+function fsToast(message, type = "info") {
+  if (window.AppUI?.toast) {
+    window.AppUI.toast(message, type);
+    return;
+  }
 
+  if (window.showToast) {
+    window.showToast(message);
+    return;
+  }
+
+  alert(message);
+}
+
+async function fsConfirm(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
+
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
   function scopeLabel(s) {
     const map = {
       DEFAULT: "عامة",
@@ -467,15 +487,28 @@ if (!res.ok) throw new Error(data.message || data.error || "API error");    retu
         fillForm(root, rule);
       }
 
-      if (act === "del") {
-        if (!confirm("حذف القاعدة؟")) return;
-        try {
-          await apiSend("DELETE", `/api/admin/fee-rules/${id}`);
-          await refreshRules(root);
-        } catch (err) {
-          alert(err.message || "فشل الحذف");
-        }
-      }
+   if (act === "del") {
+  const ok = await fsConfirm({
+    title: "حذف قاعدة الرسوم",
+    message:
+      "سيتم حذف قاعدة الرسوم المحددة.\n" +
+      "هذا قد يؤثر على الطلاب الذين يعتمدون على هذه القاعدة في إنشاء عقود الرسوم.\n\n" +
+      "هل تريد حذف القاعدة؟",
+    confirmText: "حذف القاعدة",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend("DELETE", `/api/admin/fee-rules/${id}`);
+    await refreshRules(root);
+    fsToast("تم حذف قاعدة الرسوم بنجاح", "success");
+  } catch (err) {
+    fsToast(err.message || "فشل حذف قاعدة الرسوم", "error");
+  }
+}
     });
 
     // save rule

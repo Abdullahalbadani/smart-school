@@ -915,36 +915,51 @@ export async function createSession(req, res) {
     const hasStageCol = await tableHasColumn(client, "student_enrollments", "stage_id");
     const hasGradeCol = await tableHasColumn(client, "student_enrollments", "grade_id");
 
-    const seedParams = [schoolId, sessionId, ay, sectionId];
-    let seedWhere = `se.school_id = $1 AND se.academic_year_id = $3 AND se.section_id = $4`;
+  const seedParams = [schoolId, sessionId, ay, sectionId];
 
-    if (hasStageCol && stageId) {
-      seedParams.push(stageId);
-      seedWhere += ` AND se.stage_id = $${seedParams.length}`;
-    }
-    if (hasGradeCol && gradeId) {
-      seedParams.push(gradeId);
-      seedWhere += ` AND se.grade_id = $${seedParams.length}`;
-    }
+let seedWhere = `
+  se.school_id::bigint = $1::bigint
+  AND se.academic_year_id = $3
+  AND se.section_id = $4
+`;
 
-    const seedQ = `
-      INSERT INTO attendance_entries (school_id, session_id, student_id, status)
-      SELECT $1, $2, se.student_id, 'present'
-      FROM student_enrollments se
-      WHERE ${seedWhere}
-      ON CONFLICT (school_id, session_id, student_id) DO NOTHING
-    `;
-    await client.query(seedQ, seedParams);
+if (hasStageCol && stageId) {
+  seedParams.push(stageId);
+  seedWhere += ` AND se.stage_id = $${seedParams.length}`;
+}
 
-    const countR = await client.query(
-      `
-      SELECT COUNT(*)::int AS cnt
-      FROM attendance_entries
-      WHERE school_id = $1
-        AND session_id = $2
-      `,
-      [schoolId, sessionId]
-    );
+if (hasGradeCol && gradeId) {
+  seedParams.push(gradeId);
+  seedWhere += ` AND se.grade_id = $${seedParams.length}`;
+}
+
+const seedQ = `
+  INSERT INTO attendance_entries (
+    school_id,
+    session_id,
+    student_id,
+    status
+  )
+  SELECT
+    $1::bigint,
+    $2::bigint,
+    se.student_id::integer,
+    'present'
+  FROM student_enrollments se
+  WHERE ${seedWhere}
+  ON CONFLICT (school_id, session_id, student_id) DO NOTHING
+`;
+
+await client.query(seedQ, seedParams);
+   const countR = await client.query(
+  `
+  SELECT COUNT(*)::int AS cnt
+  FROM attendance_entries
+  WHERE school_id = $1::bigint
+    AND session_id = $2::bigint
+  `,
+  [schoolId, sessionId]
+);
 
     await client.query("COMMIT");
 

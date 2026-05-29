@@ -4,6 +4,7 @@ import authMiddleware from "../middleware/authMiddleware.js";
 import { TeacherAttendanceController } from "../controllers/teacherAttendanceController.js";
 
 const router = express.Router();
+
 router.use(authMiddleware);
 
 /* =========================
@@ -14,9 +15,25 @@ router.get("/scopes", TeacherAttendanceController.scopes);
 router.get("/reasons", TeacherAttendanceController.reasons);
 
 /* =========================
-   SESSIONS (Today Slots)
+   SESSIONS (Today Slots + Frontend Aliases)
+   مهم:
+   هذه المسارات يجب أن تكون قبل /sessions/:id
 ========================= */
+
+// الواجهة تطلب:
+// GET /api/teacher/attendance/sessions?academicYearId=6&term=1
+router.get("/sessions", TeacherAttendanceController.sessionSlots);
+
+// الرابط القديم/الأصلي
 router.get("/sessions/slots", TeacherAttendanceController.sessionSlots);
+
+// الواجهة تطلب:
+// GET /api/teacher/attendance/sessions/history?academicYearId=6&term=1
+router.get("/sessions/history", TeacherAttendanceController.historySearch);
+
+// الواجهة تطلب:
+// GET /api/teacher/attendance/sessions/log?academicYearId=6&term=1
+router.get("/sessions/log", TeacherAttendanceController.historySearch);
 
 /* =========================
    PERMITS (Parent requests / excuses)
@@ -27,19 +44,24 @@ router.get("/permits/approved", TeacherAttendanceController.permitsApproved);
 router.get("/permits/excuses", TeacherAttendanceController.permitsExcuses);
 router.get("/permits/map", TeacherAttendanceController.permitsMap);
 
-// Aliases (لو الفرونت يستخدمها)
+// Aliases لو الفرونت يستخدمها
 router.get("/approved", TeacherAttendanceController.permitsApproved);
 router.get("/excuses", TeacherAttendanceController.permitsExcuses);
 
 /* =========================
    HISTORY + REPORTS
 ========================= */
+
+// الرابط العام القديم:
+// GET /api/teacher/attendance/history
 router.get("/history", TeacherAttendanceController.historySearch);
+
 router.get("/report/aggregate", TeacherAttendanceController.reportAggregate);
 
 /* =========================
    SESSIONS (CRUD + Lock/Unlock/End)
 ========================= */
+
 // Create/Open session
 router.post("/sessions", TeacherAttendanceController.createSession);
 
@@ -47,6 +69,9 @@ router.post("/sessions", TeacherAttendanceController.createSession);
 router.post("/sessions/start", TeacherAttendanceController.createSession);
 
 // Get/Update
+// مهم جدًا:
+// هذا يجب أن يبقى بعد /sessions/history و /sessions/log
+// حتى لا يعتبر Express كلمة history أو log أنها id
 router.get("/sessions/:id", TeacherAttendanceController.getSession);
 router.patch("/sessions/:id", TeacherAttendanceController.updateSession);
 
@@ -54,11 +79,11 @@ router.patch("/sessions/:id", TeacherAttendanceController.updateSession);
 router.patch("/sessions/:id/lock", TeacherAttendanceController.lockSession);
 router.patch("/sessions/:id/unlock", TeacherAttendanceController.unlockSession);
 
-// End (يسجل ended_at حسب الكنترولر الحالي)
+// End
 router.patch("/sessions/:id/end", TeacherAttendanceController.endSession);
 router.post("/sessions/:id/end", TeacherAttendanceController.endSession);
 
-// ✅ NEW: Scan QR to mark present inside this session
+// Scan QR to mark present inside this session
 router.post("/sessions/:id/scan", TeacherAttendanceController.scanMarkPresentByToken);
 
 /* =========================

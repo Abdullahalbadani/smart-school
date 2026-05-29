@@ -4664,4 +4664,147 @@ canvas{ width: 100% !important; height: 100% !important; }
 .fs-pageinfo{
   opacity:.85;
   color: var(--text-muted);
+}.school-pulse-empty {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+}
+
+.empty-state {
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 18px;
+  padding: 28px;
+  text-align: center;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.empty-state strong {
+  display: block;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.empty-state span {
+  display: block;
+  font-size: 13px;
+  color: #94a3b8;
+  line-height: 1.8;
+}/* =========================================================
+   FIX ONLY: Reports horizontal scroll + side drawer
+   لا يؤثر على شريط التنقل السفلي
+========================================================= */
+
+/* صفحة تقرير الطلاب والموظفين لا توسّع الواجهة */
+.sr-page,
+.str-page {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+/* الجدول فقط هو الذي يسمح بسكرول داخلي عند الحاجة */
+.sr-table-wrap,
+.str-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* لا تجعل الجدول يوسّع الصفحة كلها */
+.sr-table,
+.str-table {
+  width: max-content;
+  min-width: 100%;
+}
+
+/* إصلاح الدرج الجانبي حتى لا يفتح كأنه صفحة ثانية */
+.sr-drawer,
+.str-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.sr-drawer.open,
+.str-drawer.open {
+  pointer-events: auto;
+}
+
+.sr-drawer-backdrop,
+.str-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+}
+
+/* استخدم right بدل inline-end حتى لا ينعكس في RTL */
+.sr-drawer-panel,
+.str-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: auto;
+  bottom: 0;
+  width: min(720px, 94vw);
+  max-width: 94vw;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transform: translateX(105%);
+}
+
+.sr-drawer.open .sr-drawer-panel,
+.str-drawer.open .str-drawer-panel {
+  transform: translateX(0);
+}/* =========================================================
+   FIX: إخفاء نافذة تفاصيل الطلاب/الموظفين حتى الضغط على عرض
+========================================================= */
+
+/* مخفية تمامًا افتراضيًا */
+.sr-drawer,
+.str-drawer {
+  display: none !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  overflow: hidden !important;
+}
+
+/* تظهر فقط عند إضافة class open من الجافاسكربت */
+.sr-drawer.open,
+.str-drawer.open {
+  display: block !important;
+}
+
+/* الخلفية لا تظهر إلا مع الدرج المفتوح */
+.sr-drawer-backdrop,
+.str-drawer-backdrop {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.55) !important;
+}
+
+/* لوحة التفاصيل تكون خارج الشاشة افتراضيًا */
+.sr-drawer-panel,
+.str-drawer-panel {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  left: auto !important;
+  bottom: 0 !important;
+  width: min(720px, 94vw) !important;
+  max-width: 94vw !important;
+  background: var(--bg-panel) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  transform: translateX(110%) !important;
+  transition: transform 0.22s ease !important;
+}
+
+/* عند الفتح تدخل من اليمين */
+.sr-drawer.open .sr-drawer-panel,
+.str-drawer.open .str-drawer-panel {
+  transform: translateX(0) !important;
 }

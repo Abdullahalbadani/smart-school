@@ -24,8 +24,8 @@
       createContract: "/api/fees/contracts", // POST
       installments: "/api/fees/installments", // ?contractId=
       payments: "/api/fees/payments", // ?contractId=
-      createPayment: "/api/fees/payments", // POST (يفضل FormData لو فيه مرفق)
-    },
+createPayment: "/api/fees/payments",
+feeAdjustmentRequests: "/api/admin/fee-adjustment-requests",    },
   };
 
   /***********************
@@ -527,26 +527,38 @@
       await this.selectStudent(found);
       this.toast("تم فتح ملف الطالب من التقارير.", "success");
     }
-    async confirmPayment(paymentId) {
-      if (!paymentId) return;
+  async confirmPayment(paymentId) {
+  if (!paymentId) return;
 
-      try {
-        this.toast("جاري اعتماد الدفعة...", "info");
-        await this.apiPatch(
-          `/api/fees/payments/${encodeURIComponent(paymentId)}/confirm`,
-          {}
-        );
-        this.toast("تم اعتماد الدفعة ✅", "success");
+  const ok = await this.confirmDialog({
+    title: "اعتماد الدفعة",
+    message:
+      "سيتم اعتماد هذه الدفعة وتحديث الأقساط والرصيد المالي للطالب.\nهل تريد المتابعة؟",
+    confirmText: "اعتماد الدفعة",
+    cancelText: "إلغاء",
+    type: "success",
+  });
 
-        // تحديث الجدول والملخص
-        if (this.state.selectedStudent) {
-          await this.loadStudentFinance(this.state.selectedStudent);
-        }
-      } catch (e) {
-        console.error(e);
-        this.toast(`فشل اعتماد الدفعة: ${e.message}`, "error");
-      }
+  if (!ok) return;
+
+  try {
+    this.toast("جاري اعتماد الدفعة...", "info");
+
+    await this.apiPatch(
+      `/api/fees/payments/${encodeURIComponent(paymentId)}/confirm`,
+      {}
+    );
+
+    this.toast("تم اعتماد الدفعة ✅", "success");
+
+    if (this.state.selectedStudent) {
+      await this.loadStudentFinance(this.state.selectedStudent);
     }
+  } catch (e) {
+    console.error(e);
+    this.toast(`فشل اعتماد الدفعة: ${e.message}`, "error");
+  }
+}
     constructor(sectionEl) {
       this.el = sectionEl;
       this.abort = new AbortController();
@@ -570,26 +582,38 @@
       return this.el.querySelector(id);
     }
 
-    toast(msg, type = "info") {
-      const toastEl = this.qs("#fpToast");
-      if (!toastEl) return;
+   toast(msg, type = "info") {
+  if (window.AppUI?.toast) {
+    window.AppUI.toast(msg, type);
+    return;
+  }
 
-      toastEl.hidden = false;
-      toastEl.textContent = msg;
+  const toastEl = this.qs("#fpToast");
+  if (!toastEl) return;
 
-      // لون بسيط حسب النوع (بدون تغيير ألوان ثابتة خارج المتغيرات)
-      toastEl.style.borderColor =
-        type === "success"
-          ? "rgba(34,197,94,0.65)"
-          : type === "error"
-          ? "rgba(239,68,68,0.65)"
-          : "rgba(229,231,235,0.9)";
+  toastEl.hidden = false;
+  toastEl.textContent = msg;
 
-      clearTimeout(this._toastTimer);
-      this._toastTimer = setTimeout(() => {
-        toastEl.hidden = true;
-      }, 2600);
-    }
+  toastEl.style.borderColor =
+    type === "success"
+      ? "rgba(34,197,94,0.65)"
+      : type === "error"
+      ? "rgba(239,68,68,0.65)"
+      : "rgba(229,231,235,0.9)";
+
+  clearTimeout(this._toastTimer);
+  this._toastTimer = setTimeout(() => {
+    toastEl.hidden = true;
+  }, 2600);
+}
+
+async confirmDialog(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
+
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
 
     setBadge(text, kind = "muted") {
       const b = this.qs("#fpStudentBadge");
@@ -696,7 +720,25 @@
         () => this.createContractAndInstallments(),
         { signal: this.abort.signal }
       );
+this.qs("#fpRequestDiscountApproval")?.addEventListener(
+  "click",
+  () => this.requestDiscountApproval(),
+  { signal: this.abort.signal }
+);
 
+["#fpDiscountAmount", "#fpDiscountReason"].forEach((id) => {
+  this.qs(id)?.addEventListener(
+    "input",
+    () => this.updateDiscountApprovalButton(),
+    { signal: this.abort.signal }
+  );
+
+  this.qs(id)?.addEventListener(
+    "change",
+    () => this.updateDiscountApprovalButton(),
+    { signal: this.abort.signal }
+  );
+});
       // Payment
       this.qs("#fpPaymentForm")?.addEventListener(
         "submit",
@@ -1074,6 +1116,7 @@
       if (btnC) btnC.disabled = true;
       const btnP = this.qs("#fpSubmitPayment");
       if (btnP) btnP.disabled = true;
+      this.enable(this.qs("#fpRequestDiscountApproval"), false);
     }
 
     async loadStudentFinance(student) {
@@ -1160,7 +1203,31 @@
           amount: toNumber(x.amount),
           paidAmount: toNumber(x.paidAmount ?? x.paid_amount),
         }));
+const installmentsTotalForStatus = this.state.installments.reduce((sum, it) => {
+  return sum + toNumber(it.amount);
+}, 0);
 
+const effectiveDiscountAmount = Math.max(
+  discountAmt,
+  annualAmt > 0 && installmentsTotalForStatus > 0
+    ? Math.max(0, annualAmt - installmentsTotalForStatus)
+    : 0
+);
+
+const effectiveNetAmount = Math.max(0, annualAmt - effectiveDiscountAmount);
+
+const effectiveDiscountText =
+  effectiveDiscountAmount > 0
+    ? ` (خصم: ${formatNumber(effectiveDiscountAmount)})`
+    : "";
+
+this.qs("#fpContractStatus").textContent = `موجود — الصافي: ${formatNumber(
+  effectiveNetAmount
+)}${effectiveDiscountText} / أقساط: ${
+  this.state.contract.installmentsCount ||
+  this.state.contract.installments_count ||
+  this.state.installments.length
+}`;
         this.state.payments = (payments || []).map((p) => ({
           id: p.id,
           paidAt: p.paidAt ?? p.paid_at ?? p.date ?? "",
@@ -1196,7 +1263,7 @@
           this.state.installments,
           this.state.payments
         );
-
+this.updateDiscountApprovalButton();
         this.setPaymentState("جاهز", "muted");
         this.updatePaymentSubmitEnabled();
       } catch (e) {
@@ -1204,51 +1271,71 @@
         this.setPaymentState("فشل", "muted");
       }
     }
-    renderSummary(annualAmount, installments, payments) {
-      // 💡 محاولة جلب مبلغ الخصم بكل المسميات الممكنة من السيرفر
-      const discountAmount = toNumber(
-        this.state.contract?.discount_amount ||
-          this.state.contract?.discountAmount ||
-          this.state.contract?.discount ||
-          0
-      );
+   renderSummary(annualAmount, installments, payments) {
+  const totalAnnualBasis = toNumber(annualAmount);
 
-      const totalAnnualBasis = toNumber(annualAmount);
+  // الخصم قد يأتي من العقد، أو نستنتجه من مجموع الأقساط بعد قبول المدير
+  const contractDiscountAmount = toNumber(
+    this.state.contract?.discount_amount ||
+      this.state.contract?.discountAmount ||
+      this.state.contract?.discount ||
+      0
+  );
 
-      // الحسابات المالية
-      const netRequired = totalAnnualBasis - discountAmount;
-      const paidTotal = (payments || []).reduce((s, p) => {
-        return p.status === "confirmed" ? s + toNumber(p.amount) : s;
-      }, 0);
+  const installmentsTotal = (installments || []).reduce((sum, it) => {
+    return sum + toNumber(it.amount);
+  }, 0);
 
-      const remaining = Math.max(0, netRequired - paidTotal);
-      const credit = Math.max(0, paidTotal - netRequired);
+  const inferredDiscountAmount =
+    totalAnnualBasis > 0 && installmentsTotal > 0
+      ? Math.max(0, totalAnnualBasis - installmentsTotal)
+      : 0;
 
-      // 📺 تحديث الشاشة
-      const setT = (id, val) => {
-        const el = this.qs(id);
-        if (el) el.textContent = val;
-      };
+  const discountAmount = Math.max(
+    contractDiscountAmount,
+    inferredDiscountAmount
+  );
 
-      setT("#fpTotalAnnual", formatNumber(totalAnnualBasis));
-      setT("#fpTotalDiscount", formatNumber(discountAmount)); // سيظهر الرقم هنا الآن بإذن الله
-      setT("#fpPaidTotal", formatNumber(paidTotal));
-      setT("#fpRemaining", formatNumber(remaining));
-      setT("#fpCredit", formatNumber(credit));
+  const netRequired = Math.max(0, totalAnnualBasis - discountAmount);
 
-      // تحديث نص القسط القادم
-      const next = (installments || []).find(
-        (x) => toNumber(x.amount) - toNumber(x.paidAmount) > 0
-      );
-      setT(
-        "#fpNextInstallment",
-        next
-          ? `قسط #${next.installmentNo} — المتبقي: ${formatNumber(
-              toNumber(next.amount) - toNumber(next.paidAmount)
-            )}`
-          : "تم سداد كامل المستحقات ✅"
-      );
-    }
+  // الأصح هنا أن نحسب المدفوع من الأقساط، لأن الأقساط هي التي تظهر حقيقة السداد
+  const paidFromInstallments = (installments || []).reduce((sum, it) => {
+    return sum + toNumber(it.paidAmount);
+  }, 0);
+
+  const paidFromConfirmedPayments = (payments || []).reduce((sum, p) => {
+    return p.status === "confirmed" ? sum + toNumber(p.amount) : sum;
+  }, 0);
+
+  const paidTotal = Math.max(paidFromInstallments, paidFromConfirmedPayments);
+
+  const remaining = Math.max(0, netRequired - paidTotal);
+  const credit = Math.max(0, paidTotal - netRequired);
+
+  const setT = (id, val) => {
+    const el = this.qs(id);
+    if (el) el.textContent = val;
+  };
+
+  setT("#fpTotalAnnual", formatNumber(totalAnnualBasis));
+  setT("#fpTotalDiscount", formatNumber(discountAmount));
+  setT("#fpPaidTotal", formatNumber(paidTotal));
+  setT("#fpRemaining", formatNumber(remaining));
+  setT("#fpCredit", formatNumber(credit));
+
+  const next = (installments || []).find(
+    (x) => toNumber(x.amount) - toNumber(x.paidAmount) > 0
+  );
+
+  setT(
+    "#fpNextInstallment",
+    next
+      ? `قسط #${next.installmentNo} — المتبقي: ${formatNumber(
+          toNumber(next.amount) - toNumber(next.paidAmount)
+        )}`
+      : "تم سداد كامل المستحقات ✅"
+  );
+}
     renderInstallments(items) {
       const body = this.qs("#fpInstallmentsBody");
       if (!body) return;
@@ -1419,10 +1506,82 @@
           "#fpGenerateInstallments"
         ).innerHTML = `<i class="ri-magic-line"></i><span>توليد الأقساط</span>`;
       }
+      this.updateDiscountApprovalButton();
     }
     closeContractForm() {
       this.show(this.qs("#fpContractForm"), false);
     }
+    updateDiscountApprovalButton() {
+  const btn = this.qs("#fpRequestDiscountApproval");
+  if (!btn) return;
+
+  const hasStudent = !!this.state.selectedStudent;
+  const hasContract = !!this.state.contract;
+
+  const amount = toNumber(this.qs("#fpDiscountAmount")?.value);
+  const reason = String(this.qs("#fpDiscountReason")?.value || "").trim();
+
+  this.enable(btn, hasStudent && hasContract && amount > 0 && !!reason);
+}
+
+async requestDiscountApproval() {
+  if (!this.state.selectedStudent) {
+    return this.toast("اختر طالبًا أولاً.", "error");
+  }
+
+  if (!this.state.contract) {
+    return this.toast("لا يوجد عقد رسوم لهذا الطالب.", "error");
+  }
+
+  const amount = toNumber(this.qs("#fpDiscountAmount")?.value);
+  const reason = String(this.qs("#fpDiscountReason")?.value || "").trim();
+
+  if (amount <= 0) {
+    return this.toast("أدخل مبلغ خصم صحيح.", "error");
+  }
+
+  if (!reason) {
+    return this.toast("سبب الخصم مطلوب.", "error");
+  }
+
+ const ok = await this.confirmDialog({
+  title: "إرسال طلب خصم",
+  message:
+    `سيتم إرسال طلب خصم بقيمة ${formatNumber(amount)} إلى المدير.\n` +
+    "لن يتم تطبيق الخصم إلا بعد موافقة المدير.\n\n" +
+    "هل تريد إرسال الطلب الآن؟",
+  confirmText: "إرسال الطلب",
+  cancelText: "إلغاء",
+  type: "warning",
+});
+
+if (!ok) return;
+  if (!ok) return;
+
+  try {
+    this.setPaymentState("جاري إرسال طلب الخصم...", "muted");
+    this.enable(this.qs("#fpRequestDiscountApproval"), false);
+
+    const result = await this.apiPost(CONFIG.ENDPOINTS.feeAdjustmentRequests, {
+      student_id: this.state.selectedStudent.id,
+      contract_id: this.state.contract.id,
+      amount,
+      reason,
+    });
+
+    this.toast(
+      result?.message || "تم إرسال طلب الخصم إلى المدير.",
+      "success"
+    );
+
+    this.setPaymentState("جاهز", "muted");
+    this.updateDiscountApprovalButton();
+  } catch (e) {
+    this.setPaymentState("فشل", "muted");
+    this.toast(`فشل إرسال طلب الخصم: ${e.message}`, "error");
+    this.updateDiscountApprovalButton();
+  }
+}
     async createContractAndInstallments() {
       if (!this.state.selectedStudent)
         return this.toast("اختر طالبًا أولاً.", "error");
@@ -1445,15 +1604,30 @@
       try {
         this.setPaymentState("جاري التنفيذ...", "muted");
 
-        const payload = {
-          studentId: this.state.selectedStudent.id,
-          yearId: this.state.selectedYearId,
-          discountAmount, // ✅ إرسال الخصم
-          discountReason, // ✅ إرسال السبب
-          annualAmount,
-          installmentsCount,
-          firstDueDate,
-        };
+    const currentDiscountAmount = toNumber(
+  this.state.contract?.discountAmount ||
+    this.state.contract?.discount_amount ||
+    0
+);
+
+const currentDiscountReason =
+  this.state.contract?.discountReason ||
+  this.state.contract?.discount_reason ||
+  "";
+
+const payload = {
+  studentId: this.state.selectedStudent.id,
+  yearId: this.state.selectedYearId,
+
+  // عند وجود عقد سابق لا نسمح بتعديل الخصم مباشرة.
+  // الخصم الجديد يذهب عبر طلب اعتماد المدير فقط.
+  discountAmount: this.state.contract ? currentDiscountAmount : discountAmount,
+  discountReason: this.state.contract ? currentDiscountReason : discountReason,
+
+  annualAmount,
+  installmentsCount,
+  firstDueDate,
+};
 
         // ✅ إذا كان العقد موجود نرسل (PUT)، وإذا غير موجود نرسل (POST)
         if (this.state.contract) {

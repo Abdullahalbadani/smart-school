@@ -172,15 +172,19 @@
     <input id="fpFirstDueDate" type="date" />
   </div>
 
-  <div class="fp-contractActions">
-    <button id="fpGenerateInstallments" class="fp-btn fp-btn-primary" type="button">
-      <i class="ri-magic-line"></i><span>توليد الأقساط</span>
-    </button>
+<div class="fp-contractActions">
+  <button id="fpGenerateInstallments" class="fp-btn fp-btn-primary" type="button">
+    <i class="ri-magic-line"></i><span>توليد الأقساط</span>
+  </button>
 
-    <button id="fpCancelContract" class="fp-btn fp-btn-ghost" type="button">
-      <i class="ri-close-circle-line"></i><span>إلغاء</span>
-    </button>
-  </div>
+  <button id="fpRequestDiscountApproval" class="fp-btn fp-btn-ghost" type="button" disabled>
+    <i class="ri-shield-check-line"></i><span>طلب اعتماد الخصم</span>
+  </button>
+
+  <button id="fpCancelContract" class="fp-btn fp-btn-ghost" type="button">
+    <i class="ri-close-circle-line"></i><span>إلغاء</span>
+  </button>
+</div>
 
   <p class="fp-hint">
     سيتم إنشاء فواتير الأقساط تلقائيًا بناءً على (الصافي) بعد الخصم.

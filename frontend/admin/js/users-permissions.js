@@ -52,11 +52,11 @@ async function rbacApiRequest(path, options = {}) {
         }
       } catch (_) {}
 
-      alert(message);
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-      window.location.href = "../login/login.html";
-      return;
+    adminToast(message, "warning");
+localStorage.removeItem("token");
+localStorage.removeItem("user");
+window.location.href = "../login/login.html";
+return;
     }
 
     // 2) أخطاء أخرى
@@ -76,11 +76,26 @@ async function rbacApiRequest(path, options = {}) {
     return await res.json();
   } catch (err) {
     console.error("RBAC request failed:", err);
-    alert(`خطأ: ${err.message}`);
-    throw err;
+   adminToast(`خطأ: ${err.message}`, "error");
+throw err;
   }
 }
+function adminToast(message, type = "info") {
+  if (window.AppUI?.toast) {
+    window.AppUI.toast(message, type);
+    return;
+  }
 
+  alert(message);
+}
+
+async function adminConfirm(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
+
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
 // تعبئة فورم من كائن قيم
 function rbacFillForm(formElement, values) {
   Object.entries(values).forEach(([key, val]) => {
@@ -185,11 +200,10 @@ const RBAC = {
       const id = document.getElementById("module-id").value || null;
       const name = document.getElementById("module-name").value.trim();
       const code = document.getElementById("module-code").value.trim();
-
-      if (!name || !code) {
-        alert("الرجاء إدخال الاسم والكود");
-        return;
-      }
+if (!name || !code) {
+  adminToast("الرجاء إدخال الاسم والكود", "warning");
+  return;
+}
 
       const body = JSON.stringify({ name, code });
 
@@ -258,14 +272,26 @@ const RBAC = {
       };
     });
 
-    tbody.querySelectorAll("[data-action=delete-module]").forEach((btn) => {
-      btn.onclick = async () => {
-        const id = btn.getAttribute("data-module-id");
-        if (!confirm("هل أنت متأكد من حذف هذه الوحدة؟")) return;
-        await rbacApiRequest(`/modules/${id}`, { method: "DELETE" });
-        await this.loadModules();
-      };
+  tbody.querySelectorAll("[data-action=delete-module]").forEach((btn) => {
+  btn.onclick = async () => {
+    const id = btn.getAttribute("data-module-id");
+
+    const ok = await adminConfirm({
+      title: "حذف الوحدة",
+      message:
+        "هل أنت متأكد من حذف هذه الوحدة؟\nقد يؤثر هذا على الصلاحيات المرتبطة بها.",
+      confirmText: "حذف الوحدة",
+      cancelText: "إلغاء",
+      type: "danger",
     });
+
+    if (!ok) return;
+
+    await rbacApiRequest(`/modules/${id}`, { method: "DELETE" });
+    adminToast("تم حذف الوحدة بنجاح", "success");
+    await this.loadModules();
+  };
+});
   },
 
   /* ================== الصلاحيات (Permissions) ================== */
@@ -315,12 +341,10 @@ const RBAC = {
       const name = document.getElementById("perm-name").value.trim();
       const code = document.getElementById("perm-code").value.trim();
       const moduleCode = document.getElementById("perm-module").value.trim();
-
-      if (!name || !code || !moduleCode) {
-        alert("الرجاء تعبئة جميع الحقول");
-        return;
-      }
-
+if (!name || !code || !moduleCode) {
+  adminToast("الرجاء تعبئة جميع الحقول", "warning");
+  return;
+}
 // ✅ استخرج module_id من قائمة الوحدات بناءً على moduleCode
 const selectedModule = this.modules.find((m) => String(m.code) === String(moduleCode));
 const module_id = selectedModule ? Number(selectedModule.id) : null;
@@ -370,59 +394,60 @@ const body = JSON.stringify({
     }
 
     // زر تنفيذ الربط
-    if (btn) {
-      btn.addEventListener("click", async () => {
-        const moduleSelect = document.getElementById("bulk-module-select");
-        const moduleCode = moduleSelect ? moduleSelect.value.trim() : "";
+  if (btn) {
+  btn.addEventListener("click", async () => {
+    const moduleSelect = document.getElementById("bulk-module-select");
+    const moduleCode = moduleSelect ? moduleSelect.value.trim() : "";
 
-        if (!moduleCode) {
-          alert("اختر وحدة أولاً");
-          return;
-        }
+    if (!moduleCode) {
+      adminToast("اختر وحدة أولاً", "warning");
+      return;
+    }
 
-        const checked = Array.from(
-          document.querySelectorAll(
-            "#bulk-perms-list input[type=checkbox]:checked"
-          )
-        ).map((c) => Number(c.value));
+    const checked = Array.from(
+      document.querySelectorAll(
+        "#bulk-perms-list input[type=checkbox]:checked"
+      )
+    ).map((c) => Number(c.value));
 
-        if (!checked.length) {
-          alert("اختر صلاحيات أولاً");
-          return;
-        }
+    if (!checked.length) {
+      adminToast("اختر صلاحيات أولاً", "warning");
+      return;
+    }
 
-        if (
-          !confirm(
-            `سيتم ربط ${checked.length} صلاحية بالوحدة المحددة. هل تريد المتابعة؟`
-          )
-        ) {
-          return;
-        }
+    const ok = await adminConfirm({
+      title: "ربط الصلاحيات بالوحدة",
+      message: `سيتم ربط ${checked.length} صلاحية بالوحدة المحددة.\nهل تريد المتابعة؟`,
+      confirmText: "ربط الصلاحيات",
+      cancelText: "إلغاء",
+      type: "warning",
+    });
 
-        // تحديث كل صلاحية مختارة
-        for (const permId of checked) {
-          const perm = this.permissions.find(
-            (p) => Number(p.id) === Number(permId)
-          );
-          if (!perm) continue;
+    if (!ok) return;
 
-          const body = JSON.stringify({
-            name: perm.name,
-            code: perm.code,
-            module_code: moduleCode,
-          });
+    for (const permId of checked) {
+      const perm = this.permissions.find(
+        (p) => Number(p.id) === Number(permId)
+      );
+      if (!perm) continue;
 
-          await rbacApiRequest(`/permissions/${permId}`, {
-            method: "PUT",
-            body,
-          });
-        }
+      const body = JSON.stringify({
+        name: perm.name,
+        code: perm.code,
+        module_code: moduleCode,
+      });
 
-        await this.loadPermissions();
-        this.renderBulkPermissionsList(searchInput ? searchInput.value : "");
-        alert("تم ربط الصلاحيات المحددة بالوحدة بنجاح");
+      await rbacApiRequest(`/permissions/${permId}`, {
+        method: "PUT",
+        body,
       });
     }
+
+    await this.loadPermissions();
+    this.renderBulkPermissionsList(searchInput ? searchInput.value : "");
+    adminToast("تم ربط الصلاحيات المحددة بالوحدة بنجاح", "success");
+  });
+}
 
     // تحميل أولي للقائمة
     this.renderBulkPermissionsList();
@@ -521,14 +546,26 @@ const body = JSON.stringify({
       };
     });
 
-    tbody.querySelectorAll("[data-action=delete-permission]").forEach((btn) => {
-      btn.onclick = async () => {
-        const id = btn.getAttribute("data-perm-id");
-        if (!confirm("هل أنت متأكد من حذف هذه الصلاحية؟")) return;
-        await rbacApiRequest(`/permissions/${id}`, { method: "DELETE" });
-        await this.loadPermissions();
-      };
+  tbody.querySelectorAll("[data-action=delete-permission]").forEach((btn) => {
+  btn.onclick = async () => {
+    const id = btn.getAttribute("data-perm-id");
+
+    const ok = await adminConfirm({
+      title: "حذف الصلاحية",
+      message:
+        "هل أنت متأكد من حذف هذه الصلاحية؟\nقد يؤثر هذا على الأدوار المرتبطة بها.",
+      confirmText: "حذف الصلاحية",
+      cancelText: "إلغاء",
+      type: "danger",
     });
+
+    if (!ok) return;
+
+    await rbacApiRequest(`/permissions/${id}`, { method: "DELETE" });
+    adminToast("تم حذف الصلاحية بنجاح", "success");
+    await this.loadPermissions();
+  };
+});
   },
 
   /* ================== الأدوار (Roles) ================== */
@@ -552,10 +589,10 @@ const body = JSON.stringify({
         .getElementById("role-description")
         .value.trim();
 
-      if (!name) {
-        alert("الرجاء إدخال اسم الدور");
-        return;
-      }
+    if (!name) {
+  adminToast("الرجاء إدخال اسم الدور", "warning");
+  return;
+}
 
       const body = JSON.stringify({ name, description });
 
@@ -580,10 +617,10 @@ const body = JSON.stringify({
 
     savePermsBtn.onclick = async () => {
       const roleId = roleSelect.value;
-      if (!roleId) {
-        alert("اختر دورًا أولاً");
-        return;
-      }
+    if (!roleId) {
+  adminToast("اختر دورًا أولاً", "warning");
+  return;
+}
 
       const checked = Array.from(
         document.querySelectorAll(
@@ -596,8 +633,7 @@ const body = JSON.stringify({
         body: JSON.stringify({ permissions: checked }),
       });
 
-      alert("تم حفظ صلاحيات الدور بنجاح");
-    };
+adminToast("تم حفظ صلاحيات الدور بنجاح", "success");    };
   },
 
   async loadRoles() {
@@ -661,14 +697,26 @@ const body = JSON.stringify({
       };
     });
 
-    tbody.querySelectorAll("[data-action=delete-role]").forEach((btn) => {
-      btn.onclick = async () => {
-        const id = btn.getAttribute("data-role-id");
-        if (!confirm("هل أنت متأكد من حذف هذا الدور؟")) return;
-        await rbacApiRequest(`/roles/${id}`, { method: "DELETE" });
-        await this.loadRoles();
-      };
+   tbody.querySelectorAll("[data-action=delete-role]").forEach((btn) => {
+  btn.onclick = async () => {
+    const id = btn.getAttribute("data-role-id");
+
+    const ok = await adminConfirm({
+      title: "حذف الدور",
+      message:
+        "هل أنت متأكد من حذف هذا الدور؟\nقد يؤثر هذا على المستخدمين المرتبطين بهذا الدور وصلاحياتهم.",
+      confirmText: "حذف الدور",
+      cancelText: "إلغاء",
+      type: "danger",
     });
+
+    if (!ok) return;
+
+    await rbacApiRequest(`/roles/${id}`, { method: "DELETE" });
+    adminToast("تم حذف الدور بنجاح", "success");
+    await this.loadRoles();
+  };
+});
   },
 
   populateRolesSelect() {
@@ -706,25 +754,33 @@ const body = JSON.stringify({
   },
 
   async grantAllPermissions() {
-    const roleSelect = document.getElementById("role-select-perms");
-    const roleId = roleSelect?.value;
+  const roleSelect = document.getElementById("role-select-perms");
+  const roleId = roleSelect?.value;
 
-    if (!roleId) {
-      alert("❌ اختر دورًا أولاً");
-      return;
-    }
+  if (!roleId) {
+    adminToast("اختر دورًا أولاً", "warning");
+    return;
+  }
 
-    if (!confirm("هل أنت متأكد من منح كل الصلاحيات لهذا الدور؟")) return;
+  const ok = await adminConfirm({
+    title: "منح كل الصلاحيات",
+    message:
+      "سيتم منح جميع صلاحيات النظام لهذا الدور.\nهذا الإجراء قد يعطي المستخدمين صلاحيات واسعة جدًا.",
+    confirmText: "منح الصلاحيات",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
 
-    await rbacApiRequest(
-      `/roles/${roleId}/grant-all-permissions`,
-      { method: "POST" }
-    );
+  if (!ok) return;
 
-    alert("✅ تم منح كل الصلاحيات بنجاح");
-    await this.renderRolePermissions(roleId);
-  },
+  await rbacApiRequest(
+    `/roles/${roleId}/grant-all-permissions`,
+    { method: "POST" }
+  );
 
+  adminToast("تم منح كل الصلاحيات بنجاح", "success");
+  await this.renderRolePermissions(roleId);
+},
   /* ================== المستخدمون (Users) ================== */
   async initUsersPage() {
     const tbody = document.getElementById("rbac-users-tbody");
@@ -751,11 +807,10 @@ const body = JSON.stringify({
       const phone = document.getElementById("user-phone").value.trim();
       const password = document.getElementById("user-password").value.trim();
       const role_id = document.getElementById("user-role").value;
-
-      if (!full_name || !username || !email || !role_id) {
-        alert("الاسم الكامل واسم المستخدم والبريد والدور مطلوبة");
-        return;
-      }
+if (!full_name || !username || !email || !role_id) {
+  adminToast("الاسم الكامل واسم المستخدم والبريد والدور مطلوبة", "warning");
+  return;
+}
 
       const payload = {
         full_name,
@@ -765,10 +820,10 @@ const body = JSON.stringify({
         role_id: Number(role_id),
       };
 
-      if (!id && !password) {
-        alert("الرجاء إدخال كلمة المرور للمستخدم الجديد");
-        return;
-      }
+    if (!id && !password) {
+  adminToast("الرجاء إدخال كلمة المرور للمستخدم الجديد", "warning");
+  return;
+}
       if (password) {
         payload.password = password;
       }
@@ -889,14 +944,26 @@ const body = JSON.stringify({
       };
     });
 
-    tbody.querySelectorAll("[data-action=delete-user]").forEach((btn) => {
-      btn.onclick = async () => {
-        const id = btn.getAttribute("data-user-id");
-        if (!confirm("هل أنت متأكد من حذف هذا المستخدم؟")) return;
-        await rbacApiRequest(`/users/${id}`, { method: "DELETE" });
-        await this.loadUsers();
-      };
+   tbody.querySelectorAll("[data-action=delete-user]").forEach((btn) => {
+  btn.onclick = async () => {
+    const id = btn.getAttribute("data-user-id");
+
+    const ok = await adminConfirm({
+      title: "حذف المستخدم",
+      message:
+        "هل أنت متأكد من حذف هذا المستخدم؟\nلن يستطيع هذا المستخدم الدخول للنظام بعد الحذف.",
+      confirmText: "حذف المستخدم",
+      cancelText: "إلغاء",
+      type: "danger",
     });
+
+    if (!ok) return;
+
+    await rbacApiRequest(`/users/${id}`, { method: "DELETE" });
+    adminToast("تم حذف المستخدم بنجاح", "success");
+    await this.loadUsers();
+  };
+});
   },
 };
 

@@ -221,7 +221,7 @@
       btn.type = "button";
       btn.className = "primary-btn";
       btn.id = "stu-gr-print";
-      btn.innerHTML = `<i class="ri-printer-line"></i><span>طباعة</span>`;
+btn.innerHTML = `<i class="ri-printer-line"></i><span>طباعة كشف الدرجات</span>`;
       actions.appendChild(btn);
     }
 
@@ -823,21 +823,499 @@
       }
     }
   }
+function resultSheetTitle(result) {
+  const term = Number(result?.term);
 
-  function printResult() {
-    const hasData =
-      state.mode === "term_results"
-        ? state.termResults.length > 0
-        : state.assessmentItems.length > 0;
+  if (term === 1) return "كشف درجات نصف العام";
+  if (term === 2) return "كشف درجات نهاية العام";
 
-    if (!hasData) {
-      toast("لا توجد درجات للطباعة", "error");
-      return;
-    }
+  return "كشف درجات الطالب";
+}
 
-    window.print();
+function resultKindLabel(result) {
+  const term = Number(result?.term);
+
+  if (term === 1) return "نتائج نصف العام";
+  if (term === 2) return "نتائج نهاية العام";
+
+  return result?.term_label || "نتائج الطالب";
+}
+
+function sheetDate() {
+  return new Date().toLocaleDateString("ar-YE", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+}
+
+function buildStudentResultSheetHTML(result) {
+  const student = state.student || {};
+  const subjects = Array.isArray(result?.subjects) ? result.subjects : [];
+
+  const title = resultSheetTitle(result);
+  const kind = resultKindLabel(result);
+
+  const total = scoreWithMax(result?.total_score, result?.max_score);
+
+  const percentage =
+    result?.percentage === null || result?.percentage === undefined
+      ? "—"
+      : `${fmtNumber(result.percentage)}%`;
+
+  const gradeLabel =
+    result?.grade_label || gradeLabelFromPercentage(result?.percentage);
+
+  const statusText =
+    result?.student_status_label || statusLabel(result?.student_status);
+
+  const rank = result?.rank_in_section || "—";
+
+  const rowsHtml = subjects.length
+    ? subjects
+        .map((subject) => {
+          const aggregate = scoreWithMax(
+            subject.aggregate_score,
+            subject.aggregate_max_score
+          );
+
+          const exam = scoreWithMax(
+            subject.exam_score,
+            subject.exam_max_score
+          );
+
+          const subjectTotal = scoreWithMax(
+            subject.total_score,
+            subject.max_score
+          );
+
+          const subjectPercentage =
+            subject.percentage === null || subject.percentage === undefined
+              ? "—"
+              : `${fmtNumber(subject.percentage)}%`;
+
+          const subjectGrade =
+            subject.grade_label || gradeLabelFromPercentage(subject.percentage);
+
+          const subjectStatus =
+            subject.status_label || statusLabel(subject.status);
+
+          return `
+            <tr>
+              <td class="subject-name">${escapeHtml(subject.subject_name || "—")}</td>
+              <td>${escapeHtml(aggregate)}</td>
+              <td>${escapeHtml(exam)}</td>
+              <td>${escapeHtml(subjectTotal)}</td>
+              <td>${escapeHtml(subjectPercentage)}</td>
+              <td>${escapeHtml(subjectGrade)}</td>
+              <td>${escapeHtml(subjectStatus)}</td>
+            </tr>
+          `;
+        })
+        .join("")
+    : `
+      <tr>
+        <td colspan="7" class="empty-row">
+          لا توجد تفاصيل مواد لهذه النتيجة.
+        </td>
+      </tr>
+    `;
+
+  return `
+    <!DOCTYPE html>
+    <html lang="ar" dir="rtl">
+    <head>
+      <meta charset="UTF-8" />
+      <title>${escapeHtml(title)}</title>
+
+      <style>
+        @page {
+          size: A4 portrait;
+          margin: 10mm;
+        }
+
+        * {
+          box-sizing: border-box;
+        }
+
+        body {
+          margin: 0;
+          direction: rtl;
+          font-family: Arial, Tahoma, sans-serif;
+          background: #eef2f7;
+          color: #111827;
+        }
+
+        .no-print {
+          padding: 14px;
+          text-align: center;
+        }
+
+        .print-btn {
+          border: 0;
+          border-radius: 999px;
+          padding: 11px 26px;
+          background: #2563eb;
+          color: white;
+          font-weight: 900;
+          font-size: 14px;
+          cursor: pointer;
+        }
+
+        .sheet {
+          width: 190mm;
+          min-height: 270mm;
+          margin: 0 auto 20px;
+          padding: 14mm;
+          background: #ffffff;
+          border-radius: 18px;
+          border: 1px solid #dbe4f0;
+          box-shadow: 0 18px 55px rgba(15, 23, 42, 0.13);
+        }
+
+        .header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 18px;
+          padding-bottom: 14px;
+          border-bottom: 2px solid #dbeafe;
+          margin-bottom: 16px;
+        }
+
+        .school {
+          font-size: 18px;
+          font-weight: 950;
+          color: #1e3a8a;
+        }
+
+        .subtitle {
+          margin-top: 6px;
+          color: #64748b;
+          font-weight: 800;
+          font-size: 12px;
+        }
+
+        .logo-box {
+          width: 64px;
+          height: 64px;
+          border-radius: 18px;
+          background: #eff6ff;
+          border: 1px solid #dbeafe;
+          display: grid;
+          place-items: center;
+          color: #2563eb;
+          font-size: 28px;
+          font-weight: 950;
+        }
+
+        .title {
+          text-align: center;
+          color: #2563eb;
+          font-size: 28px;
+          font-weight: 950;
+          margin: 18px 0 18px;
+        }
+
+        .info-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 9px;
+          margin-bottom: 14px;
+        }
+
+        .info {
+          border: 1px solid #e5e7eb;
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 10px;
+          min-height: 58px;
+        }
+
+        .info span {
+          display: block;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 900;
+          margin-bottom: 5px;
+        }
+
+        .info strong {
+          display: block;
+          color: #111827;
+          font-size: 13px;
+          font-weight: 950;
+          line-height: 1.5;
+        }
+
+        .summary-grid {
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 9px;
+          margin: 14px 0 16px;
+        }
+
+        .summary {
+          border: 1px solid #e5e7eb;
+          background: #f8fafc;
+          border-radius: 12px;
+          padding: 10px;
+          text-align: center;
+        }
+
+        .summary span {
+          display: block;
+          color: #64748b;
+          font-size: 11px;
+          font-weight: 900;
+          margin-bottom: 5px;
+        }
+
+        .summary strong {
+          display: block;
+          font-size: 14px;
+          font-weight: 950;
+          color: #111827;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 12px;
+        }
+
+        th,
+        td {
+          border: 1px solid #d1d5db;
+          padding: 8px 7px;
+          text-align: center;
+          vertical-align: middle;
+        }
+
+        th {
+          background: #eaf2ff;
+          color: #1e3a8a;
+          font-weight: 950;
+        }
+
+        td.subject-name {
+          text-align: right;
+          font-weight: 900;
+        }
+
+        .empty-row {
+          padding: 18px;
+          text-align: center;
+          color: #64748b;
+          font-weight: 800;
+        }
+
+        .footer {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 36px;
+          margin-top: 26px;
+          align-items: end;
+        }
+
+        .signature {
+          text-align: center;
+          font-weight: 950;
+          color: #111827;
+        }
+
+        .signature span {
+          display: block;
+          color: #64748b;
+          font-size: 12px;
+          font-weight: 900;
+          margin-bottom: 30px;
+          padding-bottom: 8px;
+          border-bottom: 1px solid #94a3b8;
+        }
+
+        @media print {
+          body {
+            background: #ffffff;
+          }
+
+          .no-print {
+            display: none;
+          }
+
+          .sheet {
+            width: auto;
+            min-height: auto;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            border-radius: 0;
+            box-shadow: none;
+          }
+        }
+      </style>
+    </head>
+
+    <body>
+      <div class="no-print">
+        <button class="print-btn" onclick="window.print()">طباعة الكشف</button>
+      </div>
+
+      <main class="sheet">
+        <header class="header">
+          <div>
+            <div class="school">إدارة المدرسة</div>
+            <div class="subtitle">${escapeHtml(kind)}</div>
+          </div>
+
+          <div class="logo-box">⌁</div>
+        </header>
+
+        <h1 class="title">${escapeHtml(title)}</h1>
+
+        <section class="info-grid">
+          <div class="info">
+            <span>اسم الطالب</span>
+            <strong>${escapeHtml(student.full_name || "—")}</strong>
+          </div>
+
+          <div class="info">
+            <span>رقم الطالب</span>
+            <strong>${escapeHtml(student.student_code || "—")}</strong>
+          </div>
+
+          <div class="info">
+            <span>السنة الدراسية</span>
+            <strong>${escapeHtml(result?.academic_year_name || "—")}</strong>
+          </div>
+
+          <div class="info">
+            <span>الفصل</span>
+            <strong>${escapeHtml(result?.term_label || "—")}</strong>
+          </div>
+
+          <div class="info">
+            <span>الصف</span>
+            <strong>${escapeHtml(result?.grade_name || "—")}</strong>
+          </div>
+
+          <div class="info">
+            <span>الشعبة</span>
+            <strong>${escapeHtml(result?.section_name || "—")}</strong>
+          </div>
+
+          <div class="info">
+            <span>نوع النتيجة</span>
+            <strong>${escapeHtml(kind)}</strong>
+          </div>
+
+          <div class="info">
+            <span>تاريخ الإصدار</span>
+            <strong>${escapeHtml(sheetDate())}</strong>
+          </div>
+        </section>
+
+        <section class="summary-grid">
+          <div class="summary">
+            <span>المجموع</span>
+            <strong>${escapeHtml(total)}</strong>
+          </div>
+
+          <div class="summary">
+            <span>النسبة</span>
+            <strong>${escapeHtml(percentage)}</strong>
+          </div>
+
+          <div class="summary">
+            <span>التقدير</span>
+            <strong>${escapeHtml(gradeLabel)}</strong>
+          </div>
+
+          <div class="summary">
+            <span>الترتيب</span>
+            <strong>${escapeHtml(rank)}</strong>
+          </div>
+
+          <div class="summary">
+            <span>الحالة</span>
+            <strong>${escapeHtml(statusText)}</strong>
+          </div>
+        </section>
+
+        <table>
+          <thead>
+            <tr>
+              <th>المادة</th>
+              <th>المحصلة</th>
+              <th>الاختبار</th>
+              <th>مجموع المادة</th>
+              <th>النسبة</th>
+              <th>التقدير</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+
+        <footer class="footer">
+          <div class="signature">
+            <span>تاريخ الإصدار</span>
+            ${escapeHtml(sheetDate())}
+          </div>
+
+          <div class="signature">
+            <span>مدير المدرسة</span>
+            مدير المدرسة
+          </div>
+        </footer>
+      </main>
+    </body>
+    </html>
+  `;
+}
+
+function printTermResultSheet() {
+  const result = activeTermResult();
+
+  if (!result) {
+    toast("لا توجد نتيجة منشورة للطباعة", "error");
+    return;
   }
 
+  const win = window.open("", "_blank", "width=950,height=720");
+
+  if (!win) {
+    toast("المتصفح منع فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة ثم حاول مرة أخرى.", "error");
+    return;
+  }
+
+  win.document.open();
+  win.document.write(buildStudentResultSheetHTML(result));
+  win.document.close();
+  win.focus();
+
+  setTimeout(() => {
+    win.print();
+  }, 500);
+}
+function printResult() {
+  if (state.mode === "term_results") {
+    printTermResultSheet();
+    return;
+  }
+
+  const hasData = state.assessmentItems.length > 0;
+
+  if (!hasData) {
+    toast("لا توجد درجات للطباعة", "error");
+    return;
+  }
+
+  window.print();
+}
   function bindModal() {
     const m = modal();
     if (!m) return;

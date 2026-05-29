@@ -382,6 +382,12 @@ if (window.attendanceReports) {
   requestAnimationFrame(() => window.initMonthlyReportsScreen());
 }
       if (
+  normalizedKey === "studentData" &&
+  typeof window.initStudentReportsScreen === "function"
+) {
+  requestAnimationFrame(() => window.initStudentReportsScreen());
+}
+      if (
   normalizedKey === "studentRenew" &&
   typeof window.initContinuingStudentsScreen === "function"
 ) {

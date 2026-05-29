@@ -1,0 +1,179 @@
+<section id="staffReportsPage" class="str-page" dir="rtl">
+  <header class="str-hero">
+    <div>
+      <span class="str-kicker">
+        <i class="ri-team-line"></i>
+        التقارير العامة
+      </span>
+
+      <h2>التقرير الشامل للموظفين</h2>
+
+      <p>
+        تقرير إداري يجمع بيانات الموظفين والمعلمين، حسابات الدخول، الأدوار، الحضور، الغياب، والنواقص في مكان واحد.
+      </p>
+    </div>
+
+    <div class="str-hero-card">
+      <span>مصدر البيانات</span>
+      <strong>الموظفون + المعلمون</strong>
+      <small>يعتمد على employees و teachers بدون تكرار.</small>
+    </div>
+  </header>
+
+  <div id="strAlert" class="str-alert"></div>
+
+  <section class="str-panel">
+    <div class="str-panel-head">
+      <div>
+        <h3>الفلاتر</h3>
+        <p>حدد نطاق التقرير ثم اضغط عرض التقرير.</p>
+      </div>
+
+      <div class="str-actions">
+        <button id="strPrintNamesBtn" type="button" class="str-btn str-btn-soft">
+  <i class="ri-file-list-3-line"></i>
+  طباعة كشف الموظفين
+</button>
+        <button id="strLoadBtn" type="button" class="str-btn str-btn-primary">
+          <i class="ri-search-line"></i>
+          عرض التقرير
+        </button>
+
+        <button id="strPrintBtn" type="button" class="str-btn str-btn-soft">
+          <i class="ri-printer-line"></i>
+          طباعة
+        </button>
+
+        <button id="strExportBtn" type="button" class="str-btn str-btn-soft">
+          <i class="ri-file-excel-2-line"></i>
+          تصدير Excel
+        </button>
+      </div>
+    </div>
+
+    <div class="str-filters">
+      <label class="str-field">
+        <span>السنة الدراسية للحضور</span>
+        <select id="strAcademicYear">
+          <option value="">كل السنوات</option>
+        </select>
+      </label>
+
+      <label class="str-field">
+        <span>بحث</span>
+        <input id="strSearch" type="search" placeholder="اسم / هاتف / وظيفة / حساب / دور">
+      </label>
+
+      <label class="str-field">
+        <span>نوع الموظف</span>
+        <select id="strEmployeeType">
+          <option value="">الكل</option>
+          <option value="teacher">المعلمون</option>
+          <option value="admin">الإداريون</option>
+        </select>
+      </label>
+
+      <label class="str-field">
+        <span>الحالة</span>
+        <select id="strIsActive">
+          <option value="">الكل</option>
+          <option value="true">نشط</option>
+          <option value="false">غير نشط</option>
+        </select>
+      </label>
+
+      <label class="str-field">
+        <span>حساب الدخول</span>
+        <select id="strHasUser">
+          <option value="">الكل</option>
+          <option value="yes">لديه حساب</option>
+          <option value="no">بدون حساب</option>
+        </select>
+      </label>
+
+      <label class="str-field">
+        <span>النواقص</span>
+        <select id="strMissingPhone">
+          <option value="">الكل</option>
+          <option value="yes">رقم الهاتف ناقص</option>
+        </select>
+      </label>
+
+      <label class="str-field">
+        <span>الحضور</span>
+        <select id="strAttendanceFlag">
+          <option value="">الكل</option>
+          <option value="has_attendance">لديه حضور</option>
+          <option value="has_absence">لديه غياب</option>
+          <option value="no_attendance">بدون سجلات حضور</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="str-summary-grid">
+    <div class="str-stat"><span>إجمالي الموظفين</span><strong id="strTotalEmployees">0</strong></div>
+    <div class="str-stat"><span>المعلمون</span><strong id="strTeachersCount">0</strong></div>
+    <div class="str-stat"><span>الإداريون</span><strong id="strAdminsCount">0</strong></div>
+    <div class="str-stat"><span>النشطون</span><strong id="strActiveCount">0</strong></div>
+    <div class="str-stat"><span>غير النشطين</span><strong id="strInactiveCount">0</strong></div>
+    <div class="str-stat"><span>بدون حساب</span><strong id="strMissingUserCount">0</strong></div>
+    <div class="str-stat"><span>هاتف ناقص</span><strong id="strMissingPhoneCount">0</strong></div>
+    <div class="str-stat"><span>لديهم حضور</span><strong id="strWithAttendanceCount">0</strong></div>
+    <div class="str-stat"><span>لديهم غياب</span><strong id="strWithAbsenceCount">0</strong></div>
+    <div class="str-stat"><span>إجمالي الغياب</span><strong id="strTotalAbsentCount">0</strong></div>
+  </section>
+
+  <section class="str-panel">
+    <div class="str-panel-head">
+      <div>
+        <h3>كشف الموظفين التفصيلي</h3>
+        <p id="strTableInfo">لم يتم تحميل التقرير بعد.</p>
+      </div>
+
+      <div class="str-pagination">
+        <button id="strPrevBtn" type="button" class="str-btn str-btn-soft">السابق</button>
+        <span id="strPageInfo">صفحة 1 من 1</span>
+        <button id="strNextBtn" type="button" class="str-btn str-btn-soft">التالي</button>
+      </div>
+    </div>
+
+    <div id="strEmpty" class="str-empty">
+      اضغط عرض التقرير لعرض بيانات الموظفين.
+    </div>
+
+    <div id="strTableWrap" class="str-table-wrap" style="display:none;">
+      <table class="str-table">
+        <thead>
+          <tr>
+            <th>م</th>
+            <th>الموظف</th>
+            <th>النوع / الوظيفة</th>
+            <th>الهاتف</th>
+            <th>حساب الدخول</th>
+            <th>الأدوار</th>
+            <th>الحضور</th>
+            <th>الحالة</th>
+            <th>النواقص</th>
+            <th>تفاصيل</th>
+          </tr>
+        </thead>
+        <tbody id="strTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <aside id="strProfileDrawer" class="str-drawer" aria-hidden="true">
+    <div class="str-drawer-backdrop" id="strCloseBackdrop"></div>
+
+    <div class="str-drawer-panel">
+      <button id="strCloseProfileBtn" type="button" class="str-close-btn">
+        <i class="ri-close-line"></i>
+      </button>
+
+      <div id="strProfileContent" class="str-profile-content">
+        <div class="str-empty">اختر موظفًا لعرض تقريره التفصيلي.</div>
+      </div>
+    </div>
+  </aside>
+</section>

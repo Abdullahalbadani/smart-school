@@ -1,0 +1,911 @@
+.cert-page {
+  min-height: 100vh;
+  padding: 22px;
+  color: var(--text-main);
+  background: var(--bg-shell);
+  overflow-x: hidden;
+}
+
+.cert-page * {
+  box-sizing: border-box;
+}
+
+.cert-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.cert-hero__content,
+.cert-hero__side,
+.cert-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-soft);
+}
+
+.cert-hero__content {
+  padding: 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cert-hero__content::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: -70px;
+  top: -90px;
+  width: 230px;
+  height: 230px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  opacity: 0.85;
+}
+
+.cert-eyebrow {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary);
+  font-weight: 950;
+  font-size: 13px;
+  margin-bottom: 14px;
+}
+
+.cert-hero h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: clamp(28px, 3vw, 44px);
+  letter-spacing: -0.04em;
+}
+
+.cert-hero p {
+  position: relative;
+  z-index: 1;
+  margin: 12px 0 0;
+  max-width: 760px;
+  color: var(--text-muted);
+  line-height: 1.9;
+  font-weight: 750;
+}
+
+.cert-hero__side {
+  padding: 18px;
+  display: flex;
+  align-items: center;
+}
+
+.cert-stat-card {
+  width: 100%;
+  padding: 18px;
+  border-radius: var(--radius-lg);
+  background:
+    radial-gradient(circle at top right, var(--primary-soft), transparent 45%),
+    var(--bg-panel-soft);
+  border: 1px solid var(--border-soft);
+}
+
+.cert-stat-card span,
+.cert-stat-card small {
+  display: block;
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.cert-stat-card strong {
+  display: block;
+  font-size: 21px;
+  margin: 8px 0;
+}
+
+.cert-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.cert-tab {
+  min-height: 46px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+  color: var(--text-main);
+  font-weight: 950;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+.cert-tab.is-active {
+  color: #fff;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
+.cert-alert {
+  display: none;
+  margin-bottom: 18px;
+  padding: 13px 16px;
+  border-radius: 16px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel);
+  font-weight: 850;
+}
+
+.cert-alert.show {
+  display: block;
+}
+
+.cert-alert.success {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-panel));
+}
+
+.cert-alert.error {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: color-mix(in srgb, var(--danger) 10%, var(--bg-panel));
+}
+
+.cert-panel {
+  padding: 18px;
+  margin-bottom: 18px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.cert-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.cert-panel-head h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.cert-panel-head p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.7;
+  font-weight: 750;
+}
+
+.cert-filters {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.cert-field {
+  display: grid;
+  gap: 7px;
+}
+
+.cert-field span {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.cert-field select,
+.cert-search input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--bg-panel-soft);
+  color: var(--text-main);
+  outline: none;
+  padding: 0 13px;
+  font-weight: 850;
+}
+
+.cert-field select:focus,
+.cert-search input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 16%, transparent);
+}
+
+.cert-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.cert-actions-row--footer {
+  padding-top: 14px;
+  border-top: 1px solid var(--border-soft);
+}
+
+.cert-btn {
+  min-height: 42px;
+  border-radius: 999px;
+  padding: 0 16px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-panel-soft);
+  color: var(--text-main);
+  font-weight: 950;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.cert-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cert-btn-primary {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: white;
+}
+
+.cert-btn-success {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+
+.cert-btn-soft {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.cert-btn-danger {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, var(--bg-panel));
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border-soft));
+}
+
+.cert-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(360px, 0.85fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.cert-check-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-muted);
+  font-weight: 900;
+  font-size: 13px;
+}
+
+.cert-check-all input,
+.cert-student-check,
+.cert-cert-check {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+}
+
+.cert-search {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.cert-search i {
+  position: absolute;
+  inset-inline-start: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.cert-search input {
+  padding-inline-start: 40px;
+}
+
+.cert-empty {
+  min-height: 130px;
+  border: 1px dashed var(--border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 20px;
+  line-height: 1.8;
+  font-weight: 850;
+}
+
+.cert-empty-soft {
+  min-height: 110px;
+}
+
+.cert-table-wrap {
+  overflow: auto;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--bg-panel);
+}
+
+.cert-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+}
+
+.cert-table th,
+.cert-table td {
+  padding: 13px 12px;
+  text-align: right;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+  font-size: 13px;
+}
+
+.cert-table th {
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.cert-table td {
+  font-weight: 800;
+}
+
+.cert-student-name {
+  font-weight: 950;
+  margin-bottom: 4px;
+}
+
+.cert-muted {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.cert-badge {
+  display: inline-flex;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.cert-badge-issued {
+  color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.cert-badge-new {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.cert-badge-printed {
+  color: var(--accent-amber);
+  background: color-mix(in srgb, var(--accent-amber) 16%, transparent);
+}
+
+.cert-print-area {
+  display: grid;
+  gap: 18px;
+}
+
+/* Monthly Certificate */
+.cert-monthly-sheet {
+  width: min(100%, 920px);
+  min-height: 620px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 35%),
+    linear-gradient(315deg, rgba(34, 197, 94, 0.08), transparent 35%),
+    #fff;
+  color: #111827;
+  border: 10px solid #f8fafc;
+  outline: 2px solid #dbeafe;
+  border-radius: 26px;
+  box-shadow: var(--shadow-soft);
+  page-break-after: always;
+}
+
+.cert-monthly-inner {
+  position: relative;
+  z-index: 2;
+  min-height: 600px;
+  padding: 42px 54px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+}
+
+.cert-monthly-border {
+  position: absolute;
+  inset: 24px;
+  border: 2px dashed rgba(37, 99, 235, 0.28);
+  border-radius: 22px;
+}
+
+.cert-deco {
+  position: absolute;
+  width: 260px;
+  height: 260px;
+  border-radius: 999px;
+  opacity: 0.22;
+}
+
+.cert-deco-a {
+  inset-inline-start: -110px;
+  top: -110px;
+  background: #2563eb;
+}
+
+.cert-deco-b {
+  inset-inline-end: -110px;
+  bottom: -110px;
+  background: #22c55e;
+}
+
+.cert-monthly-header {
+  text-align: center;
+}
+
+.cert-monthly-header img {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
+  margin-bottom: 6px;
+}
+
+.cert-monthly-header h2 {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 22px;
+}
+
+.cert-monthly-header span {
+  display: block;
+  margin-top: 5px;
+  color: #64748b;
+  font-weight: 800;
+}
+
+.cert-monthly-main {
+  display: grid;
+  align-content: center;
+  text-align: center;
+}
+
+.cert-monthly-main h1 {
+  margin: 0;
+  color: #1d4ed8;
+  font-size: clamp(36px, 6vw, 64px);
+  line-height: 1.15;
+}
+
+.cert-give,
+.cert-sub-line {
+  color: #64748b;
+  font-weight: 900;
+  font-size: 18px;
+}
+
+.cert-big-name {
+  margin: 18px auto 0;
+  width: min(100%, 620px);
+  padding: 16px 20px;
+  border-bottom: 3px solid #2563eb;
+  font-size: clamp(28px, 4vw, 46px);
+  font-weight: 950;
+  line-height: 1.35;
+}
+
+.cert-body-text {
+  width: min(100%, 680px);
+  margin: 24px auto 0;
+  color: #334155;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 2;
+}
+
+.cert-monthly-footer,
+.cert-result-footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 36px;
+}
+
+.cert-monthly-footer div,
+.cert-result-footer div {
+  text-align: center;
+}
+
+.cert-monthly-footer span,
+.cert-result-footer span {
+  display: block;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 950;
+  border-bottom: 1px solid #94a3b8;
+  padding-bottom: 9px;
+  margin-bottom: 8px;
+}
+
+.cert-monthly-footer b,
+.cert-result-footer b {
+  color: #111827;
+}
+
+/* Result Certificate */
+.cert-result-sheet {
+  width: min(100%, 920px);
+  margin: 0 auto;
+  padding: 34px;
+  background: #fff;
+  color: #111827;
+  border: 8px solid #f8fafc;
+  outline: 2px solid #dbeafe;
+  border-radius: 24px;
+  box-shadow: var(--shadow-soft);
+  page-break-after: always;
+}
+
+.cert-result-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 2px solid #dbeafe;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+
+.cert-logo-box {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: #eff6ff;
+  display: grid;
+  place-items: center;
+  color: #2563eb;
+  font-size: 32px;
+  flex: 0 0 auto;
+}
+
+.cert-logo-box img {
+  max-width: 58px;
+  max-height: 58px;
+  object-fit: contain;
+}
+
+.cert-result-header h2 {
+  margin: 0;
+  color: #1e3a8a;
+  font-size: 20px;
+}
+
+.cert-result-header h1 {
+  margin: 5px 0 0;
+  color: #1d4ed8;
+  font-size: 30px;
+}
+
+.cert-student-summary,
+.cert-score-summary {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.cert-student-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.cert-score-summary {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.cert-student-summary div,
+.cert-score-summary div,
+.cert-year-result {
+  border: 1px solid #e5e7eb;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 10px;
+}
+
+.cert-student-summary span,
+.cert-score-summary span,
+.cert-year-result span {
+  display: block;
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 950;
+  margin-bottom: 5px;
+}
+
+.cert-student-summary strong,
+.cert-score-summary strong,
+.cert-year-result strong {
+  color: #111827;
+  font-size: 14px;
+}
+
+.cert-subjects-wrap {
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  border-radius: 16px;
+  margin: 16px 0;
+}
+
+.cert-subjects-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.cert-subjects-table th,
+.cert-subjects-table td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: center;
+  font-size: 12px;
+}
+
+.cert-subjects-table th {
+  background: #eff6ff;
+  color: #1e3a8a;
+  font-weight: 950;
+}
+
+.cert-subjects-table td:first-child,
+.cert-subjects-table th:first-child {
+  text-align: right;
+}
+
+.cert-year-result {
+  margin-bottom: 16px;
+}
+
+.cert-year-result p {
+  margin: 8px 0 0;
+  color: #64748b;
+  font-weight: 800;
+}
+
+/* Responsive */
+@media (max-width: 1180px) {
+  .cert-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .cert-hero__side {
+    display: none;
+  }
+
+  .cert-filters {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .cert-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .cert-page {
+    padding: 12px;
+    padding-bottom: 130px;
+  }
+
+  .cert-hero__content,
+  .cert-panel {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .cert-tabs,
+  .cert-actions-row {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cert-tab,
+  .cert-btn {
+    width: 100%;
+  }
+
+  .cert-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .cert-panel-head {
+    display: grid;
+  }
+
+  .cert-table-wrap {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+  }
+
+  .cert-table,
+  .cert-table thead,
+  .cert-table tbody,
+  .cert-table tr,
+  .cert-table th,
+  .cert-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .cert-table thead {
+    display: none;
+  }
+
+  .cert-table tbody {
+    display: grid;
+    gap: 10px;
+  }
+
+  .cert-table tr {
+    border: 1px solid var(--border-soft);
+    border-radius: 16px;
+    background: var(--bg-panel-soft);
+    padding: 10px;
+  }
+
+  .cert-table td {
+    border: 0;
+    padding: 9px 4px;
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .cert-table td:not(:last-child) {
+    border-bottom: 1px dashed var(--border-soft);
+  }
+
+  .cert-table td::before {
+    content: attr(data-label);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 950;
+  }
+
+  .cert-monthly-sheet,
+  .cert-result-sheet {
+    width: 100%;
+    height: auto;
+    min-height: auto;
+    overflow: visible;
+  }
+
+  .cert-monthly-inner {
+    min-height: auto;
+    display: block;
+    padding: 28px 18px 34px;
+  }
+
+  .cert-monthly-main {
+    display: block;
+    padding: 20px 0;
+  }
+
+  .cert-monthly-main h1 {
+    font-size: 34px;
+  }
+
+  .cert-big-name {
+    font-size: 26px;
+    width: 100%;
+  }
+
+  .cert-body-text {
+    font-size: 13px;
+  }
+
+  .cert-result-sheet {
+    padding: 18px;
+  }
+
+  .cert-result-header {
+    display: grid;
+    text-align: center;
+    justify-items: center;
+  }
+
+  .cert-student-summary,
+  .cert-score-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .cert-subjects-wrap {
+    overflow-x: auto;
+  }
+
+  .cert-subjects-table {
+    min-width: 680px;
+  }
+
+  .cert-monthly-footer,
+  .cert-result-footer {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+}
+
+/* Print */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #certPrintArea,
+  #certPrintArea * {
+    visibility: visible !important;
+  }
+
+  #certPrintArea {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    background: #fff;
+    display: block;
+  }
+
+  .cert-page,
+  .cert-panel,
+  .cert-preview-panel {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    border: 0 !important;
+  }
+
+  .cert-monthly-sheet,
+  .cert-result-sheet {
+    width: 297mm;
+    min-height: 210mm;
+    margin: 0;
+    border-radius: 0;
+    box-shadow: none;
+    page-break-after: always;
+  }
+
+  .cert-monthly-inner {
+    min-height: calc(210mm - 16mm);
+    padding: 18mm 24mm;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 0;
+  }
+}/* إخفاء حقول الشهر والفصل في النصفية والنهائية */
+.cert-page [hidden],
+.cert-monthly-only[hidden] {
+  display: none !important;
+}

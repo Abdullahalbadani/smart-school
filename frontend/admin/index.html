@@ -15,7 +15,11 @@
       href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css"
     />
     <!-- ملف الـ CSS -->
+     <link rel="stylesheet" href="/frontend/shared/css/ui-dialogs.css?v=1" />
     <link rel="stylesheet" href="css/admin.css" />
+    <link rel="stylesheet" href="css/monthlyCertificates.css?v=10">
+    <link rel="stylesheet" href="css/studentReports.css?v=1">
+    <link rel="stylesheet" href="css/staffData.css">
     <link rel="stylesheet" href="css/rbac.css" />
     <link rel="stylesheet" href="css/viewstudent.css" />
     <link rel="stylesheet" href="css/studentRenew.css" />
@@ -28,6 +32,7 @@
     <link rel="stylesheet" href="css/inbox.css" />
     <link rel="stylesheet" href="css/notifications-log.css" />
     <link rel="stylesheet" href="css/notifications-send.css" />
+
   </head>
   <body>
     <div class="shell">
@@ -136,27 +141,22 @@
         <div class="hero-main">
           <div class="hero-text">
             <p class="hero-kicker" id="hero-day-label">الملخص التنفيذي لليوم</p>
-            <p class="hero-sub">
-              صباح الخير <i class="ri-hand-heart-line" aria-hidden="true"></i>،
-              أمامك ملخص تنفيذي لليوم الدراسي الحالي في مدرسة النور الأهلية:
-              الحضور، الرسوم، والملفات التي تحتاج إلى متابعتك المباشرة على مستوى
-              المدرسة.
+            <p class="hero-sub" id="hero-sub">
+              جاري تحميل الملخص التنفيذي من قاعدة البيانات...
             </p>
 
             <div class="hero-chips">
               <div class="chip">
                 <span class="chip-label">نسبة الحضور حتى الآن</span>
-                <span class="chip-value" id="chip-attendance">96٪</span>
+                <span class="chip-value" id="chip-attendance">—</span>
               </div>
               <div class="chip">
-                <span class="chip-label">إجمالي الرسوم المتأخرة</span>
-                <span class="chip-value chip-danger" id="chip-fees"
-                  >84,500 ر.س</span
-                >
+                <span class="chip-label">إجمالي الرسوم المتبقية</span>
+                <span class="chip-value chip-danger" id="chip-fees">—</span>
               </div>
               <div class="chip">
                 <span class="chip-label">ملفات بانتظار اعتمادك</span>
-                <span class="chip-value chip-warn" id="chip-requests">5</span>
+                <span class="chip-value chip-warn" id="chip-requests">—</span>
               </div>
             </div>
           </div>
@@ -191,62 +191,53 @@
                 <h3>مؤشرات اليوم للمدير</h3>
                 <span class="panel-tag">Real-time</span>
               </div>
+
               <div class="kpis">
                 <div class="kpi">
                   <div class="kpi-header">
                     <span class="kpi-label">الطلاب المتغيبون اليوم</span>
-                    <span class="kpi-trend kpi-trend--up">+8%</span>
+                    <span class="kpi-trend kpi-trend--up" id="kpi-absent-trend">—</span>
                   </div>
-                  <div class="kpi-value">62 طالب</div>
+                  <div class="kpi-value" id="kpi-absent-students">—</div>
                   <div class="kpi-bar">
-                    <div class="kpi-bar-fill" style="width: 65%"></div>
+                    <div class="kpi-bar-fill" id="kpi-absent-bar" style="width: 0%"></div>
                   </div>
-                  <p class="kpi-sub">
-                    أعلى غياب: الصف 3/أ · 11 طالب متغيب يحتاجون متابعة.
-                  </p>
+                  <p class="kpi-sub" id="kpi-absent-sub">جاري تحميل بيانات الحضور...</p>
                 </div>
 
                 <div class="kpi">
                   <div class="kpi-header">
-                    <span class="kpi-label">إنهاء إدخال الدرجات</span>
-                    <span class="kpi-trend kpi-trend--ok">+5%</span>
+<span class="kpi-label">شعب لم تُسجّل حضور اليوم</span>
+                    <span class="kpi-trend kpi-trend--ok" id="kpi-grades-trend">—</span>
                   </div>
-                  <div class="kpi-value">82٪</div>
+                  <div class="kpi-value" id="kpi-grades-completion">—</div>
                   <div class="kpi-bar">
-                    <div class="kpi-bar-fill" style="width: 82%"></div>
+                    <div class="kpi-bar-fill" id="kpi-grades-bar" style="width: 0%"></div>
                   </div>
-                  <p class="kpi-sub">بقيت 4 مواد لم يكتمل إدخال درجاتها.</p>
-                </div>
+<p class="kpi-sub" id="kpi-grades-sub">جاري فحص الشعب التي لم تسجل حضور اليوم...</p>                </div>
 
                 <div class="kpi">
                   <div class="kpi-header">
                     <span class="kpi-label">سداد الرسوم لهذا الشهر</span>
-                    <span class="kpi-trend kpi-trend--ok">+6%</span>
+                    <span class="kpi-trend kpi-trend--ok" id="kpi-fees-trend">—</span>
                   </div>
-                  <div class="kpi-value">74٪</div>
+                  <div class="kpi-value" id="kpi-fees-payment">—</div>
                   <div class="kpi-bar">
-                    <div class="kpi-bar-fill" style="width: 74%"></div>
+                    <div class="kpi-bar-fill" id="kpi-fees-bar" style="width: 0%"></div>
                   </div>
-                  <p class="kpi-sub">
-                    تم سداد الرسوم لـ 31 طالب خلال الأسبوع الحالي.
-                  </p>
+                  <p class="kpi-sub" id="kpi-fees-sub">جاري تحميل بيانات الرسوم...</p>
                 </div>
 
                 <div class="kpi">
                   <div class="kpi-header">
-                    <span class="kpi-label">طلبات أولياء الأمور المفتوحة</span>
-                    <span class="kpi-trend kpi-trend--up">+2</span>
+                    <span class="kpi-label">طلبات بانتظار الاعتماد</span>
+                    <span class="kpi-trend kpi-trend--up" id="kpi-parent-requests-trend">—</span>
                   </div>
-                  <div class="kpi-value">11 طلب</div>
+                  <div class="kpi-value" id="kpi-parent-requests">—</div>
                   <div class="kpi-bar">
-                    <div
-                      class="kpi-bar-fill kpi-bar-fill--danger"
-                      style="width: 55%"
-                    ></div>
+                    <div class="kpi-bar-fill kpi-bar-fill--danger" id="kpi-parent-requests-bar" style="width: 0%"></div>
                   </div>
-                  <p class="kpi-sub">
-                    4 طلبات تحتاج قرارك النهائي اليوم قبل الساعة 2 ظهرًا.
-                  </p>
+                  <p class="kpi-sub" id="kpi-parent-requests-sub">جاري تحميل الطلبات...</p>
                 </div>
               </div>
             </section>
@@ -275,63 +266,19 @@
   </div>
 </section>
 
-            <!-- كانبان -->
+            <!-- مهام تحتاج قرار المدير -->
             <section class="panel panel-kanban">
               <div class="panel-header">
                 <h3>مهام تحتاج قرار المدير</h3>
                 <span class="panel-tag panel-tag--amber">Focus</span>
               </div>
-              <div class="kanban">
+
+              <div class="kanban" id="pending-tasks-board">
                 <div class="kanban-column">
-                  <h4>عاجلة</h4>
-                  <div class="task task--danger">
-                    <span class="task-title">
-                      ولي أمر يطلب مقابلة عاجلة بخصوص سلوك طالب في الصف 2/ج.
-                    </span>
-                    <span class="task-meta"
-                      >الإرشاد الطلابي · اليوم 10:30 ص</span
-                    >
-                  </div>
-                  <div class="task task--danger">
-                    <span class="task-title">
-                      اعتماد إيقاف مؤقت لطالبة بسبب تجاوز لائحة السلوك (اقتراح
-                      من لجنة السلوك).
-                    </span>
-                    <span class="task-meta">لجنة السلوك · بانتظار توقيعك</span>
-                  </div>
-                </div>
-                <div class="kanban-column">
-                  <h4>قيد المتابعة</h4>
-                  <div class="task task--warn">
-                    <span class="task-title">
-                      طلب تحويل طالب من المسار العام إلى المسار الدولي بداية
-                      الفصل القادم.
-                    </span>
-                    <span class="task-meta"
-                      >ولي الأمر · بانتظار قرار المدير</span
-                    >
-                  </div>
-                  <div class="task task--warn">
-                    <span class="task-title">
-                      مراجعة خطة الدعم الأكاديمي لطلاب منخفضي التحصيل في
-                      الرياضيات بالمرحلة المتوسطة.
-                    </span>
-                    <span class="task-meta">وكيل الشؤون التعليمية</span>
-                  </div>
-                </div>
-                <div class="kanban-column">
-                  <h4>اكتملت</h4>
-                  <div class="task task--ok">
-                    <span class="task-title">
-                      اعتماد نتائج منتصف الفصل لجميع المراحل الدراسية.
-                    </span>
-                    <span class="task-meta">تم الاعتماد · أمس 03:15 م</span>
-                  </div>
-                  <div class="task task--ok">
-                    <span class="task-title">
-                      إغلاق بلاغ تعطل معملي الحاسب الآلي بعد إتمام الصيانة.
-                    </span>
-                    <span class="task-meta">قسم التقنية · تم التنفيذ</span>
+                  <h4>المهام</h4>
+                  <div class="task">
+                    <span class="task-title">جاري تحميل المهام من قاعدة البيانات...</span>
+                    <span class="task-meta">يرجى الانتظار</span>
                   </div>
                 </div>
               </div>
@@ -396,38 +343,12 @@
                   عرض التقارير العامة
                 </button>
               </div>
-              <div class="heat-body">
-                <div class="heat-legend">
-                  <p>
-                    كل نقطة تمثل صفًا دراسيًا اليوم، واللون يوضح الحالة العامة
-                    للصف من حيث الحضور والدرجات والسلوك:
-                  </p>
-                  <ul>
-                    <li>
-                      <span class="pill pill--ok"></span>
-                      وضع مستقر (حضور جيد ودرجات ضمن المعدل).
-                    </li>
-                    <li>
-                      <span class="pill pill--warn"></span>
-                      ارتفاع ملحوظ في الغياب أو وجود ملاحظات سلوكية.
-                    </li>
-                    <li>
-                      <span class="pill pill--danger"></span>
-                      حاجة لتدخل إداري (انخفاض درجات أو غياب متكرر).
-                    </li>
-                  </ul>
-                </div>
-                <div class="heat-map">
-                  <span class="heat-dot heat-dot--ok"></span>
-                  <span class="heat-dot heat-dot--warn"></span>
-                  <span class="heat-dot heat-dot--danger"></span>
-                  <span class="heat-dot heat-dot--ok"></span>
-                  <span class="heat-dot heat-dot--warn"></span>
-                  <span class="heat-dot heat-dot--danger"></span>
-                  <span class="heat-dot heat-dot--ok"></span>
-                  <span class="heat-dot heat-dot--ok"></span>
-                  <span class="heat-dot heat-dot--warn"></span>
-                  <span class="heat-dot heat-dot--danger"></span>
+
+<div class="heat-body" id="school-pulse-map">                <div class="empty-state" style="width: 100%;">
+                  <strong>لم يتم ربط خريطة نبض المدرسة بعد</strong>
+                  <span>
+                    سيتم عرض حالة الصفوف هنا بعد ربط الحضور والدرجات والملاحظات السلوكية ببيانات حقيقية.
+                  </span>
                 </div>
               </div>
             </section>
@@ -1455,6 +1376,11 @@
 <script src="js/monthlyReports.js?v=4"></script>
 <script src="js/monthlyCertificates.js?v=4"></script>
 <script src="js/termResults.js?v=4"></script>
+<script src="js/monthlyCertificates.js"></script>
+<script src="js/studentData.js"></script>
+<script src="js/staffData.js"></script>
+
+<script src="/frontend/shared/js/ui-dialogs.js?v=1"></script>
 
 <script
   defer

@@ -197,7 +197,27 @@ async function apiPost(path, body) {
       </div>
     `;
   }
+async function mrConfirm(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
 
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
+
+async function mrPrompt(options = {}) {
+  if (window.AppUI?.prompt) {
+    return await window.AppUI.prompt(options);
+  }
+
+  return prompt(options.message || "اكتب السبب", options.defaultValue || "");
+}
+
+function mrToast(message, type = "info") {
+  if (window.AppUI?.toast) {
+    window.AppUI.toast(message, type);
+  }
+}
   function setLoading(isLoading) {
     state.loading = isLoading;
 
@@ -535,51 +555,101 @@ async function approveCurrentWorks() {
 
   if (!state.lastData.summary?.can_approve) {
     setMessage("لا يمكن اعتماد المادة قبل اكتمال جميع الدرجات.", "error");
+    mrToast("لا يمكن اعتماد المادة قبل اكتمال جميع الدرجات.", "error");
     return;
   }
 
-  const ok = confirm("هل تريد اعتماد الأعمال الفصلية لهذه المادة؟");
+  const ok = await mrConfirm({
+    title: "اعتماد الأعمال الفصلية",
+    message:
+      "سيتم اعتماد الأعمال الفصلية لهذه المادة.\n" +
+      "بعد الاعتماد تصبح الدرجات جاهزة للاستخدام في النتائج والتقارير.\n\n" +
+      "هل تريد اعتماد هذه المادة الآن؟",
+    confirmText: "اعتماد المادة",
+    cancelText: "إلغاء",
+    type: "success",
+  });
+
   if (!ok) return;
 
   const sel = getSelected(rootEl);
 
   try {
     setLoading(true);
+
     await apiPost("/admin/control/term-works/approve", sel);
+    mrToast("تم اعتماد الأعمال الفصلية بنجاح", "success");
+
     await loadTermWorks();
   } catch (e) {
     setMessage(e.message || "فشل اعتماد المادة.", "error");
+    mrToast(e.message || "فشل اعتماد المادة.", "error");
   } finally {
     setLoading(false);
   }
 }
-
 async function returnCurrentWorks() {
   const rootEl = root();
   if (!rootEl || !state.lastData) return;
 
   if (state.lastData.approval?.status === "approved") {
     setMessage("لا يمكن إرجاع مادة معتمدة.", "error");
+    mrToast("لا يمكن إرجاع مادة معتمدة.", "error");
     return;
   }
 
-  const note = prompt("اكتب سبب إرجاع الأعمال الفصلية للمعلم:");
-  if (!note || !note.trim()) {
+  const note = await mrPrompt({
+    title: "إرجاع الأعمال الفصلية للمعلم",
+    message:
+      "اكتب سبب إرجاع الأعمال الفصلية للمعلم.\n" +
+      "سيظهر هذا السبب للمعلم حتى يعرف ماذا يجب عليه تعديله.",
+    placeholder: "مثال: توجد درجات ناقصة أو خطأ في رصد بعض الطلاب",
+    confirmText: "إرجاع للمعلم",
+    cancelText: "إلغاء",
+    type: "warning",
+    textarea: true,
+    required: true,
+    requiredMessage: "سبب الإرجاع مطلوب.",
+  });
+
+  if (note === null) return;
+
+  const cleanNote = String(note || "").trim();
+
+  if (!cleanNote) {
     setMessage("يجب كتابة سبب الإرجاع.", "error");
+    mrToast("يجب كتابة سبب الإرجاع.", "error");
     return;
   }
+
+  const ok = await mrConfirm({
+    title: "تأكيد الإرجاع",
+    message:
+      "سيتم إرجاع الأعمال الفصلية للمعلم مع سبب المراجعة.\n" +
+      "هل تريد تنفيذ الإرجاع الآن؟",
+    confirmText: "تأكيد الإرجاع",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
+
+  if (!ok) return;
 
   const sel = getSelected(rootEl);
 
   try {
     setLoading(true);
+
     await apiPost("/admin/control/term-works/return", {
       ...sel,
-      note: note.trim(),
+      note: cleanNote,
     });
+
+    mrToast("تم إرجاع الأعمال الفصلية للمعلم", "success");
+
     await loadTermWorks();
   } catch (e) {
     setMessage(e.message || "فشل إرجاع المادة.", "error");
+    mrToast(e.message || "فشل إرجاع المادة.", "error");
   } finally {
     setLoading(false);
   }

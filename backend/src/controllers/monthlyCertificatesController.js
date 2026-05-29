@@ -1,378 +1,675 @@
+// backend/src/controllers/monthlyCertificatesController.js
 import { pool } from "../config/db.js";
 
-function pickUserId(req) {
-  return req.user?.id ?? req.user?.user_id ?? req.user?.userId ?? null;
-}
-
-function badRequest(message) {
-  const err = new Error(message);
-  err.status = 400;
-  return err;
-}
-
-function parsePositiveInt(value, fieldName) {
+function normalizeInt(value) {
   const n = Number(value);
-  if (!Number.isInteger(n) || n <= 0) {
-    throw badRequest(`${fieldName} غير صحيح.`);
-  }
-  return n;
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
 
-function parseTerm(value) {
+function normalizeTerm(value) {
   const n = Number(value);
-  if (![1, 2].includes(n)) {
-    throw badRequest("الفصل الدراسي غير صحيح.");
-  }
-  return n;
+  return n === 1 || n === 2 ? n : null;
 }
 
-function parseMonth(value) {
+function normalizeMonth(value) {
   const n = Number(value);
-  if (!Number.isInteger(n) || n < 1 || n > 12) {
-    throw badRequest("الشهر غير صحيح.");
-  }
-  return n;
+  return Number.isInteger(n) && n >= 1 && n <= 12 ? n : null;
 }
 
-function parseStudentIds(value) {
-  const arr = Array.isArray(value) ? value : [];
-  const ids = arr
-    .map((x) => Number(x))
-    .filter((x) => Number.isInteger(x) && x > 0);
+function normalizeStudentIds(value) {
+  if (!Array.isArray(value)) return [];
 
-  const unique = Array.from(new Set(ids));
+  const ids = value
+    .map((id) => Number(id))
+    .filter((id) => Number.isInteger(id) && id > 0);
 
-  if (!unique.length) {
-    throw badRequest("اختر طالبًا واحدًا على الأقل.");
-  }
-
-  return unique;
+  return [...new Set(ids)];
 }
 
-export async function listEligibleStudents(req, res) {
-  try {
-    const schoolId = req.user?.school_id;
-    const userId = pickUserId(req);
+function monthName(month) {
+  const names = {
+    1: "يناير",
+    2: "فبراير",
+    3: "مارس",
+    4: "أبريل",
+    5: "مايو",
+    6: "يونيو",
+    7: "يوليو",
+    8: "أغسطس",
+    9: "سبتمبر",
+    10: "أكتوبر",
+    11: "نوفمبر",
+    12: "ديسمبر",
+  };
 
-    if (!schoolId || !userId) {
-      return res.status(401).json({ message: "غير مصرح." });
-    }
-
-    const academicYearId = parsePositiveInt(req.query.academic_year_id, "السنة الدراسية");
-    const term = parseTerm(req.query.term);
-    const month = parseMonth(req.query.month);
-    const stageId = parsePositiveInt(req.query.stage_id, "المرحلة");
-    const gradeId = parsePositiveInt(req.query.grade_id, "الصف");
-    const sectionId = parsePositiveInt(req.query.section_id, "الشعبة");
-
-    const { rows } = await pool.query(
-      `
-      SELECT
-        se.student_id,
-        s.full_name,
-        s.student_code,
-        se.roll_number,
-        cert.id AS certificate_id,
-        cert.issued_at,
-        cert.printed_at
-      FROM student_enrollments se
-      JOIN students s
-        ON s.id = se.student_id
-       AND s.school_id = se.school_id
-      LEFT JOIN student_monthly_certificates cert
-        ON cert.school_id = se.school_id
-       AND cert.academic_year_id = se.academic_year_id
-       AND cert.term = se.term
-       AND cert.month = $7
-       AND cert.student_id = se.student_id
-      WHERE se.school_id = $1
-        AND se.academic_year_id = $2
-        AND se.term = $3
-        AND se.stage_id = $4
-        AND se.grade_id = $5
-        AND se.section_id = $6
-        AND COALESCE(se.status, 'enrolled') = 'enrolled'
-      ORDER BY COALESCE(se.roll_number, 999999), s.full_name ASC
-      `,
-      [schoolId, academicYearId, term, stageId, gradeId, sectionId, month]
-    );
-
-    return res.json({
-      items: rows.map((row) => ({
-        student_id: row.student_id,
-        full_name: row.full_name,
-        student_code: row.student_code,
-        roll_number: row.roll_number,
-        certificate_id: row.certificate_id,
-        already_issued: !!row.certificate_id,
-        issued_at: row.issued_at || null,
-        printed_at: row.printed_at || null,
-      })),
-    });
-  } catch (e) {
-    console.error("listEligibleStudents error:", e);
-    return res.status(e.status || 500).json({
-      message: e.message || "خطأ في السيرفر",
-    });
-  }
+  return names[Number(month)] || "";
 }
 
-export async function createMonthlyCertificates(req, res) {
-  const client = await pool.connect();
+function termLabel(term) {
+  if (Number(term) === 1) return "الفصل الأول";
+  if (Number(term) === 2) return "الفصل الثاني";
+  return "";
+}
 
-  try {
-    const schoolId = req.user?.school_id;
-    const userId = pickUserId(req);
+function getSchoolId(req) {
+  return req.user?.school_id || req.user?.school?.id || null;
+}
 
-    if (!schoolId || !userId) {
-      return res.status(401).json({ message: "غير مصرح." });
-    }
+function getUserId(req) {
+  return req.user?.id || req.user?.user_id || null;
+}
 
-    const academicYearId = parsePositiveInt(req.body.academic_year_id, "السنة الدراسية");
-    const term = parseTerm(req.body.term);
-    const month = parseMonth(req.body.month);
-    const stageId = parsePositiveInt(req.body.stage_id, "المرحلة");
-    const gradeId = parsePositiveInt(req.body.grade_id, "الصف");
-    const sectionId = parsePositiveInt(req.body.section_id, "الشعبة");
-    const studentIds = parseStudentIds(req.body.student_ids);
+function validateScope(source) {
+  const academicYearId = normalizeInt(source.academic_year_id);
+  const term = normalizeTerm(source.term);
+  const month = normalizeMonth(source.month);
+  const stageId = normalizeInt(source.stage_id);
+  const gradeId = normalizeInt(source.grade_id);
+  const sectionId = normalizeInt(source.section_id);
 
-    await client.query("BEGIN");
+  if (!academicYearId) throw new Error("اختر السنة الدراسية.");
+  if (!term) throw new Error("اختر الفصل الدراسي.");
+  if (!month) throw new Error("اختر الشهر.");
+  if (!stageId) throw new Error("اختر المرحلة.");
+  if (!gradeId) throw new Error("اختر الصف.");
+  if (!sectionId) throw new Error("اختر الشعبة.");
 
-    const eligibleQ = await client.query(
-      `
-      SELECT se.student_id
-      FROM student_enrollments se
-      JOIN students s
-        ON s.id = se.student_id
-       AND s.school_id = se.school_id
-      WHERE se.school_id = $1
-        AND se.academic_year_id = $2
-        AND se.term = $3
-        AND se.stage_id = $4
-        AND se.grade_id = $5
-        AND se.section_id = $6
-        AND COALESCE(se.status, 'enrolled') = 'enrolled'
-        AND se.student_id = ANY($7::bigint[])
-      `,
-      [schoolId, academicYearId, term, stageId, gradeId, sectionId, studentIds]
-    );
+  return {
+    academicYearId,
+    term,
+    month,
+    stageId,
+    gradeId,
+    sectionId,
+  };
+}
 
-    const eligibleIds = new Set(eligibleQ.rows.map((r) => Number(r.student_id)));
+async function getSchoolSnapshot(client, schoolId) {
+  const { rows } = await client.query(
+    `
+    SELECT *
+    FROM schools
+    WHERE id = $1
+    LIMIT 1
+    `,
+    [schoolId]
+  );
 
-    for (const id of studentIds) {
-      if (!eligibleIds.has(id)) {
-        throw badRequest(`الطالب رقم ${id} ليس ضمن الشعبة المحددة أو لا يتبع لهذه المدرسة.`);
+  const school = rows[0] || {};
+
+  return {
+    id: school.id || schoolId,
+    name:
+      school.name_ar ||
+      school.name_en ||
+      school.name ||
+      school.school_name ||
+      school.school_name_ar ||
+      "اسم المدرسة",
+    logo_url:
+      school.logo_url ||
+      school.school_logo ||
+      school.logo ||
+      school.logo_path ||
+      "",
+    principal_name:
+      school.principal_name ||
+      school.manager_name ||
+      school.director_name ||
+      school.headmaster_name ||
+      school.school_principal ||
+      "مدير المدرسة",
+  };
+}
+
+async function loadStudentsForScope(client, schoolId, scope) {
+  const { rows } = await client.query(
+    `
+    SELECT
+      s.id AS student_id,
+      s.full_name,
+      s.student_code,
+
+      se.roll_number,
+      se.stage_id,
+      se.grade_id,
+      se.section_id,
+
+      st.name AS stage_name,
+      COALESCE(g.grade_name, g.name) AS grade_name,
+      sec.name AS section_name,
+
+      c.id AS certificate_id,
+      c.status AS certificate_status,
+      c.created_at AS issued_at,
+      c.printed_at
+
+    FROM student_enrollments se
+
+    JOIN students s
+      ON s.id = se.student_id
+
+    LEFT JOIN stages st
+      ON st.id = se.stage_id
+
+    LEFT JOIN grades g
+      ON g.id = se.grade_id
+
+    LEFT JOIN sections sec
+      ON sec.id = se.section_id
+
+    LEFT JOIN student_certificates c
+      ON c.school_id = se.school_id
+      AND c.certificate_type = 'monthly'
+      AND c.academic_year_id = se.academic_year_id
+      AND c.term = se.term
+      AND c.month = $7
+      AND c.student_id = se.student_id
+      AND c.status <> 'canceled'
+
+    WHERE se.school_id = $1
+      AND se.academic_year_id = $2
+      AND se.term = $3
+      AND se.stage_id = $4
+      AND se.grade_id = $5
+      AND se.section_id = $6
+
+    ORDER BY
+      se.roll_number NULLS LAST,
+      s.full_name ASC,
+      s.id ASC
+    `,
+    [
+      schoolId,
+      scope.academicYearId,
+      scope.term,
+      scope.stageId,
+      scope.gradeId,
+      scope.sectionId,
+      scope.month,
+    ]
+  );
+
+  return rows;
+}
+
+export const MonthlyCertificatesController = {
+  async meta(req, res) {
+    const client = await pool.connect();
+
+    try {
+      const schoolId = getSchoolId(req);
+
+      if (!schoolId) {
+        return res.status(403).json({
+          success: false,
+          message: "غير مصرح: لم يتم تحديد المدرسة",
+        });
       }
+
+      const school = await getSchoolSnapshot(client, schoolId);
+
+      return res.json({
+        success: true,
+        school,
+        settings: {
+          school_name: school.name,
+          logo_url: school.logo_url,
+          principal_name: school.principal_name,
+        },
+      });
+    } catch (err) {
+      console.error("monthly certificates meta error:", err);
+
+      return res.status(500).json({
+        success: false,
+        message: "خطأ في تحميل بيانات الشهادات",
+      });
+    } finally {
+      client.release();
     }
+  },
 
-    const insertQ = await client.query(
-      `
-      INSERT INTO student_monthly_certificates
-        (school_id, academic_year_id, term, month, student_id, issued_by, issued_at, created_at, updated_at)
-      SELECT
-        $1,
-        $2,
-        $3,
-        $4,
-        x.student_id,
-        $5,
-        NOW(),
-        NOW(),
-        NOW()
-      FROM unnest($6::bigint[]) AS x(student_id)
-      ON CONFLICT (school_id, academic_year_id, term, month, student_id)
-      DO NOTHING
-      RETURNING id, student_id, issued_at
-      `,
-      [schoolId, academicYearId, term, month, userId, studentIds]
-    );
+  async students(req, res) {
+    const client = await pool.connect();
 
-    await client.query("COMMIT");
+    try {
+      const schoolId = getSchoolId(req);
 
-    return res.status(201).json({
-      message: "تم حفظ الشهادات الشهرية بنجاح.",
-      created_count: insertQ.rows.length,
-      skipped_count: studentIds.length - insertQ.rows.length,
-      items: insertQ.rows,
-    });
-  } catch (e) {
-    await client.query("ROLLBACK");
-    console.error("createMonthlyCertificates error:", e);
-    return res.status(e.status || 500).json({
-      message: e.message || "خطأ في السيرفر",
-    });
-  } finally {
-    client.release();
-  }
-}
+      if (!schoolId) {
+        return res.status(403).json({
+          success: false,
+          message: "غير مصرح: لم يتم تحديد المدرسة",
+        });
+      }
 
-export async function listMonthlyCertificates(req, res) {
-  try {
-    const schoolId = req.user?.school_id;
-    const userId = pickUserId(req);
+      const scope = validateScope(req.query);
+      const rows = await loadStudentsForScope(client, schoolId, scope);
 
-    if (!schoolId || !userId) {
-      return res.status(401).json({ message: "غير مصرح." });
+      return res.json({
+        success: true,
+        items: rows.map((row) => ({
+          student_id: row.student_id,
+          full_name: row.full_name,
+          student_code: row.student_code,
+          roll_number: row.roll_number,
+
+          stage_id: row.stage_id,
+          grade_id: row.grade_id,
+          section_id: row.section_id,
+
+          stage_name: row.stage_name,
+          grade_name: row.grade_name,
+          section_name: row.section_name,
+
+          already_issued: !!row.certificate_id,
+          certificate_id: row.certificate_id,
+          certificate_status: row.certificate_status,
+          issued_at: row.issued_at,
+          printed_at: row.printed_at,
+        })),
+      });
+    } catch (err) {
+      console.error("monthly certificates students error:", err);
+
+      return res.status(400).json({
+        success: false,
+        message: err.message || "خطأ في تحميل الطلاب",
+      });
+    } finally {
+      client.release();
     }
+  },
 
-    const academicYearId = parsePositiveInt(req.query.academic_year_id, "السنة الدراسية");
-    const term = parseTerm(req.query.term);
-    const month = parseMonth(req.query.month);
+  async list(req, res) {
+    try {
+      const schoolId = getSchoolId(req);
 
-    const stageId = req.query.stage_id ? Number(req.query.stage_id) : null;
-    const gradeId = req.query.grade_id ? Number(req.query.grade_id) : null;
-    const sectionId = req.query.section_id ? Number(req.query.section_id) : null;
+      if (!schoolId) {
+        return res.status(403).json({
+          success: false,
+          message: "غير مصرح: لم يتم تحديد المدرسة",
+        });
+      }
 
-    const { rows } = await pool.query(
-      `
-      SELECT
-        cert.id,
-        cert.academic_year_id,
-        cert.term,
-        cert.month,
-        cert.student_id,
-        cert.issued_at,
-        cert.printed_at,
-        s.full_name,
-        s.student_code,
-        se.roll_number,
-        st.name AS stage_name,
-        COALESCE(g.grade_name, g.name) AS grade_name,
-        sec.name AS section_name
-      FROM student_monthly_certificates cert
-      JOIN students s
-        ON s.id = cert.student_id
-       AND s.school_id = cert.school_id
-      LEFT JOIN student_enrollments se
-        ON se.student_id = cert.student_id
-       AND se.school_id = cert.school_id
-       AND se.academic_year_id = cert.academic_year_id
-       AND se.term = cert.term
-      LEFT JOIN stages st ON st.id = se.stage_id
-      LEFT JOIN grades g ON g.id = se.grade_id
-      LEFT JOIN sections sec ON sec.id = se.section_id
-      WHERE cert.school_id = $1
-        AND cert.academic_year_id = $2
-        AND cert.term = $3
-        AND cert.month = $4
-        AND ($5::bigint IS NULL OR se.stage_id = $5)
-        AND ($6::bigint IS NULL OR se.grade_id = $6)
-        AND ($7::bigint IS NULL OR se.section_id = $7)
-      ORDER BY COALESCE(se.roll_number, 999999), s.full_name ASC
-      `,
-      [schoolId, academicYearId, term, month, stageId, gradeId, sectionId]
-    );
+      const scope = validateScope(req.query);
 
-    return res.json({ items: rows });
-  } catch (e) {
-    console.error("listMonthlyCertificates error:", e);
-    return res.status(e.status || 500).json({
-      message: e.message || "خطأ في السيرفر",
-    });
-  }
-}
+      const { rows } = await pool.query(
+        `
+        SELECT
+          c.id,
+          c.school_id,
+          c.certificate_type,
+          c.academic_year_id,
+          c.term,
+          c.month,
+          c.student_id,
+          c.stage_id,
+          c.grade_id,
+          c.section_id,
+          c.title,
+          c.status,
+          c.snapshot_json,
+          c.created_at AS issued_at,
+          c.printed_at,
 
-export async function markCertificatePrinted(req, res) {
-  try {
-    const schoolId = req.user?.school_id;
-    const userId = pickUserId(req);
+          COALESCE(c.snapshot_json->>'student_name', s.full_name) AS full_name,
+          COALESCE(c.snapshot_json->>'student_code', s.student_code) AS student_code
 
-    if (!schoolId || !userId) {
-      return res.status(401).json({ message: "غير مصرح." });
+        FROM student_certificates c
+
+        JOIN students s
+          ON s.id = c.student_id
+
+        WHERE c.school_id = $1
+          AND c.certificate_type = 'monthly'
+          AND c.academic_year_id = $2
+          AND c.term = $3
+          AND c.month = $4
+          AND c.stage_id = $5
+          AND c.grade_id = $6
+          AND c.section_id = $7
+          AND c.status <> 'canceled'
+
+        ORDER BY
+          c.created_at DESC,
+          c.id DESC
+        `,
+        [
+          schoolId,
+          scope.academicYearId,
+          scope.term,
+          scope.month,
+          scope.stageId,
+          scope.gradeId,
+          scope.sectionId,
+        ]
+      );
+
+      return res.json({
+        success: true,
+        items: rows,
+      });
+    } catch (err) {
+      console.error("monthly certificates list error:", err);
+
+      return res.status(400).json({
+        success: false,
+        message: err.message || "خطأ في عرض الشهادات",
+      });
     }
+  },
 
-    const id = parsePositiveInt(req.params.id, "معرف الشهادة");
+  async create(req, res) {
+    const client = await pool.connect();
+    let transactionStarted = false;
 
-    const { rows } = await pool.query(
-      `
-      UPDATE student_monthly_certificates
-      SET printed_at = NOW(),
+    try {
+      const schoolId = getSchoolId(req);
+      const userId = getUserId(req);
+
+      if (!schoolId) {
+        return res.status(403).json({
+          success: false,
+          message: "غير مصرح: لم يتم تحديد المدرسة",
+        });
+      }
+
+      const scope = validateScope(req.body);
+      const studentIds = normalizeStudentIds(req.body.student_ids);
+
+      if (!studentIds.length) {
+        return res.status(400).json({
+          success: false,
+          message: "اختر طالبًا واحدًا على الأقل",
+        });
+      }
+
+      await client.query("BEGIN");
+      transactionStarted = true;
+
+      const school = await getSchoolSnapshot(client, schoolId);
+      const allRows = await loadStudentsForScope(client, schoolId, scope);
+
+      const selected = allRows.filter((row) =>
+        studentIds.includes(Number(row.student_id))
+      );
+
+      if (!selected.length) {
+        await client.query("ROLLBACK");
+        transactionStarted = false;
+
+        return res.status(400).json({
+          success: false,
+          message: "لا يوجد طلاب مطابقون للاختيار الحالي",
+        });
+      }
+
+      const created = [];
+      const skipped = [];
+
+      for (const row of selected) {
+        if (row.certificate_id) {
+          skipped.push(row.student_id);
+          continue;
+        }
+
+        const snapshot = {
+          certificate_type: "monthly",
+          title: "شهادة شكر وتقدير",
+
+          school_id: school.id,
+          school_name: school.name,
+          logo_url: school.logo_url,
+          principal_name: school.principal_name,
+
+          student_id: row.student_id,
+          student_name: row.full_name,
+          student_code: row.student_code,
+          roll_number: row.roll_number,
+
+          stage_id: row.stage_id,
+          grade_id: row.grade_id,
+          section_id: row.section_id,
+          stage_name: row.stage_name,
+          grade_name: row.grade_name,
+          section_name: row.section_name,
+
+          academic_year_id: scope.academicYearId,
+          term: scope.term,
+          term_label: termLabel(scope.term),
+          month: scope.month,
+          month_name: monthName(scope.month),
+
+          issued_at: new Date().toISOString(),
+        };
+
+        try {
+          const insert = await client.query(
+            `
+            INSERT INTO student_certificates
+              (
+                school_id,
+                certificate_type,
+                academic_year_id,
+                term,
+                month,
+                student_id,
+                stage_id,
+                grade_id,
+                section_id,
+                title,
+                status,
+                snapshot_json,
+                issued_by_user_id,
+                created_at,
+                updated_at
+              )
+            VALUES
+              (
+                $1,
+                'monthly',
+                $2,
+                $3,
+                $4,
+                $5,
+                $6,
+                $7,
+                $8,
+                'شهادة شكر وتقدير',
+                'issued',
+                $9::jsonb,
+                $10,
+                NOW(),
+                NOW()
+              )
+            RETURNING
+              id,
+              school_id,
+              certificate_type,
+              academic_year_id,
+              term,
+              month,
+              student_id,
+              stage_id,
+              grade_id,
+              section_id,
+              title,
+              status,
+              snapshot_json,
+              created_at AS issued_at,
+              printed_at
+            `,
+            [
+              schoolId,
+              scope.academicYearId,
+              scope.term,
+              scope.month,
+              row.student_id,
+              row.stage_id,
+              row.grade_id,
+              row.section_id,
+              JSON.stringify(snapshot),
+              userId,
+            ]
+          );
+
+          created.push({
+            ...insert.rows[0],
+            full_name: row.full_name,
+            student_code: row.student_code,
+          });
+        } catch (err) {
+          if (err?.code === "23505") {
+            skipped.push(row.student_id);
+            continue;
+          }
+
+          throw err;
+        }
+      }
+
+      await client.query("COMMIT");
+      transactionStarted = false;
+
+      return res.json({
+        success: true,
+        message:
+          created.length > 0
+            ? `تم إصدار ${created.length} شهادة شهرية. تم تخطي ${skipped.length}.`
+            : `لم يتم إصدار شهادات جديدة. تم تخطي ${skipped.length} لأنها موجودة مسبقًا.`,
+        items: created,
+        created_count: created.length,
+        skipped_count: skipped.length,
+      });
+    } catch (err) {
+      if (transactionStarted) {
+        await client.query("ROLLBACK");
+      }
+
+      console.error("monthly certificates create error:", err);
+
+      return res.status(500).json({
+        success: false,
+        message: err.message || "خطأ في إصدار الشهادات الشهرية",
+      });
+    } finally {
+      client.release();
+    }
+  },
+
+  async markPrinted(req, res) {
+    try {
+      const schoolId = getSchoolId(req);
+      const id = normalizeInt(req.params.id);
+
+      if (!schoolId) {
+        return res.status(403).json({
+          success: false,
+          message: "غير مصرح: لم يتم تحديد المدرسة",
+        });
+      }
+
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: "رقم الشهادة غير صالح",
+        });
+      }
+
+      const { rows } = await pool.query(
+        `
+        UPDATE student_certificates
+        SET
+          status = 'printed',
+          printed_at = NOW(),
           updated_at = NOW()
-      WHERE id = $1
-        AND school_id = $2
-      RETURNING id, printed_at
-      `,
-      [id, schoolId]
-    );
+        WHERE id = $1
+          AND school_id = $2
+          AND certificate_type = 'monthly'
+          AND status <> 'canceled'
+        RETURNING *
+        `,
+        [id, schoolId]
+      );
 
-    if (!rows.length) {
-      return res.status(404).json({ message: "الشهادة غير موجودة." });
+      if (!rows[0]) {
+        return res.status(404).json({
+          success: false,
+          message: "الشهادة غير موجودة",
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "تم تحديث حالة الطباعة",
+        data: rows[0],
+      });
+    } catch (err) {
+      console.error("monthly certificate printed error:", err);
+
+      return res.status(500).json({
+        success: false,
+        message: "خطأ في تحديث حالة الطباعة",
+      });
     }
+  },
 
-    return res.json({
-      message: "تم تحديث حالة الطباعة.",
-      item: rows[0],
-    });
-  } catch (e) {
-    console.error("markCertificatePrinted error:", e);
-    return res.status(e.status || 500).json({
-      message: e.message || "خطأ في السيرفر",
-    });
-  }
-}
+  async remove(req, res) {
+    try {
+      const schoolId = getSchoolId(req);
+      const id = normalizeInt(req.params.id);
 
-export async function deleteMonthlyCertificate(req, res) {
-  try {
-    const schoolId = req.user?.school_id;
-    const userId = pickUserId(req);
+      if (!schoolId) {
+        return res.status(403).json({
+          success: false,
+          message: "غير مصرح: لم يتم تحديد المدرسة",
+        });
+      }
 
-    if (!schoolId || !userId) {
-      return res.status(401).json({ message: "غير مصرح." });
+      if (!id) {
+        return res.status(400).json({
+          success: false,
+          message: "رقم الشهادة غير صالح",
+        });
+      }
+
+      const { rows } = await pool.query(
+        `
+        UPDATE student_certificates
+        SET
+          status = 'canceled',
+          canceled_at = NOW(),
+          updated_at = NOW()
+        WHERE id = $1
+          AND school_id = $2
+          AND certificate_type = 'monthly'
+          AND status <> 'canceled'
+        RETURNING id
+        `,
+        [id, schoolId]
+      );
+
+      if (!rows[0]) {
+        return res.status(404).json({
+          success: false,
+          message: "الشهادة غير موجودة",
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: "تم حذف الشهادة",
+      });
+    } catch (err) {
+      console.error("monthly certificate delete error:", err);
+
+      return res.status(500).json({
+        success: false,
+        message: "خطأ في حذف الشهادة",
+      });
     }
+  },
+};
 
-    const id = parsePositiveInt(req.params.id, "معرف الشهادة");
-
-    const { rowCount } = await pool.query(
-      `
-      DELETE FROM student_monthly_certificates
-      WHERE id = $1
-        AND school_id = $2
-      `,
-      [id, schoolId]
-    );
-
-    if (!rowCount) {
-      return res.status(404).json({ message: "الشهادة غير موجودة." });
-    }
-
-    return res.status(204).send();
-  } catch (e) {
-    console.error("deleteMonthlyCertificate error:", e);
-    return res.status(e.status || 500).json({
-      message: e.message || "خطأ في السيرفر",
-    });
-  }
-}export async function getMonthlyCertificatesMeta(req, res) {
-  try {
-    const schoolId = req.user?.school_id;
-    const userId = pickUserId(req);
-
-    if (!schoolId || !userId) {
-      return res.status(401).json({ message: "غير مصرح." });
-    }
-
-    const { rows } = await pool.query(
-      `
-      SELECT
-        to_jsonb(s) AS school,
-        to_jsonb(ss) AS settings
-      FROM schools s
-      LEFT JOIN school_settings ss
-        ON ss.school_id = s.id
-      WHERE s.id = $1
-      LIMIT 1
-      `,
-      [schoolId]
-    );
-
-    return res.json({
-      school: rows[0]?.school || {},
-      settings: rows[0]?.settings || {},
-    });
-  } catch (e) {
-    console.error("getMonthlyCertificatesMeta error:", e);
-    return res.status(e.status || 500).json({
-      message: e.message || "خطأ في السيرفر",
-    });
-  }
-}
+export default MonthlyCertificatesController;

@@ -30,7 +30,7 @@ import userRoutes from "./routes/userRoutes.js";
 import profileRoutes from "./routes/profileRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import activityRoutes from "./routes/activityRoutes.js";
-
+import studentTransferRequestsRoutes from "./routes/studentTransferRequestsRoutes.js";
 // Academic Structure Routes
 import academicYearRoutes from "./routes/academicYearRoutes.js";
 import stageRoutes from "./routes/stageRoutes.js";
@@ -40,12 +40,13 @@ import studentRoutes from "./routes/studentRoutes.js";
 import parentsRoutes from "./routes/parentsRoutes.js";
 import continuingRoutes from "./routes/continuingRoutes.js";
 import periodsRoutes from "./routes/periodsRoutes.js";
-
+import staffReportsRoutes from "./routes/staffReportsRoutes.js";
+import certificatesRoutes from "./routes/certificatesRoutes.js";
 // Timetables and Exams Routes
 import timetablesRoutes from "./routes/timetablesRoutes.js";
 import teacherTimetablesRoutes from "./routes/teacherTimetablesRoutes.js";
 import examTimetablesRoutes from "./routes/examTimetablesRoutes.js";
-
+import studentReportsRoutes from "./routes/studentReportsRoutes.js";
 // Student Portal Routes
 import studentPortalRoutes from "./routes/studentPortalRoutes.js";
 import studentAttendanceRoutes from "./routes/studentAttendanceRoutes.js";
@@ -89,6 +90,7 @@ import adminTeacherAttendanceRoutes from "./routes/adminTeacherAttendanceRoutes.
 import adminTeacherPermitsRoutes from "./routes/adminTeacherPermitsRoutes.js";
 import attendanceReportsRoutes from "./routes/attendanceReportsRoutes.js";
 import adminAssessmentsRoutes from "./routes/adminAssessmentsRoutes.js";
+import assessmentReopenRequestsRoutes from "./routes/assessmentReopenRequestsRoutes.js";
 import adminTermWorksRoutes from "./routes/adminTermWorksRoutes.js";
 import adminTermResultsRoutes from "./routes/adminTermResultsRoutes.js";
 import monthlyCertificatesRoutes from "./routes/monthlyCertificatesRoutes.js";
@@ -98,6 +100,7 @@ import notificationsInboxRoutes from "./routes/notificationsInboxRoutes.js";
 import notificationsAdminRoutes from "./routes/notificationsAdminRoutes.js";
 
 // Fees and Meta Routes
+import feeAdjustmentRequestsRoutes from "./routes/feeAdjustmentRequestsRoutes.js";
 import feesRoutes from "./routes/feesRoutes.js";
 import feeRulesRoutes from "./routes/feeRulesRoutes.js";
 import metaRoutes from "./routes/metaRoutes.js";
@@ -209,6 +212,7 @@ app.use(autoActivityLogger);
 // ==============================
 mountRoutes([
   { path: "/api", router: activityRoutes },
+  { path: "/api/admin/certificates" ,  router: certificatesRoutes },
   { path: "/api/admin/monthly-certificates", router: monthlyCertificatesRoutes },
   { path: "/api/admin/term-results", router: adminTermResultsRoutes },
   { path: "/api/admin-assessments", router: adminAssessmentsRoutes },
@@ -269,21 +273,23 @@ mountRoutes([
   { path: "/api/student/learning", middlewares: protectedMiddlewares, router: studentLearningRoutes },
   { path: "/api/student/notifications", middlewares: protectedMiddlewares, router: studentNotificationsRoutes },
   { path: "/api/student", middlewares: protectedMiddlewares, router: studentPortalRoutes },
-
+{ path: "/api/admin/reports/students", middlewares: protectedMiddlewares, router: studentReportsRoutes },
   // Parent Portal
   { path: "/api/parent/attendance", middlewares: protectedMiddlewares, router: parentAttendanceRoutes },
   { path: "/api/parent/notifications", middlewares: protectedMiddlewares, router: parentNotificationsRoutes },
   { path: "/api/parent", middlewares: protectedMiddlewares, router: parentPermissionsRoutes },
   { path: "/api/parent", middlewares: protectedMiddlewares, router: parentPortalRoutes },
   { path: "/api/parent", middlewares: protectedMiddlewares, router: parentRoutes },
-
-  // Admin
+{ path: "/api/admin/reports/staff", middlewares: protectedMiddlewares, router: staffReportsRoutes },  // Admin
   { path: "/api/employees", middlewares: protectedMiddlewares, router: employeesRoutes },
   { path: "/api/admin/assign-teachers", middlewares: protectedMiddlewares, router: assignTeachersRoutes },
   { path: "/api/admin/school-settings", middlewares: protectedMiddlewares, router: schoolSettingsRoutes },
   { path: "/api/admin/teacher-attendance", middlewares: protectedMiddlewares, router: adminTeacherAttendanceRoutes },
   { path: "/api/admin/teacher-permits", middlewares: protectedMiddlewares, router: adminTeacherPermitsRoutes },
   { path: "/api/admin/reports", middlewares: protectedMiddlewares, router: attendanceReportsRoutes },
+  { path: "/api/admin/assessment-reopen-requests", middlewares: protectedMiddlewares, router: assessmentReopenRequestsRoutes },
+  { path: "/api/admin/fee-adjustment-requests", middlewares: protectedMiddlewares, router: feeAdjustmentRequestsRoutes },
+  { path: "/api/admin/student-transfer-requests", middlewares: protectedMiddlewares, router: studentTransferRequestsRoutes },
   { path: "/api/admin", middlewares: protectedMiddlewares, router: adminPermissionsRoutes },
   { path: "/api/admin/fee-rules", middlewares: protectedMiddlewares, router: feeRulesRoutes },
   { path: "/api/admin/control", middlewares: protectedMiddlewares, router: adminTermWorksRoutes },

@@ -130,13 +130,36 @@ let defaultMonthlyExamTotal = 20;
     return document.querySelector(sel);
   }
 
-  function toast(msg, type = "ok") {
-    const t = el("#wsToast");
-    if (!t) return;
-    t.className = "ws-toast ws-show " + (type === "err" ? "ws-err" : "ws-ok");
-    t.textContent = msg;
-    setTimeout(() => t.classList.remove("ws-show"), 2200);
+function toast(msg, type = "ok") {
+  const finalType = type === "err" ? "error" : "success";
+
+  if (window.AppUI?.toast) {
+    window.AppUI.toast(msg, finalType);
+    return;
   }
+
+  const t = el("#wsToast");
+  if (!t) return;
+  t.className = "ws-toast ws-show " + (type === "err" ? "ws-err" : "ws-ok");
+  t.textContent = msg;
+  setTimeout(() => t.classList.remove("ws-show"), 2200);
+}
+
+async function wsConfirm(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
+
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
+
+async function wsPrompt(options = {}) {
+  if (window.AppUI?.prompt) {
+    return await window.AppUI.prompt(options);
+  }
+
+  return prompt(options.message || "اكتب البيانات", options.defaultValue || "");
+}
 
   function setStatusChip(status) {
     const chip = el("#wsStatusChip");
@@ -709,17 +732,27 @@ if (el("#wsExamTotal")) {
         }
       });
 
-      delBtn?.addEventListener("click", async () => {
-        if (!confirm("متأكد تريد حذف هذه الحصة؟")) return;
-        try {
-          await apiSend(`/periods/${id}`, "DELETE");
-          toast("تم حذف الحصة.", "ok");
-          await refreshPeriodsAndGrid();
-        } catch (e) {
-          console.error(e);
-          toast(e.message || "فشل الحذف.", "err");
-        }
-      });
+    delBtn?.addEventListener("click", async () => {
+  const ok = await wsConfirm({
+    title: "حذف الحصة",
+    message:
+      "هل أنت متأكد من حذف هذه الحصة؟\nقد يؤثر ذلك على الجداول التي تستخدم هذه الحصة.",
+    confirmText: "حذف الحصة",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend(`/periods/${id}`, "DELETE");
+    toast("تم حذف الحصة.", "ok");
+    await refreshPeriodsAndGrid();
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "فشل الحذف.", "err");
+  }
+});
     });
   }
 
@@ -1148,85 +1181,134 @@ await loadAcademicSettings();
       throw err;
     }
   }
+async function publish() {
+  if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
 
-  async function publish() {
-    if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
+  const okConfirm = await wsConfirm({
+    title: "نشر الجدول الأسبوعي",
+    message:
+      "سيتم نشر الجدول الأسبوعي للطلاب والمعلمين.\nبعد النشر لن تستطيع التعديل إلا بعد إلغاء النشر.",
+    confirmText: "نشر الجدول",
+    cancelText: "إلغاء",
+    type: "success",
+  });
 
-    try {
-      const ok = await saveDraft(true);
-      if (!ok) return;
+  if (!okConfirm) return;
 
-      await apiSend(`/timetables/${currentTimetableId}/publish`, "PUT", {});
-      currentTimetableStatus = "published";
-      setStatusChip("published");
-      showUnpublishBtn();
-      toast("تم نشر الجدول.", "ok");
-    } catch (err) {
-      console.error(err);
-      toast(err.message || "فشل النشر.", "err");
-    }
+  try {
+    const ok = await saveDraft(true);
+    if (!ok) return;
+
+    await apiSend(`/timetables/${currentTimetableId}/publish`, "PUT", {});
+    currentTimetableStatus = "published";
+    setStatusChip("published");
+    showUnpublishBtn();
+    toast("تم نشر الجدول.", "ok");
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "فشل النشر.", "err");
+  }
+}
+
+ async function unpublish() {
+  if (!currentTimetableId) return;
+
+  const ok = await wsConfirm({
+    title: "إلغاء نشر الجدول الأسبوعي",
+    message:
+      "سيتم إلغاء نشر الجدول من البوابات.\nسيعود الجدول إلى وضع المسودة ويمكنك التعديل عليه.",
+    confirmText: "إلغاء النشر",
+    cancelText: "رجوع",
+    type: "warning",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend(`/timetables/${currentTimetableId}/unpublish`, "PUT", {});
+    currentTimetableStatus = "draft";
+    setStatusChip("draft");
+    showUnpublishBtn();
+    toast("تم إلغاء النشر.", "ok");
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "فشل إلغاء النشر.", "err");
+  }
+}
+ async function clearServerEntries() {
+  if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
+  if (currentTimetableStatus === "published") {
+    return toast("لا يمكن تفريغ منشور — ألغِ النشر أولاً.", "err");
   }
 
-  async function unpublish() {
-    if (!currentTimetableId) return;
-    try {
-      await apiSend(`/timetables/${currentTimetableId}/unpublish`, "PUT", {});
-      currentTimetableStatus = "draft";
-      setStatusChip("draft");
-      showUnpublishBtn();
-      toast("تم إلغاء النشر.", "ok");
-    } catch (err) {
-      console.error(err);
-      toast(err.message || "فشل إلغاء النشر.", "err");
-    }
+  const ok = await wsConfirm({
+    title: "تفريغ الجدول الأسبوعي",
+    message:
+      "سيتم حذف كل الحصص من هذا الجدول.\nسيبقى الجدول نفسه موجودًا كمسودة فارغة.",
+    confirmText: "تفريغ الجدول",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend(`/timetables/${currentTimetableId}/entries`, "DELETE");
+    timetable.entries = new Map();
+    overrides.clear();
+    overridesBaseline.clear();
+    overridesDirty = false;
+    renderGrid();
+    clearConflictsUI();
+    toast("تم تفريغ الجدول (مسودة).", "ok");
+  } catch (err) {
+    console.error(err);
+    toast(err.message || "فشل التفريغ.", "err");
+  }
+}
+
+ async function deleteCurrentTimetable() {
+  if (!currentTimetableId) return toast("لا يوجد جدول مفتوح.", "err");
+  if (currentTimetableStatus === "published") {
+    return toast("لا يمكن حذف جدول منشور — ألغِ النشر أولاً.", "err");
   }
 
-  async function clearServerEntries() {
-    if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
-    if (currentTimetableStatus === "published") return toast("لا يمكن تفريغ منشور — ألغِ النشر أولاً.", "err");
+  const ok = await wsConfirm({
+    title: "حذف الجدول الأسبوعي",
+    message:
+      `سيتم حذف الجدول الحالي رقم #${currentTimetableId} بالكامل.\n` +
+      "هذا الإجراء لا يمكن التراجع عنه.",
+    confirmText: "حذف الجدول",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
 
-    try {
-      await apiSend(`/timetables/${currentTimetableId}/entries`, "DELETE");
-      timetable.entries = new Map();
-      overrides.clear();
-      overridesBaseline.clear();
-      overridesDirty = false;
-      renderGrid();
-      clearConflictsUI();
-      toast("تم تفريغ الجدول (مسودة).", "ok");
-    } catch (err) {
-      console.error(err);
-      toast(err.message || "فشل التفريغ.", "err");
+  if (!ok) return;
+
+  try {
+    await apiSend(`/timetables/${currentTimetableId}`, "DELETE");
+    toast("تم حذف الجدول.", "ok");
+
+    timetable = { id: null, status: "draft", entries: new Map() };
+    currentTimetableId = null;
+    currentTimetableStatus = "draft";
+    selectedCell = null;
+    overrides.clear();
+    overridesBaseline.clear();
+    overridesDirty = false;
+
+    setStatusChip("-");
+    showUnpublishBtn();
+    if (el("#wsInfoChip")) {
+      el("#wsInfoChip").textContent =
+        "تم حذف الجدول. اختر الفلاتر وافتح جدول جديد.";
     }
+    clearConflictsUI();
+    renderGrid();
+  } catch (e) {
+    toast(e.message || "فشل الحذف.", "err");
   }
-
-  async function deleteCurrentTimetable() {
-    if (!currentTimetableId) return toast("لا يوجد جدول مفتوح.", "err");
-    if (currentTimetableStatus === "published") return toast("لا يمكن حذف جدول منشور — ألغِ النشر أولاً.", "err");
-    if (!confirm(`متأكد تريد حذف الجدول الحالي #${currentTimetableId} ؟`)) return;
-
-    try {
-      await apiSend(`/timetables/${currentTimetableId}`, "DELETE");
-      toast("تم حذف الجدول.", "ok");
-
-      timetable = { id: null, status: "draft", entries: new Map() };
-      currentTimetableId = null;
-      currentTimetableStatus = "draft";
-      selectedCell = null;
-      overrides.clear();
-      overridesBaseline.clear();
-      overridesDirty = false;
-
-      setStatusChip("-");
-      showUnpublishBtn();
-      if (el("#wsInfoChip")) el("#wsInfoChip").textContent = "تم حذف الجدول. اختر الفلاتر وافتح جدول جديد.";
-      clearConflictsUI();
-      renderGrid();
-    } catch (e) {
-      toast(e.message || "فشل الحذف.", "err");
-    }
-  }
-
+}
   // ===== Manage modal =====
   function openManage() {
     el("#wsManageBackdrop")?.setAttribute("aria-hidden", "false");
@@ -1330,47 +1412,87 @@ await loadAcademicSettings();
       });
     });
 
-    tbody.querySelectorAll("[data-del-id]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.getAttribute("data-del-id"));
-        if (!confirm("متأكد تريد حذف الجدول رقم " + id + " ؟ (يجب أن يكون مسودة)")) return;
-        try {
-          await apiSend(`/timetables/${id}`, "DELETE");
-          toast("تم حذف الجدول.", "ok");
-          await loadManageList();
-        } catch (e) {
-          toast(e.message || "فشل الحذف", "err");
-        }
-      });
+  tbody.querySelectorAll("[data-del-id]").forEach((btn) => {
+  btn.addEventListener("click", async () => {
+    const id = Number(btn.getAttribute("data-del-id"));
+
+    const ok = await wsConfirm({
+      title: "حذف جدول أسبوعي",
+      message:
+        `سيتم حذف الجدول رقم #${id}.\n` +
+        "يجب أن يكون الجدول مسودة وغير منشور.\nهذا الإجراء لا يمكن التراجع عنه.",
+      confirmText: "حذف الجدول",
+      cancelText: "إلغاء",
+      type: "danger",
     });
-  }
 
-  async function copyFromTimetable() {
-    if (!currentTimetableId) return toast("افتح جدول الهدف أولاً.", "err");
-    if (currentTimetableStatus === "published") return toast("لا يمكن النسخ لجدول منشور.", "err");
-
-    const fromIdRaw = prompt("اكتب timetableId للجدول المصدر:");
-    if (!fromIdRaw) return;
-
-    const fromTimetableId = Number(fromIdRaw);
-    if (!Number.isFinite(fromTimetableId) || fromTimetableId <= 0) return toast("رقم غير صحيح.", "err");
+    if (!ok) return;
 
     try {
-      await apiSend(`/timetables/${currentTimetableId}/copy-from`, "POST", { fromTimetableId });
-      await reloadCurrentTimetable();
-      clearConflictsUI();
-      toast("تم النسخ بنجاح.", "ok");
-    } catch (err) {
-      console.error(err);
-
-      if (err.status === 409 && err.payload?.conflicts) {
-        renderArabicConflicts(err.payload.conflicts, "تعارض بعد النسخ");
-        return toast(err.message || "لا يمكن النسخ بسبب تعارض.", "err");
-      }
-
-      toast(err.message || "فشل النسخ.", "err");
+      await apiSend(`/timetables/${id}`, "DELETE");
+      toast("تم حذف الجدول.", "ok");
+      await loadManageList();
+    } catch (e) {
+      toast(e.message || "فشل الحذف", "err");
     }
+  });
+});
   }
+
+async function copyFromTimetable() {
+  if (!currentTimetableId) return toast("افتح جدول الهدف أولاً.", "err");
+  if (currentTimetableStatus === "published") {
+    return toast("لا يمكن النسخ لجدول منشور.", "err");
+  }
+
+  const fromIdRaw = await wsPrompt({
+    title: "نسخ من جدول آخر",
+    message: "اكتب رقم الجدول المصدر الذي تريد النسخ منه.",
+    placeholder: "مثال: 15",
+    confirmText: "متابعة",
+    cancelText: "إلغاء",
+    type: "info",
+    required: true,
+    requiredMessage: "رقم الجدول المصدر مطلوب.",
+  });
+
+  if (fromIdRaw === null) return;
+
+  const fromTimetableId = Number(fromIdRaw);
+  if (!Number.isFinite(fromTimetableId) || fromTimetableId <= 0) {
+    return toast("رقم غير صحيح.", "err");
+  }
+
+  const ok = await wsConfirm({
+    title: "تأكيد نسخ الجدول",
+    message:
+      `سيتم نسخ محتوى الجدول رقم #${fromTimetableId} إلى الجدول الحالي رقم #${currentTimetableId}.\n` +
+      "قد يتم استبدال أو إضافة حصص حسب منطق النظام.",
+    confirmText: "تأكيد النسخ",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend(`/timetables/${currentTimetableId}/copy-from`, "POST", {
+      fromTimetableId,
+    });
+    await reloadCurrentTimetable();
+    clearConflictsUI();
+    toast("تم النسخ بنجاح.", "ok");
+  } catch (err) {
+    console.error(err);
+
+    if (err.status === 409 && err.payload?.conflicts) {
+      renderArabicConflicts(err.payload.conflicts, "تعارض بعد النسخ");
+      return toast(err.message || "لا يمكن النسخ بسبب تعارض.", "err");
+    }
+
+    toast(err.message || "فشل النسخ.", "err");
+  }
+}
 
   function bindEnterToOpen() {
     const ids = [

@@ -92,11 +92,24 @@ async function apiFetch(path, opts = {}) {
     return [];
   }
 
-  function toast(msg) {
-    if (window.showToast) return window.showToast(msg);
-    alert(msg);
+function toast(msg, type = "info") {
+  if (window.AppUI?.toast) {
+    window.AppUI.toast(msg, type);
+    return;
   }
 
+  if (window.showToast) return window.showToast(msg);
+
+  alert(msg);
+}
+
+async function ssConfirm(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
+
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
   function boot() {
     const root = $("#schoolSettingsPage");
     if (!root || root.dataset.inited === "1") return;
@@ -1453,12 +1466,37 @@ recalcAcademicTotals(root);
   }
 
   // ---------- ACTIONS ----------
-  async function toggleItem(root, type, id) {
-    if (!confirm("هل أنت متأكد؟")) return;
-    await apiFetch(`/admin/school-settings/${type}/${id}/toggle`, { method: "PATCH" });
-    await loadMeta(root, { keepActivePanel: true });
-    toast("تم ✅");
-  }
+async function toggleItem(root, type, id) {
+  const labels = {
+    years: "السنة الدراسية",
+    stages: "المرحلة",
+    grades: "الصف",
+    sections: "الشعبة",
+    subjects: "المادة",
+    periods: "الفترة",
+  };
+
+  const label = labels[type] || "العنصر";
+
+  const ok = await ssConfirm({
+    title: `تفعيل / تعطيل ${label}`,
+    message:
+      `سيتم تغيير حالة ${label} رقم #${id}.\n` +
+      "التعطيل لا يحذف البيانات القديمة، لكنه يمنع استخدامها كعنصر نشط في النظام.",
+    confirmText: "تأكيد التغيير",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
+
+  if (!ok) return;
+
+  await apiFetch(`/admin/school-settings/${type}/${id}/toggle`, {
+    method: "PATCH",
+  });
+
+  await loadMeta(root, { keepActivePanel: true });
+  toast("تم تحديث الحالة بنجاح ✅", "success");
+}
 
   function pill(text, kind) {
     const cls = kind === "ok" ? "ss-pill ss-pill--ok" : "ss-pill ss-pill--off";

@@ -1,0 +1,220 @@
+<!-- frontend/admin/pages/studentReports.html -->
+<section id="studentReportsPage" class="sr-page" dir="rtl">
+  <header class="sr-hero">
+    <div>
+      <span class="sr-kicker">
+        <i class="ri-file-chart-line"></i>
+        التقارير العامة
+      </span>
+
+      <h2>التقرير الشامل للطلاب</h2>
+
+      <p>
+        تقرير تحليلي رسمي يجمع بيانات الطالب، ولي الأمر، الرسوم، الحضور، الشهادات، وسجل النقل في مكان واحد.
+      </p>
+    </div>
+
+    <div class="sr-hero-card">
+      <span>مصدر البيانات</span>
+      <strong>جداول النظام الرسمية</strong>
+      <small>بدون تكرار أو اختلاف عن وظائف الطلاب والرسوم والحضور.</small>
+    </div>
+  </header>
+
+  <div id="srAlert" class="sr-alert"></div>
+
+  <section class="sr-panel">
+    <div class="sr-panel-head">
+      <div>
+        <h3>الفلاتر</h3>
+        <p>حدد نطاق التقرير ثم اضغط عرض التقرير.</p>
+      </div>
+
+      <div class="sr-actions">
+      <button id="srPrintNamesBtn" type="button" class="sr-btn sr-btn-soft">
+  <i class="ri-file-list-3-line"></i>
+  طباعة كشف الطلاب
+</button>
+        <button id="srLoadBtn" type="button" class="sr-btn sr-btn-primary">
+          <i class="ri-search-line"></i>
+          عرض التقرير
+        </button>
+
+        <button id="srPrintBtn" type="button" class="sr-btn sr-btn-soft">
+          <i class="ri-printer-line"></i>
+          طباعة
+        </button>
+
+        <button id="srExportBtn" type="button" class="sr-btn sr-btn-soft">
+          <i class="ri-file-excel-2-line"></i>
+          تصدير Excel
+        </button>
+      </div>
+    </div>
+
+    <div class="sr-filters">
+      <label class="sr-field">
+        <span>السنة الدراسية</span>
+        <select id="srAcademicYear">
+          <option value="">اختر السنة الدراسية</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>الفصل للحضور</span>
+        <select id="srTerm">
+          <option value="">كل الفصول</option>
+          <option value="1">الفصل الأول</option>
+          <option value="2">الفصل الثاني</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>المرحلة</span>
+        <select id="srStage">
+          <option value="">كل المراحل</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>الصف</span>
+        <select id="srGrade">
+          <option value="">كل الصفوف</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>الشعبة</span>
+        <select id="srSection">
+          <option value="">كل الشعب</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>بحث</span>
+        <input id="srSearch" type="search" placeholder="اسم الطالب / الرقم / ولي الأمر / الهاتف">
+      </label>
+
+      <label class="sr-field">
+        <span>الجنس</span>
+        <select id="srGender">
+          <option value="">الكل</option>
+          <option value="ذكر">ذكر</option>
+          <option value="أنثى">أنثى</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>حالة الرسوم</span>
+        <select id="srFeeStatus">
+          <option value="">الكل</option>
+          <option value="paid">مسدد</option>
+          <option value="due">عليه متبقي</option>
+          <option value="no_contract">بدون عقد رسوم</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>ولي الأمر</span>
+        <select id="srHasGuardian">
+          <option value="">الكل</option>
+          <option value="yes">لديه ولي أمر</option>
+          <option value="no">بدون ولي أمر</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>النواقص</span>
+        <select id="srMissingPhone">
+          <option value="">الكل</option>
+          <option value="yes">رقم طالب/ولي أمر ناقص</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>الحضور</span>
+        <select id="srAttendanceFlag">
+          <option value="">الكل</option>
+          <option value="has_absence">لديه غياب</option>
+          <option value="high_absence">غياب مرتفع</option>
+          <option value="has_late">لديه تأخير</option>
+        </select>
+      </label>
+
+      <label class="sr-field">
+        <span>الشهادات</span>
+        <select id="srHasCertificates">
+          <option value="">الكل</option>
+          <option value="yes">لديه شهادات</option>
+          <option value="no">بدون شهادات</option>
+        </select>
+      </label>
+    </div>
+  </section>
+
+  <section class="sr-summary-grid" id="srSummaryGrid">
+    <div class="sr-stat"><span>إجمالي الطلاب</span><strong id="srTotalStudents">0</strong></div>
+    <div class="sr-stat"><span>الذكور</span><strong id="srMaleCount">0</strong></div>
+    <div class="sr-stat"><span>الإناث</span><strong id="srFemaleCount">0</strong></div>
+    <div class="sr-stat"><span>عليهم متبقي</span><strong id="srDueFeesCount">0</strong></div>
+    <div class="sr-stat"><span>بدون عقد رسوم</span><strong id="srNoContractCount">0</strong></div>
+    <div class="sr-stat"><span>إجمالي المتبقي</span><strong id="srRemainingAmount">0</strong></div>
+    <div class="sr-stat"><span>غياب مرتفع</span><strong id="srHighAbsenceCount">0</strong></div>
+    <div class="sr-stat"><span>بدون ولي أمر</span><strong id="srMissingGuardianCount">0</strong></div>
+    <div class="sr-stat"><span>لديهم شهادات</span><strong id="srWithCertificatesCount">0</strong></div>
+    <div class="sr-stat"><span>لديهم نقل</span><strong id="srWithTransfersCount">0</strong></div>
+  </section>
+
+  <section class="sr-panel">
+    <div class="sr-panel-head">
+      <div>
+        <h3>كشف الطلاب التفصيلي</h3>
+        <p id="srTableInfo">لم يتم تحميل التقرير بعد.</p>
+      </div>
+
+      <div class="sr-pagination">
+        <button id="srPrevBtn" type="button" class="sr-btn sr-btn-soft">السابق</button>
+        <span id="srPageInfo">صفحة 1 من 1</span>
+        <button id="srNextBtn" type="button" class="sr-btn sr-btn-soft">التالي</button>
+      </div>
+    </div>
+
+    <div id="srEmpty" class="sr-empty">
+      اختر السنة الدراسية ثم اضغط عرض التقرير.
+    </div>
+
+    <div id="srTableWrap" class="sr-table-wrap" style="display:none;">
+      <table class="sr-table">
+        <thead>
+          <tr>
+            <th>م</th>
+            <th>الطالب</th>
+            <th>الموقع الدراسي</th>
+            <th>ولي الأمر</th>
+            <th>الرسوم</th>
+            <th>الحضور</th>
+            <th>الشهادات</th>
+            <th>النقل</th>
+            <th>النواقص</th>
+            <th>تفاصيل</th>
+          </tr>
+        </thead>
+        <tbody id="srTableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <aside id="srProfileDrawer" class="sr-drawer" aria-hidden="true">
+    <div class="sr-drawer-backdrop" id="srCloseBackdrop"></div>
+
+    <div class="sr-drawer-panel">
+      <button id="srCloseProfileBtn" type="button" class="sr-close-btn">
+        <i class="ri-close-line"></i>
+      </button>
+
+      <div id="srProfileContent" class="sr-profile-content">
+        <div class="sr-empty">اختر طالبًا لعرض تقريره التفصيلي.</div>
+      </div>
+    </div>
+  </aside>
+</section>

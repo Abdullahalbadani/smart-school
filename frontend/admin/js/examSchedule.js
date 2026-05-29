@@ -180,14 +180,36 @@ async function apiSend(path, method, body) {
     return root.querySelector(sel);
   }
 
-  function toast(msg, type = "ok") {
-    const t = document.querySelector("#exToast");
-    if (!t) return;
-    t.className = "ex-toast ex-show " + (type === "err" ? "ex-err" : "ex-ok");
-    t.textContent = msg;
-    setTimeout(() => t.classList.remove("ex-show"), 1800);
+ function toast(msg, type = "ok") {
+  const finalType = type === "err" ? "error" : "success";
+
+  if (window.AppUI?.toast) {
+    window.AppUI.toast(msg, finalType);
+    return;
   }
 
+  const t = document.querySelector("#exToast");
+  if (!t) return;
+  t.className = "ex-toast ex-show " + (type === "err" ? "ex-err" : "ex-ok");
+  t.textContent = msg;
+  setTimeout(() => t.classList.remove("ex-show"), 1800);
+}
+
+async function exConfirm(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
+
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
+
+async function exPrompt(options = {}) {
+  if (window.AppUI?.prompt) {
+    return await window.AppUI.prompt(options);
+  }
+
+  return prompt(options.message || "اكتب البيانات", options.defaultValue || "");
+}
   function setStatusChip(status) {
     const chip = document.querySelector("#exStatusChip");
     if (!chip) return;
@@ -1054,100 +1076,172 @@ function parseISODateUTC(iso) {
     }
   }
 
-  async function publish() {
-    if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
+ async function publish() {
+  if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
 
-    const v = validateEntries(true, true);
-    if (!v.ok) return;
+  const v = validateEntries(true, true);
+  if (!v.ok) return;
 
-    try {
-      await saveDraft(true);
-      await apiSend(`/exam-timetables/${currentTimetableId}/publish`, "PUT", {});
-      currentTimetableStatus = "published";
-      setStatusChip("published");
-      syncPublishButtons();
-      toast("تم نشر الجدول.", "ok");
-    } catch (e) {
-      console.error(e);
-      toast(e.message || "فشل النشر.", "err");
-    }
+  const ok = await exConfirm({
+    title: "نشر جدول الاختبارات",
+    message:
+      "سيتم نشر جدول الاختبارات للطلاب وأولياء الأمور.\nبعد النشر لن تستطيع التعديل إلا بعد إلغاء النشر.",
+    confirmText: "نشر الجدول",
+    cancelText: "إلغاء",
+    type: "success",
+  });
+
+  if (!ok) return;
+
+  try {
+    await saveDraft(true);
+    await apiSend(`/exam-timetables/${currentTimetableId}/publish`, "PUT", {});
+    currentTimetableStatus = "published";
+    setStatusChip("published");
+    syncPublishButtons();
+    toast("تم نشر الجدول.", "ok");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "فشل النشر.", "err");
   }
+}
 
-  async function unpublish() {
-    if (!currentTimetableId) return;
+ async function unpublish() {
+  if (!currentTimetableId) return;
 
-    try {
-      await apiSend(`/exam-timetables/${currentTimetableId}/unpublish`, "PUT", {});
-      currentTimetableStatus = "draft";
-      setStatusChip("draft");
-      syncPublishButtons();
-      toast("تم إلغاء النشر.", "ok");
-    } catch (e) {
-      console.error(e);
-      toast(e.message || "فشل إلغاء النشر.", "err");
-    }
+  const ok = await exConfirm({
+    title: "إلغاء نشر جدول الاختبارات",
+    message:
+      "سيتم إلغاء نشر جدول الاختبارات من بوابات الطلاب وأولياء الأمور.\nسيعود الجدول إلى وضع المسودة ويمكن تعديله.",
+    confirmText: "إلغاء النشر",
+    cancelText: "رجوع",
+    type: "warning",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend(`/exam-timetables/${currentTimetableId}/unpublish`, "PUT", {});
+    currentTimetableStatus = "draft";
+    setStatusChip("draft");
+    syncPublishButtons();
+    toast("تم إلغاء النشر.", "ok");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "فشل إلغاء النشر.", "err");
   }
-
+}
   async function clearServerEntries() {
-    if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
-    if (currentTimetableStatus === "published") return toast("لا يمكن تفريغ منشور — ألغِ النشر أولاً.", "err");
-    if (!confirm("متأكد تريد تفريغ كل الاختبارات من الجدول؟")) return;
-
-    try {
-      await apiSend(`/exam-timetables/${currentTimetableId}/entries`, "DELETE");
-      entries = [];
-      renderTable();
-      toast("تم تفريغ الجدول (مسودة).", "ok");
-    } catch (e) {
-      console.error(e);
-      toast(e.message || "فشل التفريغ.", "err");
-    }
+  if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
+  if (currentTimetableStatus === "published") {
+    return toast("لا يمكن تفريغ منشور — ألغِ النشر أولاً.", "err");
   }
 
-  async function deleteCurrentTimetable() {
-    if (!currentTimetableId) return toast("لا يوجد جدول مفتوح.", "err");
-    if (currentTimetableStatus === "published") return toast("لا يمكن حذف جدول منشور — ألغِ النشر أولاً.", "err");
-    if (!confirm(`متأكد تريد حذف جدول الاختبارات الحالي #${currentTimetableId} ؟`)) return;
+  const ok = await exConfirm({
+    title: "تفريغ جدول الاختبارات",
+    message:
+      "سيتم حذف كل الاختبارات من هذا الجدول.\nسيبقى الجدول نفسه موجودًا كمسودة فارغة.",
+    confirmText: "تفريغ الجدول",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
 
-    try {
-      await apiSend(`/exam-timetables/${currentTimetableId}`, "DELETE");
-      toast("تم حذف الجدول.", "ok");
+  if (!ok) return;
 
-      currentTimetableId = null;
-      currentTimetableStatus = "draft";
-      entries = [];
-      clearPersistedLast();
+  try {
+    await apiSend(`/exam-timetables/${currentTimetableId}/entries`, "DELETE");
+    entries = [];
+    renderTable();
+    toast("تم تفريغ الجدول (مسودة).", "ok");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "فشل التفريغ.", "err");
+  }
+}
 
-      setStatusChip("-");
-      syncPublishButtons();
-      setInfo("تم حذف الجدول. اختر الفلاتر وافتح جدول جديد.");
-      renderTable();
-    } catch (e) {
-      console.error(e);
-      toast(e.message || "فشل الحذف.", "err");
-    }
+ async function deleteCurrentTimetable() {
+  if (!currentTimetableId) return toast("لا يوجد جدول مفتوح.", "err");
+  if (currentTimetableStatus === "published") {
+    return toast("لا يمكن حذف جدول منشور — ألغِ النشر أولاً.", "err");
   }
 
+  const ok = await exConfirm({
+    title: "حذف جدول الاختبارات",
+    message:
+      `سيتم حذف جدول الاختبارات الحالي رقم #${currentTimetableId} بالكامل.\n` +
+      "هذا الإجراء لا يمكن التراجع عنه.",
+    confirmText: "حذف الجدول",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend(`/exam-timetables/${currentTimetableId}`, "DELETE");
+    toast("تم حذف الجدول.", "ok");
+
+    currentTimetableId = null;
+    currentTimetableStatus = "draft";
+    entries = [];
+    clearPersistedLast();
+
+    setStatusChip("-");
+    syncPublishButtons();
+    setInfo("تم حذف الجدول. اختر الفلاتر وافتح جدول جديد.");
+    renderTable();
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "فشل الحذف.", "err");
+  }
+}
   async function copyFromTimetable() {
-    if (!currentTimetableId) return toast("افتح جدول الهدف أولاً.", "err");
-    if (currentTimetableStatus === "published") return toast("لا يمكن النسخ لجدول منشور.", "err");
-
-    const fromIdRaw = prompt("اكتب examTimetableId للجدول المصدر:");
-    if (!fromIdRaw) return;
-
-    const fromTimetableId = Number(toLatinDigits(fromIdRaw));
-    if (!Number.isFinite(fromTimetableId) || fromTimetableId <= 0) return toast("رقم غير صحيح.", "err");
-
-    try {
-      await apiSend(`/exam-timetables/${currentTimetableId}/copy-from`, "POST", { fromTimetableId });
-      await reloadCurrentTimetable();
-      toast("تم النسخ بنجاح.", "ok");
-    } catch (e) {
-      console.error(e);
-      toast(e.message || "فشل النسخ.", "err");
-    }
+  if (!currentTimetableId) return toast("افتح جدول الهدف أولاً.", "err");
+  if (currentTimetableStatus === "published") {
+    return toast("لا يمكن النسخ لجدول منشور.", "err");
   }
 
+  const fromIdRaw = await exPrompt({
+    title: "نسخ من جدول آخر",
+    message: "اكتب رقم جدول الاختبارات المصدر الذي تريد النسخ منه.",
+    placeholder: "مثال: 12",
+    confirmText: "نسخ الجدول",
+    cancelText: "إلغاء",
+    type: "info",
+    required: true,
+    requiredMessage: "رقم الجدول المصدر مطلوب.",
+  });
+
+  if (fromIdRaw === null) return;
+
+  const fromTimetableId = Number(toLatinDigits(fromIdRaw));
+  if (!Number.isFinite(fromTimetableId) || fromTimetableId <= 0) {
+    return toast("رقم غير صحيح.", "err");
+  }
+
+  const ok = await exConfirm({
+    title: "تأكيد نسخ الجدول",
+    message:
+      `سيتم نسخ اختبارات الجدول رقم #${fromTimetableId} إلى الجدول الحالي رقم #${currentTimetableId}.\n` +
+      "هل تريد المتابعة؟",
+    confirmText: "تأكيد النسخ",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend(`/exam-timetables/${currentTimetableId}/copy-from`, "POST", {
+      fromTimetableId,
+    });
+    await reloadCurrentTimetable();
+    toast("تم النسخ بنجاح.", "ok");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "فشل النسخ.", "err");
+  }
+}
   async function loadManageList() {
     const root = document.getElementById("examSchedulePage") || document;
     const sel = getSelection();
@@ -1298,14 +1392,26 @@ function parseISODateUTC(iso) {
         return saveRowFromDrawer(true);
       }
 
-      if (id === "exDrawerDelete") {
-        if (!selectedRowId) return;
-        if (currentTimetableStatus === "published") return toast("الجدول منشور — ألغِ النشر للتعديل.", "err");
-        if (!confirm("متأكد تريد حذف هذا الاختبار؟")) return;
-        deleteRow(selectedRowId);
-        closeDrawer();
-        return;
-      }
+     if (id === "exDrawerDelete") {
+  if (!selectedRowId) return;
+  if (currentTimetableStatus === "published") {
+    return toast("الجدول منشور — ألغِ النشر للتعديل.", "err");
+  }
+
+  const ok = await exConfirm({
+    title: "حذف اختبار",
+    message: "هل أنت متأكد من حذف هذا الاختبار من الجدول؟",
+    confirmText: "حذف الاختبار",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  deleteRow(selectedRowId);
+  closeDrawer();
+  return;
+}
 
       if (id === "exManageBtn") {
         openManage();
@@ -1324,23 +1430,35 @@ function parseISODateUTC(iso) {
         return;
       }
 
-      const delBtn = e.target.closest("[data-del-id]");
-      if (delBtn) {
-        const tid = Number(delBtn.getAttribute("data-del-id"));
-        if (!confirm("متأكد تريد حذف الجدول رقم " + tid + " ؟ (يجب أن يكون مسودة)")) return;
-        try {
-          await apiSend(`/exam-timetables/${tid}`, "DELETE");
-          toast("تم حذف الجدول.", "ok");
-          await loadManageList();
+    const delBtn = e.target.closest("[data-del-id]");
+if (delBtn) {
+  const tid = Number(delBtn.getAttribute("data-del-id"));
 
-          if (String(currentTimetableId) === String(tid)) {
-            resetExamScheduleToDefaults("تم حذف الجدول المفتوح. اختر الفلاتر ثم افتح جدول جديد.");
-          }
-        } catch (err) {
-          toast(err.message || "فشل الحذف", "err");
-        }
-        return;
-      }
+  const ok = await exConfirm({
+    title: "حذف جدول اختبارات",
+    message:
+      `سيتم حذف الجدول رقم #${tid}.\n` +
+      "يجب أن يكون الجدول مسودة وغير منشور.\nهذا الإجراء لا يمكن التراجع عنه.",
+    confirmText: "حذف الجدول",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiSend(`/exam-timetables/${tid}`, "DELETE");
+    toast("تم حذف الجدول.", "ok");
+    await loadManageList();
+
+    if (String(currentTimetableId) === String(tid)) {
+      resetExamScheduleToDefaults("تم حذف الجدول المفتوح. اختر الفلاتر ثم افتح جدول جديد.");
+    }
+  } catch (err) {
+    toast(err.message || "فشل الحذف", "err");
+  }
+  return;
+}
 
       const tbody = el("#exTbody", root);
       if (tbody && tbody.contains(e.target)) {
@@ -1350,13 +1468,24 @@ function parseISODateUTC(iso) {
         const rowId = tr.dataset.rowId;
         const actBtn = e.target.closest("[data-act]");
         const act = actBtn?.getAttribute("data-act");
+if (act === "del") {
+  if (currentTimetableStatus === "published") {
+    return toast("الجدول منشور — ألغِ النشر للتعديل.", "err");
+  }
 
-        if (act === "del") {
-          if (currentTimetableStatus === "published") return toast("الجدول منشور — ألغِ النشر للتعديل.", "err");
-          if (!confirm("متأكد تريد حذف الاختبار؟")) return;
-          deleteRow(rowId);
-          return;
-        }
+  const ok = await exConfirm({
+    title: "حذف اختبار",
+    message: "هل أنت متأكد من حذف هذا الاختبار؟",
+    confirmText: "حذف الاختبار",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  deleteRow(rowId);
+  return;
+}
 
         if (currentTimetableStatus === "published") return toast("الجدول منشور — ألغِ النشر للتعديل.", "err");
         openRowEditor(rowId);

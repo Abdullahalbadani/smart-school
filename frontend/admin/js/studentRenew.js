@@ -88,7 +88,13 @@ function apiUrl(path) {
     el.className = `cs-alert show ${type}`;
     el.textContent = message;
   }
+async function csConfirm(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
 
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
   function setLoading(btn, loading, text) {
     if (!btn) return;
 
@@ -466,50 +472,65 @@ function apiUrl(path) {
 
     updateSelectedCount();
   }
+async function registerStudents() {
+  const btn = qs("#csRegisterBtn");
 
-  async function registerStudents() {
-    const btn = qs("#csRegisterBtn");
+  try {
+    const filters = validateFilters();
 
-    try {
-      const filters = validateFilters();
+    const student_ids = qsa(".cs-row-check")
+      .filter((check) => check.checked)
+      .map((check) => Number(check.dataset.id))
+      .filter((id) => Number.isInteger(id) && id > 0);
 
-      const student_ids = qsa(".cs-row-check")
-        .filter((check) => check.checked)
-        .map((check) => Number(check.dataset.id))
-        .filter((id) => Number.isInteger(id) && id > 0);
+    if (!student_ids.length) {
+      throw new Error("اختر طالبًا واحدًا على الأقل.");
+    }
 
-      if (!student_ids.length) {
-        throw new Error("اختر طالبًا واحدًا على الأقل.");
-      }
+    const ok = await csConfirm({
+      title: "تسجيل الطلاب في السنة الجديدة",
+      message:
+        `سيتم تسجيل ${student_ids.length} طالب/طلاب في السنة الجديدة.\n\n` +
+        "الناجحون سيتم ترحيلهم إلى وجهة الناجحين.\n" +
+        "الراسبون سيتم تسجيلهم في وجهة الراسبين.\n\n" +
+        "هل تريد تنفيذ العملية الآن؟",
+      confirmText: "تسجيل الطلاب",
+      cancelText: "إلغاء",
+      type: "success",
+    });
 
-      if (
-        !confirm(
-          `سيتم تسجيل ${student_ids.length} طالب/طلاب في السنة الجديدة. الناجحون يترحلون، والراسبون يعيدون السنة. هل تريد المتابعة؟`
-        )
-      ) {
-        return;
-      }
+    if (!ok) return;
 
-      setLoading(btn, true, "جاري التسجيل...");
+    setLoading(btn, true, "جاري التسجيل...");
 
-      const data = await apiPost("/continuing-students/register", {
-        ...filters,
-        student_ids,
-      });
+    const data = await apiPost("/continuing-students/register", {
+      ...filters,
+      student_ids,
+    });
 
-      showAlert(
-        `${data.message || "تم التسجيل."} تم تخطي ${data.skipped_count || 0}.`,
+    showAlert(
+      `${data.message || "تم التسجيل."} تم تخطي ${data.skipped_count || 0}.`,
+      "success"
+    );
+
+    if (window.AppUI?.toast) {
+      window.AppUI.toast(
+        `${data.message || "تم تسجيل الطلاب بنجاح."} تم تخطي ${data.skipped_count || 0}.`,
         "success"
       );
-
-      await loadStudents();
-    } catch (e) {
-      showAlert(e.message || "تعذر تسجيل المستمرين.", "error");
-    } finally {
-      setLoading(btn, false);
     }
-  }
 
+    await loadStudents();
+  } catch (e) {
+    showAlert(e.message || "تعذر تسجيل المستمرين.", "error");
+
+    if (window.AppUI?.toast) {
+      window.AppUI.toast(e.message || "تعذر تسجيل المستمرين.", "error");
+    }
+  } finally {
+    setLoading(btn, false);
+  }
+}
   function bindEvents() {
     qs("#csFromStage")?.addEventListener("change", () => {
       fillGrades("From");

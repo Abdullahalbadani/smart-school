@@ -93,7 +93,21 @@ const apiUrl =
     console.log(msg);
     alert(msg);
   }
+async function stuPrompt(options) {
+  if (window.AppUI?.prompt) {
+    return await window.AppUI.prompt(options);
+  }
 
+  return prompt(options?.message || "اكتب البيانات", options?.defaultValue || "");
+}
+
+async function stuConfirm(options) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
+
+  return confirm(options?.message || "هل تريد المتابعة؟");
+}
   function safeJson(s) {
     try {
       return JSON.parse(s);
@@ -866,30 +880,230 @@ const url = apiUrl(`/students/${encodeURIComponent(id)}`);      try {
     }
 
     // ✅ Payload مطابق لجدولك (بدون notes/nid)
-    function buildUpdatePayload() {
-      const st = String(eStatus?.value || "active").toLowerCase();
-      const status = st === "graduated" ? "graduated" : st === "inactive" ? "inactive" : "active";
+function buildUpdatePayload() {
+  const st = String(eStatus?.value || "active").toLowerCase();
+  const status =
+    st === "graduated" ? "graduated" : st === "inactive" ? "inactive" : "active";
 
-      const toNumOrNull = (v) => (v ? Number(v) : null);
+  // مهم جدًا:
+  // لا نرسل المرحلة/الصف/الشعبة من تعديل الطالب.
+  // نقل الطالب يتم فقط عبر طلب نقل وموافقة المدير.
+  return {
+    full_name: (eName?.value || "").trim(),
+    student_code: (eCode?.value || "").trim(),
+    status,
+    phone: (ePhone?.value || "").trim(),
+    gender: eGender?.value || "male",
+    birth_date: eDob?.value || "",
+    address: (eAddress?.value || "").trim(),
 
-      return {
-        full_name: (eName?.value || "").trim(),
-        student_code: (eCode?.value || "").trim(),
-        status,
-        phone: (ePhone?.value || "").trim(),
-        gender: eGender?.value || "male",
-        birth_date: eDob?.value || "",
-        address: (eAddress?.value || "").trim(),
+    guardian_name: (eGuardian?.value || "").trim(),
+    guardian_phone: (eGuardianPhone?.value || "").trim(),
+  };
+}
+function hasEnrollmentTargetChanged(student) {
+  if (!student) return false;
 
-        stage_id: toNumOrNull(eStage?.value || ""),
-        grade_id: toNumOrNull(eGrade?.value || ""),
-        section_id: toNumOrNull(eSection?.value || ""),
+  const oldStage = String(student.stage_id || "");
+  const oldGrade = String(student.grade_id || "");
+  const oldSection = String(student.section_id || "");
 
-        guardian_name: (eGuardian?.value || "").trim(),
-        guardian_phone: (eGuardianPhone?.value || "").trim(),
-      };
-    }
+  const newStage = String(eStage?.value || "");
+  const newGrade = String(eGrade?.value || "");
+  const newSection = String(eSection?.value || "");
 
+  return oldStage !== newStage || oldGrade !== newGrade || oldSection !== newSection;
+}
+function ensureStudentTransferBox(student) {
+  if (!editForm || !eSection) return;
+
+  let box = document.getElementById("stuTransferRequestBox");
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "stuTransferRequestBox";
+    box.style.cssText = `
+      margin-top: 12px;
+      padding: 12px;
+      border: 1px solid rgba(245, 158, 11, .35);
+      border-radius: 16px;
+      background: rgba(245, 158, 11, .08);
+      display: grid;
+      gap: 8px;
+    `;
+
+    box.innerHTML = `
+      <div style="font-weight:900;color:#fbbf24;">
+        نقل الطالب بين الصفوف والشعب
+      </div>
+
+      <div id="stuTransferCurrentLabel" style="font-size:12px;color:var(--text-muted,#9ca3af);line-height:1.7;">
+        —
+      </div>
+
+      <div style="font-size:12px;color:var(--text-muted,#9ca3af);line-height:1.8;">
+        لتغيير المرحلة أو الصف أو الشعبة، اختر الهدف من الحقول أعلاه ثم اضغط
+        <b>طلب نقل الطالب</b>. لن يتم النقل إلا بعد موافقة المدير.
+      </div>
+
+      <button
+        id="stuRequestTransferBtn"
+        class="stu-btn stu-btn--soft"
+        type="button"
+        style="justify-self:start;"
+      >
+        <i class="ri-arrow-left-right-line"></i>
+        <span>طلب نقل الطالب</span>
+      </button>
+    `;
+
+    const anchor =
+      eSection.closest(".stu-field, .form-field, .field, .input-group, div") ||
+      eSection.parentElement ||
+      editForm;
+
+    anchor.insertAdjacentElement("afterend", box);
+
+    const btn = box.querySelector("#stuRequestTransferBtn");
+    btn?.addEventListener("click", requestStudentTransferFromEdit);
+  }
+
+  const currentLabel = document.getElementById("stuTransferCurrentLabel");
+  if (currentLabel && student) {
+    currentLabel.textContent = `الموقع الحالي: ${student.stage || "—"} / ${
+      student.grade || "—"
+    } / ${student.section || "—"}`;
+  }
+}
+
+async function requestStudentTransferFromEdit() {
+  const id = editM?.dataset?.studentId || "";
+  const student = state.list.find((x) => String(x.id) === String(id));
+
+  if (!id || !student) {
+    return toast("لم يتم تحديد الطالب.");
+  }
+
+  const toStageId = Number(eStage?.value || 0);
+  const toGradeId = Number(eGrade?.value || 0);
+  const toSectionId = eSection?.value ? Number(eSection.value) : null;
+
+  if (!toStageId || !toGradeId) {
+    return toast("اختر المرحلة والصف المراد النقل إليه.");
+  }
+
+  const reason = prompt(
+    "اكتب سبب نقل الطالب:",
+    "طلب نقل الطالب بعد مراجعة بيانات القيد"
+  );
+
+  if (reason === null) return;
+
+  if (!String(reason).trim()) {
+    return toast("سبب النقل مطلوب.");
+  }
+
+  const ok = confirm(
+    `سيتم إرسال طلب نقل الطالب إلى المدير.\n\nالطالب: ${
+      student.name || student.code || id
+    }\nمن: ${student.stage || "—"} / ${student.grade || "—"} / ${
+      student.section || "—"
+    }\nإلى المرحلة رقم: ${toStageId} / الصف رقم: ${toGradeId} / الشعبة رقم: ${
+      toSectionId || "بدون"
+    }\n\nلن يتم النقل إلا بعد موافقة المدير.\nهل تريد المتابعة؟`
+  );
+
+  if (!ok) return;
+
+  try {
+    await apiFetch(apiUrl("/admin/student-transfer-requests"), {
+      method: "POST",
+      body: JSON.stringify({
+        student_id: Number(id),
+        to_stage_id: toStageId,
+        to_grade_id: toGradeId,
+        to_section_id: toSectionId,
+        reason: String(reason).trim(),
+      }),
+    });
+
+    toast("تم إرسال طلب نقل الطالب إلى المدير ✅");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "فشل إرسال طلب نقل الطالب");
+  }
+}
+async function requestStudentTransferFromEdit() {
+  const id = editM?.dataset?.studentId || "";
+  const student = state.list.find((x) => String(x.id) === String(id));
+
+  if (!id || !student) {
+    return toast("لم يتم تحديد الطالب.");
+  }
+
+  const toStageId = Number(eStage?.value || 0);
+  const toGradeId = Number(eGrade?.value || 0);
+  const toSectionId = eSection?.value ? Number(eSection.value) : null;
+
+  if (!toStageId || !toGradeId) {
+    return toast("اختر المرحلة والصف المراد النقل إليه.");
+  }
+
+  const reason = await stuPrompt({
+    title: "سبب نقل الطالب",
+    message: "اكتب سبب نقل الطالب ليظهر للمدير قبل الموافقة.",
+    placeholder: "مثال: طلب ولي الأمر / ازدحام الشعبة / خطأ في التسجيل",
+    defaultValue: "طلب نقل الطالب بعد مراجعة بيانات القيد",
+    confirmText: "متابعة",
+    cancelText: "إلغاء",
+    type: "info",
+    textarea: true,
+    required: true,
+    requiredMessage: "سبب النقل مطلوب.",
+  });
+
+  if (reason === null) return;
+
+  const ok = await stuConfirm({
+    title: "إرسال طلب نقل الطالب",
+    message: `سيتم إرسال طلب نقل الطالب إلى المدير.
+
+الطالب: ${student.name || student.code || id}
+
+من:
+${student.stage || "—"} / ${student.grade || "—"} / ${student.section || "—"}
+
+إلى:
+المرحلة رقم: ${toStageId}
+الصف رقم: ${toGradeId}
+الشعبة رقم: ${toSectionId || "بدون"}
+
+لن يتم النقل إلا بعد موافقة المدير.`,
+    confirmText: "إرسال الطلب",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiFetch(apiUrl("/admin/student-transfer-requests"), {
+      method: "POST",
+      body: JSON.stringify({
+        student_id: Number(id),
+        to_stage_id: toStageId,
+        to_grade_id: toGradeId,
+        to_section_id: toSectionId,
+        reason: String(reason).trim(),
+      }),
+    });
+
+    toast("تم إرسال طلب نقل الطالب إلى المدير ✅");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "فشل إرسال طلب نقل الطالب");
+  }
+}
     async function openEditModal(student) {
       if (!student || !editM) return;
 
@@ -916,7 +1130,7 @@ const url = apiUrl(`/students/${encodeURIComponent(id)}`);      try {
       await loadSections(eGrade?.value || "", eSection);
 
       if (eSection) eSection.value = student.section_id || "";
-
+ensureStudentTransferBox(student);
       editM.dataset.studentId = student.id;
       setModal(editM, true);
     }
@@ -943,11 +1157,21 @@ const url = apiUrl(`/students/${encodeURIComponent(id)}`);      try {
 
         if (!eName?.value?.trim()) return toast("اسم الطالب مطلوب");
 
-        const payload = buildUpdatePayload();
+      const currentStudent =
+  state.list.find((x) => String(x.id) === String(id)) ||
+  state.currentStudent;
 
-        try {
-          await updateStudent(id, payload);
-          toast("تم حفظ التعديل ✅");
+if (hasEnrollmentTargetChanged(currentStudent)) {
+  return toast(
+    "لا يمكن تغيير المرحلة أو الصف أو الشعبة من زر حفظ التعديل. استخدم زر طلب نقل الطالب وانتظر موافقة المدير."
+  );
+}
+
+const payload = buildUpdatePayload();
+
+try {
+  await updateStudent(id, payload);
+  toast("تم حفظ بيانات الطالب فقط ✅");
           closeEditModal();
 
           await loadStudents();

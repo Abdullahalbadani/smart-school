@@ -51,7 +51,744 @@ const $id = (id) => document.getElementById(id);
     }
     requestAnimationFrame(tick);
   }
+function setText(id, value) {
+  const el = $id(id);
+  if (el) el.textContent = value;
+}
 
+function formatMoney(value) {
+  const n = Number(value || 0);
+  return `${n.toLocaleString("ar-EG")} ر.س`;
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  return `${Number(value || 0).toLocaleString("ar-EG")}٪`;
+}
+function setBar(id, value) {
+  const el = $id(id);
+  if (!el) return;
+
+  const percent = Math.max(0, Math.min(100, Number(value || 0)));
+  el.style.width = `${percent}%`;
+}
+async function loadAdminHomeDashboard() {
+  try {
+    const r = await fetch(apiUrl("/dashboard/admin-home"), {
+      headers: { ...authHeaders() },
+    });
+
+    const data = await r.json().catch(() => ({}));
+
+    if (!r.ok) {
+      throw new Error(data?.message || "فشل تحميل بيانات لوحة المدير");
+    }
+
+    const summary = data.summary || {};
+    const attendance = data.attendance_today || {};
+    const finance = data.finance || {};
+    const pending = data.pending_tasks || {};
+const sectionsAttendance = data.sections_attendance_status || {};
+const school = data.school || {};
+const schoolName = school.name_ar || school.name_en || "المدرسة";
+
+setText(
+  "hero-sub",
+  `أمامك ملخص تنفيذي لليوم في ${schoolName} من قاعدة البيانات: الحضور، الرسوم، والملفات التي تحتاج متابعتك.`
+);
+    // أرقام الدائرة الرئيسية
+    animateCount($id("orbit-students"), summary.students_count || 0);
+    animateCount($id("orbit-teachers"), summary.teachers_count || 0);
+    animateCount($id("orbit-classes"), summary.sections_count || summary.grades_count || 0);
+
+    // شرائح الهيرو
+    setText("chip-attendance", attendance.configured ? formatPercent(attendance.attendance_rate) : "غير مربوط");
+    setText("chip-fees", finance.configured ? formatMoney(finance.total_remaining) : "غير مربوط");
+setText("chip-requests", `${formatAr(pending.total || 0)} طلب`);
+    // مؤشرات اليوم
+   const markedStudents = Number(attendance.marked_students || 0);
+const absentStudents = Number(attendance.absent_students || 0);
+const presentStudents = Number(attendance.present_students || 0);
+const lateStudents = Number(attendance.late_students || 0);
+
+const totalSectionsForAttendance = Number(sectionsAttendance.total_sections || 0);
+const missingSectionsForAttendance = Number(sectionsAttendance.missing_sections || 0);
+
+if (markedStudents <= 0 && missingSectionsForAttendance > 0) {
+  setText("kpi-absent-students", "لم يبدأ");
+  setText(
+    "kpi-absent-sub",
+    `${formatAr(missingSectionsForAttendance)} شعبة لم تسجل حضور اليوم.`
+  );
+
+  if (typeof setBar === "function") {
+    setBar("kpi-absent-bar", 0);
+  }
+
+  setText("kpi-absent-trend", "—");
+} else {
+  setText("kpi-absent-students", `${formatAr(absentStudents)} طالب`);
+  setText(
+    "kpi-absent-sub",
+    `الحضور اليوم: ${formatAr(presentStudents)} حاضر · ${formatAr(lateStudents)} متأخر`
+  );
+
+  if (typeof setBar === "function") {
+    setBar("kpi-absent-bar", Number(attendance.attendance_rate || 0));
+  }
+
+  setText(
+    "kpi-absent-trend",
+    `${formatAr(Number(attendance.attendance_rate || 0))}٪`
+  );
+}
+
+ const totalSections = Number(sectionsAttendance.total_sections || 0);
+const recordedSections = Number(sectionsAttendance.recorded_sections || 0);
+const missingSections = Number(sectionsAttendance.missing_sections || 0);
+const sectionsCompletionRate = Number(sectionsAttendance.completion_rate || 0);
+const missingExamples = Array.isArray(sectionsAttendance.missing_examples)
+  ? sectionsAttendance.missing_examples
+  : [];
+
+setText("kpi-grades-completion", `${formatAr(missingSections)} شعبة`);
+
+const visibleMissingExamples = missingExamples
+  .map((item) => item.label)
+  .filter(Boolean)
+  .slice(0, 3);
+
+const remainingMissingCount = Math.max(
+  missingSections - visibleMissingExamples.length,
+  0
+);
+
+const missingSectionsText =
+  visibleMissingExamples.length > 0
+    ? `${visibleMissingExamples.join("، ")}${
+        remainingMissingCount > 0
+          ? ` + ${formatAr(remainingMissingCount)} أخرى`
+          : ""
+      }`
+    : `${formatAr(missingSections)} شعبة لم تسجل حضور اليوم.`;
+
+setText(
+  "kpi-grades-sub",
+  missingSections > 0
+    ? missingSectionsText
+    : totalSections > 0
+    ? "تم تسجيل حضور جميع الشعب اليوم."
+    : "لا توجد شعب نشطة في المدرسة."
+);
+
+setBar("kpi-grades-bar", sectionsCompletionRate);
+
+setText(
+  "kpi-grades-trend",
+  totalSections > 0
+    ? `${formatAr(recordedSections)} / ${formatAr(totalSections)}`
+    : "—"
+);
+    setText(
+      "kpi-fees-payment",
+      finance.configured ? formatPercent(finance.payment_rate) : "غير مربوط"
+    );
+
+    setText(
+      "kpi-fees-sub",
+      finance.configured
+        ? `المتبقي: ${formatMoney(finance.total_remaining)}`
+        : "لم يتم ربط جداول الرسوم بعد."
+    );
+
+    setText(
+      "kpi-parent-requests",
+      `${formatAr(pending.total || 0)} طلب`
+    );
+
+    setText(
+      "kpi-parent-requests-sub",
+      pending.total > 0
+        ? `لديك ${formatAr(pending.total)} ملف بانتظار المتابعة.`
+        : "لا توجد طلبات تحتاج قرار المدير الآن."
+    );
+const studentsCount = Number(summary.students_count || 0);
+
+const absentPercent =
+  attendance.configured && studentsCount > 0
+    ? Math.round(((attendance.absent_students || 0) / studentsCount) * 100)
+    : 0;
+
+setBar("kpi-absent-bar", absentPercent);
+setText(
+  "kpi-absent-trend",
+  attendance.configured ? `${formatAr(absentPercent)}٪` : "—"
+);
+
+
+
+setBar(
+  "kpi-fees-bar",
+  finance.configured ? Number(finance.payment_rate || 0) : 0
+);
+setText(
+  "kpi-fees-trend",
+  finance.configured ? formatPercent(finance.payment_rate) : "—"
+);
+
+const pendingPercent = Math.min(Number(pending.total || 0) * 10, 100);
+setBar("kpi-parent-requests-bar", pendingPercent);
+setText(
+  "kpi-parent-requests-trend",
+  pending.total > 0 ? `${formatAr(pending.total)} طلب` : "—"
+);
+  renderPendingTasks(pending);
+loadAssessmentReopenRequests();
+loadFeeAdjustmentRequests();
+loadStudentTransferRequests();
+    renderSchoolPulse(data.school_pulse || []);
+  } catch (error) {
+    console.error("Admin home dashboard error:", error);
+  }
+}
+
+function renderPendingTasks(pending) {
+  const board = document.getElementById("pending-tasks-board");
+  if (!board) return;
+
+  const items = Array.isArray(pending?.items) ? pending.items : [];
+
+  if (!items.length) {
+    board.innerHTML = `
+      <div class="kanban-column">
+        <h4>المهام</h4>
+        <div class="task">
+          <span class="task-title">لا توجد مهام تحتاج قرار المدير الآن.</span>
+          <span class="task-meta">سيتم عرض الطلبات الحقيقية هنا عند توفرها.</span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+  board.innerHTML = `
+    <div class="kanban-column">
+      <h4>بانتظار المتابعة</h4>
+      ${items
+        .map(
+          (item) => `
+          <div class="task task--warn">
+            <span class="task-title">${item.title || "مهمة معلقة"}</span>
+            <span class="task-meta">${formatAr(item.count || 0)} عنصر</span>
+          </div>
+        `
+        )
+        .join("")}
+    </div>
+  `;
+}
+async function loadFeeAdjustmentRequests() {
+  const board = document.getElementById("pending-tasks-board");
+  if (!board) return;
+
+  try {
+    const response = await fetch(apiUrl("/admin/fee-adjustment-requests?status=pending"), {
+      headers: { ...authHeaders() },
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل تحميل طلبات تعديل الرسوم");
+    }
+
+    const items = Array.isArray(result.data) ? result.data : [];
+
+    if (!items.length) return;
+
+    const emptyText = board.textContent || "";
+    if (emptyText.includes("لا توجد مهام تحتاج قرار المدير")) {
+      board.innerHTML = "";
+    }
+
+    const cards = items
+      .map((item) => {
+        const studentName = item.student_name || "طالب غير محدد";
+        const studentCode = item.student_code || "—";
+        const amount = formatMoney(item.amount || 0);
+        const reason = item.reason || "لا يوجد سبب مكتوب";
+        const requestedBy = item.requested_by_name || "مستخدم";
+
+        return `
+          <div class="task task--warn" style="gap:10px;">
+            <span class="task-title">طلب تعديل رسوم</span>
+
+            <span class="task-meta">
+              الطالب: ${studentName}<br>
+              رقم الطالب: ${studentCode}<br>
+              نوع الطلب: خصم<br>
+              مبلغ الخصم: ${amount}<br>
+              بواسطة: ${requestedBy}<br>
+              السبب: ${reason}
+            </span>
+
+            <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+              <button
+                type="button"
+                onclick="approveFeeAdjustmentRequest(${item.id})"
+                style="
+                  border:0;
+                  border-radius:999px;
+                  padding:7px 12px;
+                  background:#22c55e;
+                  color:white;
+                  font-weight:800;
+                  cursor:pointer;
+                  font-size:12px;
+                "
+              >
+                قبول
+              </button>
+
+              <button
+                type="button"
+                onclick="rejectFeeAdjustmentRequest(${item.id})"
+                style="
+                  border:1px solid rgba(239,68,68,.45);
+                  border-radius:999px;
+                  padding:7px 12px;
+                  background:rgba(239,68,68,.12);
+                  color:#fecaca;
+                  font-weight:800;
+                  cursor:pointer;
+                  font-size:12px;
+                "
+              >
+                رفض
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    board.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="kanban-column">
+        <h4>طلبات تعديل الرسوم</h4>
+        ${cards}
+      </div>
+      `
+    );
+  } catch (error) {
+    console.error("Fee adjustment requests error:", error);
+  }
+}
+
+window.approveFeeAdjustmentRequest = async function (id) {
+  const adminNote =
+    prompt("اكتب ملاحظة الموافقة:", "تمت الموافقة على تعديل الرسوم") || "";
+
+  try {
+    const response = await fetch(apiUrl(`/admin/fee-adjustment-requests/${id}/approve`), {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        admin_note: adminNote,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل قبول طلب تعديل الرسوم");
+    }
+
+    alert(result.message || "تم قبول الطلب");
+    loadAdminHomeDashboard();
+  } catch (error) {
+    console.error("Approve fee adjustment request error:", error);
+    alert(error.message || "تعذر قبول طلب تعديل الرسوم");
+  }
+};
+
+window.rejectFeeAdjustmentRequest = async function (id) {
+  const adminNote = prompt("اكتب سبب الرفض:");
+  if (adminNote === null) return;
+
+  if (!String(adminNote).trim()) {
+    alert("سبب الرفض مطلوب.");
+    return;
+  }
+
+  try {
+    const response = await fetch(apiUrl(`/admin/fee-adjustment-requests/${id}/reject`), {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        admin_note: adminNote,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل رفض طلب تعديل الرسوم");
+    }
+
+    alert(result.message || "تم رفض الطلب");
+    loadAdminHomeDashboard();
+  } catch (error) {
+    console.error("Reject fee adjustment request error:", error);
+    alert(error.message || "تعذر رفض طلب تعديل الرسوم");
+  }
+};
+async function loadAssessmentReopenRequests() {
+  const board = document.getElementById("pending-tasks-board");
+  if (!board) return;
+
+  try {
+    const response = await fetch(apiUrl("/admin/assessment-reopen-requests?status=pending"), {
+      headers: { ...authHeaders() },
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل تحميل طلبات إعادة فتح التقييم");
+    }
+
+    const items = Array.isArray(result.data) ? result.data : [];
+
+    if (!items.length) return;
+
+    const emptyText = board.textContent || "";
+    if (emptyText.includes("لا توجد مهام تحتاج قرار المدير")) {
+      board.innerHTML = "";
+    }
+
+    const cards = items
+      .map((item) => {
+     const title =
+  item.assessment_title ||
+  item.assessment_title_short ||
+  "تقييم بدون عنوان";
+
+const teacherName = item.requested_by_name || "معلم";
+const reason = item.reason || "لا يوجد سبب مكتوب";
+
+const termLabel =
+  Number(item.term) === 1
+    ? "الفصل الأول"
+    : Number(item.term) === 2
+    ? "الفصل الثاني"
+    : "فصل غير محدد";
+
+const classLabel =
+  item.class_label ||
+  `${item.grade_name || "صف غير محدد"} - الشعبة ${item.section_name || "غير محددة"}`;
+        return `
+          <div class="task task--warn" style="gap:10px;">
+            <span class="task-title">طلب إعادة فتح تقييم</span>
+            <span class="task-meta">
+         التقييم: ${title}<br>
+الفصل: ${termLabel}<br>
+الصف والشعبة: ${classLabel}<br>
+بواسطة: ${teacherName}<br>
+السبب: ${reason}
+            </span>
+
+            <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+              <button
+                type="button"
+                onclick="approveAssessmentReopenRequest(${item.id})"
+                style="
+                  border:0;
+                  border-radius:999px;
+                  padding:7px 12px;
+                  background:#22c55e;
+                  color:white;
+                  font-weight:800;
+                  cursor:pointer;
+                  font-size:12px;
+                "
+              >
+                قبول
+              </button>
+
+              <button
+                type="button"
+                onclick="rejectAssessmentReopenRequest(${item.id})"
+                style="
+                  border:1px solid rgba(239,68,68,.45);
+                  border-radius:999px;
+                  padding:7px 12px;
+                  background:rgba(239,68,68,.12);
+                  color:#fecaca;
+                  font-weight:800;
+                  cursor:pointer;
+                  font-size:12px;
+                "
+              >
+                رفض
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    board.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="kanban-column">
+        <h4>طلبات إعادة فتح التقييم</h4>
+        ${cards}
+      </div>
+      `
+    );
+  } catch (error) {
+    console.error("Assessment reopen requests error:", error);
+  }
+}
+async function loadStudentTransferRequests() {
+  const board = document.getElementById("pending-tasks-board");
+  if (!board) return;
+
+  try {
+    const response = await fetch(apiUrl("/admin/student-transfer-requests?status=pending"), {
+      headers: { ...authHeaders() },
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل تحميل طلبات نقل الطلاب");
+    }
+
+    const items = Array.isArray(result.data) ? result.data : [];
+
+    if (!items.length) return;
+
+    const emptyText = board.textContent || "";
+    if (emptyText.includes("لا توجد مهام تحتاج قرار المدير")) {
+      board.innerHTML = "";
+    }
+
+    const cards = items
+      .map((item) => {
+        const studentName = item.student_name || "طالب غير محدد";
+        const studentCode = item.student_code || "—";
+        const fromClass = item.from_class_label || "غير محدد";
+        const toClass = item.to_class_label || "غير محدد";
+        const reason = item.reason || "لا يوجد سبب مكتوب";
+        const requestedBy = item.requested_by_name || "مستخدم";
+
+        return `
+          <div class="task task--warn" style="gap:10px;">
+            <span class="task-title">طلب نقل طالب</span>
+
+            <span class="task-meta">
+              الطالب: ${studentName} · ${studentCode}<br>
+              من: ${fromClass}<br>
+              إلى: ${toClass}<br>
+              بواسطة: ${requestedBy}<br>
+              السبب: ${reason}
+            </span>
+
+            <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
+              <button
+                type="button"
+                onclick="approveStudentTransferRequest(${item.id})"
+                style="
+                  border:0;
+                  border-radius:999px;
+                  padding:7px 12px;
+                  background:#22c55e;
+                  color:white;
+                  font-weight:800;
+                  cursor:pointer;
+                  font-size:12px;
+                "
+              >
+                قبول
+              </button>
+
+              <button
+                type="button"
+                onclick="rejectStudentTransferRequest(${item.id})"
+                style="
+                  border:1px solid rgba(239,68,68,.45);
+                  border-radius:999px;
+                  padding:7px 12px;
+                  background:rgba(239,68,68,.12);
+                  color:#fecaca;
+                  font-weight:800;
+                  cursor:pointer;
+                  font-size:12px;
+                "
+              >
+                رفض
+              </button>
+            </div>
+          </div>
+        `;
+      })
+      .join("");
+
+    board.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="kanban-column">
+        <h4>طلبات نقل الطلاب</h4>
+        ${cards}
+      </div>
+      `
+    );
+  } catch (error) {
+    console.error("Student transfer requests error:", error);
+  }
+}
+
+window.approveStudentTransferRequest = async function (id) {
+  const adminNote =
+    prompt("اكتب ملاحظة الموافقة:", "تمت الموافقة على نقل الطالب") || "";
+
+  try {
+    const response = await fetch(apiUrl(`/admin/student-transfer-requests/${id}/approve`), {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        admin_note: adminNote,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل قبول طلب النقل");
+    }
+
+    alert(result.message || "تم قبول طلب النقل");
+    loadAdminHomeDashboard();
+  } catch (error) {
+    console.error("Approve student transfer request error:", error);
+    alert(error.message || "تعذر قبول طلب النقل");
+  }
+};
+
+window.rejectStudentTransferRequest = async function (id) {
+  const adminNote = prompt("اكتب سبب الرفض:");
+  if (adminNote === null) return;
+
+  if (!String(adminNote).trim()) {
+    alert("سبب الرفض مطلوب.");
+    return;
+  }
+
+  try {
+    const response = await fetch(apiUrl(`/admin/student-transfer-requests/${id}/reject`), {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        admin_note: adminNote,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل رفض طلب النقل");
+    }
+
+    alert(result.message || "تم رفض طلب النقل");
+    loadAdminHomeDashboard();
+  } catch (error) {
+    console.error("Reject student transfer request error:", error);
+    alert(error.message || "تعذر رفض طلب النقل");
+  }
+};
+window.approveAssessmentReopenRequest = async function (id) {
+  const hours = prompt("كم ساعة تريد إعادة فتح التقييم؟", "24");
+  if (hours === null) return;
+
+  const adminNote =
+    prompt("اكتب ملاحظة الموافقة:", "تمت الموافقة لإصلاح الدرجات") || "";
+
+  try {
+    const response = await fetch(apiUrl(`/admin/assessment-reopen-requests/${id}/approve`), {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        admin_note: adminNote,
+        reopen_hours: Number(hours) || 24,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل قبول الطلب");
+    }
+
+    alert(result.message || "تم قبول الطلب");
+    loadAdminHomeDashboard();
+  } catch (error) {
+    console.error("Approve reopen request error:", error);
+    alert(error.message || "تعذر قبول الطلب");
+  }
+};
+
+window.rejectAssessmentReopenRequest = async function (id) {
+  const adminNote = prompt("اكتب سبب الرفض:");
+  if (adminNote === null) return;
+
+  if (!String(adminNote).trim()) {
+    alert("سبب الرفض مطلوب.");
+    return;
+  }
+
+  try {
+    const response = await fetch(apiUrl(`/admin/assessment-reopen-requests/${id}/reject`), {
+      method: "POST",
+      headers: {
+        ...authHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        admin_note: adminNote,
+      }),
+    });
+
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "فشل رفض الطلب");
+    }
+
+    alert(result.message || "تم رفض الطلب");
+    loadAdminHomeDashboard();
+  } catch (error) {
+    console.error("Reject reopen request error:", error);
+    alert(error.message || "تعذر رفض الطلب");
+  }
+};
   // 🕒 دالة احترافية لتحويل الوقت إلى صيغة "منذ..."
   function timeAgo(dateString) {
     const date = new Date(dateString);
@@ -311,15 +1048,18 @@ const freshLogoUrl = schoolData.logo_url.startsWith("http")
   // 🎯 المُنسق المركزي (Orchestrator) 
   // يضمن تشغيل كل شيء بترتيب سليم وبدون تكرار
   // ===============================
-  document.addEventListener("DOMContentLoaded", () => {
-    // 1. هوية المدرسة والإحصائيات
-    setupSchoolBranding();
-    loadOrbitStats();
-    
-    // 2. سجل النشاطات المباشر
-    fetchLiveActivities();
-    setInterval(fetchLiveActivities, 60000); // تحديث كل دقيقة بالخلفية
-  });
+document.addEventListener("DOMContentLoaded", () => {
+  setupSchoolBranding();
+
+  // الداشبورد الجديدة الكاملة
+  loadAdminHomeDashboard();
+
+  // نترك هذا مؤقتًا كاحتياط، لكن لاحقًا سنحذفه بعد التأكد
+  // loadOrbitStats();
+
+  fetchLiveActivities();
+  setInterval(fetchLiveActivities, 60000);
+});
 
 })();
 
@@ -425,7 +1165,149 @@ document.addEventListener("DOMContentLoaded", () => {
     window.UserUI.init();
   }
 });
+function renderSchoolPulse(items) {
+  const box =
+    document.getElementById("school-pulse-map") ||
+    document.querySelector(".heat-body");
 
+  if (!box) return;
+
+  const list = Array.isArray(items) ? items : [];
+
+  const fmt = (n) => {
+    try {
+      return Number(n || 0).toLocaleString("ar-EG");
+    } catch {
+      return String(n || 0);
+    }
+  };
+
+  if (!list.length) {
+    box.innerHTML = `
+      <div style="
+        width:100%;
+        min-height:220px;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        text-align:center;
+        border:1px dashed rgba(148,163,184,.25);
+        border-radius:22px;
+        color:#94a3b8;
+        padding:24px;
+      ">
+        <div>
+          <strong style="display:block;color:#e5e7eb;font-size:15px;margin-bottom:8px;">
+            لا توجد بيانات كافية لخريطة نبض المدرسة
+          </strong>
+          <span style="font-size:13px;line-height:1.8;">
+            ستظهر الخريطة بعد تسجيل الحضور.
+          </span>
+        </div>
+      </div>
+    `;
+    return;
+  }
+
+ const statusColor = {
+  ok: "#22c55e",
+  warn: "#f59e0b",
+  danger: "#ef4444",
+  no_data: "#64748b",
+};  
+  const dotsPositions = [
+    [18, 34], [34, 18], [52, 28], [72, 18],
+    [82, 42], [66, 58], [48, 74], [28, 64],
+    [16, 78], [74, 78], [42, 46], [58, 48],
+    [24, 22], [84, 66], [36, 82], [62, 16],
+    [14, 52], [88, 28],
+  ];
+
+  const visibleItems = list.slice(0, dotsPositions.length);
+
+  const dots = visibleItems
+    .map((item, index) => {
+      const [left, top] = dotsPositions[index];
+      const status = item.status || "no_data";
+      const color = statusColor[status] || statusColor.no_data;
+
+      const label =
+        item.label ||
+        `${item.grade_name || "صف غير محدد"} - الشعبة ${item.section_name || ""}`;
+
+      return `
+        <span
+          title="${label}"
+          style="
+            position:absolute;
+            left:${left}%;
+            top:${top}%;
+            width:13px;
+            height:13px;
+            border-radius:50%;
+            background:${color};
+            border:2px solid rgba(255,255,255,.92);
+            box-shadow:0 0 14px ${color};
+            transform:translate(-50%, -50%);
+          "
+        ></span>
+      `;
+    })
+    .join("");
+
+const okCount = list.filter((x) => x.status === "ok").length;
+const noDataCount = list.filter((x) => x.status === "no_data").length;
+const warnOnlyCount = list.filter((x) => x.status === "warn").length;
+const dangerCount = list.filter((x) => x.status === "danger").length;
+  box.innerHTML = `
+    <div style="
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:22px;
+      direction:rtl;
+    ">
+      <div style="
+        flex:1;
+        min-width:210px;
+        color:#cbd5e1;
+        font-size:13px;
+        line-height:2;
+        text-align:right;
+      ">
+        <p style="margin:0 0 12px;color:#94a3b8;line-height:1.8;">
+          كل نقطة تمثل شعبة. اللون يوضح حالة الحضور اليوم.
+        </p>
+
+        <div style="display:grid;gap:7px;">
+          <div><span style="color:#22c55e;">●</span> مستقر: ${fmt(okCount)} شعبة</div>
+<div><span style="color:#64748b;">●</span> لم يسجل حضور: ${fmt(noDataCount)} شعبة</div>
+<div><span style="color:#f59e0b;">●</span> يحتاج متابعة: ${fmt(warnOnlyCount)} شعبة</div>          <div><span style="color:#ef4444;">●</span> يحتاج تدخل: ${fmt(dangerCount)} شعبة</div>
+        </div>
+      </div>
+
+      <div style="
+   width:240px;
+height:240px;
+        flex:0 0 230px;
+        position:relative;
+        border-radius:50%;
+        background:
+          radial-gradient(circle at center, rgba(30,64,175,.55), rgba(15,23,42,.88) 62%, rgba(15,23,42,.98) 100%);
+        border:1px solid rgba(148,163,184,.22);
+        box-shadow:
+          inset 0 0 45px rgba(59,130,246,.18),
+          0 0 25px rgba(15,23,42,.35);
+        overflow:hidden;
+      ">
+        ${dots}
+
+   
+      </div>
+    </div>
+  `;
+}
 // ===============================
 // Idle Auto Logout System
 // ===============================

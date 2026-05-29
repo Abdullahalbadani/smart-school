@@ -56,16 +56,30 @@ const apiUrl =
     return data;
   }
 
-  function toast(msg) {
-    const t = document.getElementById("toast");
-    if (!t) return alert(msg);
-    t.hidden = false;
-    t.textContent = msg;
-    t.classList.add("show");
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => t.classList.remove("show"), 2600);
+ function toast(msg, type = "info") {
+  if (window.AppUI?.toast) {
+    window.AppUI.toast(msg, type);
+    return;
   }
 
+  const t = document.getElementById("toast");
+  if (!t) return alert(msg);
+
+  t.hidden = false;
+  t.textContent = msg;
+  t.classList.add("show");
+
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => t.classList.remove("show"), 2600);
+}
+
+async function empConfirm(options = {}) {
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm(options);
+  }
+
+  return confirm(options.message || "هل تريد المتابعة؟");
+}
   function esc(s) {
     return String(s ?? "")
       .replaceAll("&", "&amp;")
@@ -794,51 +808,74 @@ const apiUrl =
     setMainTab("form");
   }
 
-  async function toggleActive(id, nextActive) {
-    await apiFetch(`/employees/${id}/active`, {
-      method: "PATCH",
-      body: JSON.stringify({ is_active: !!nextActive }),
-    });
+ async function toggleActive(id, nextActive) {
+  const row = [...state.teachers, ...state.employees].find(
+    (x) => Number(x.id) === Number(id)
+  );
 
-    toast(nextActive ? "تم التفعيل ✅" : "تم التعطيل ✅");
-    await loadLists();
+  const name = row?.full_name || `#${id}`;
 
-    // لو المودال مفتوح على نفس الشخص
-    if (
-      els.viewModal &&
-      !els.viewModal.hidden &&
-      state.lastViewedId === Number(id)
-    ) {
-      await viewEmployee(id);
-    }
+  const ok = await empConfirm({
+    title: nextActive ? "تفعيل الحساب" : "تعطيل الحساب",
+    message: nextActive
+      ? `سيتم تفعيل ${name} وإعادته للعمل داخل النظام.\nهل تريد المتابعة؟`
+      : `سيتم تعطيل ${name} ومنعه من الاستخدام الطبيعي داخل النظام.\nهل تريد المتابعة؟`,
+    confirmText: nextActive ? "تفعيل" : "تعطيل",
+    cancelText: "إلغاء",
+    type: nextActive ? "success" : "warning",
+  });
+
+  if (!ok) return;
+
+  await apiFetch(`/employees/${id}/active`, {
+    method: "PATCH",
+    body: JSON.stringify({ is_active: !!nextActive }),
+  });
+
+  toast(nextActive ? "تم التفعيل ✅" : "تم التعطيل ✅", "success");
+  await loadLists();
+
+  if (
+    els.viewModal &&
+    !els.viewModal.hidden &&
+    state.lastViewedId === Number(id)
+  ) {
+    await viewEmployee(id);
   }
-
+}
   async function delEmployee(id) {
-    const row = [...state.teachers, ...state.employees].find(
-      (x) => Number(x.id) === Number(id)
-    );
-    const name = row?.full_name || `#${id}`;
+  const row = [...state.teachers, ...state.employees].find(
+    (x) => Number(x.id) === Number(id)
+  );
 
-    if (
-      !confirm(
-        `حذف نهائي (نادر): ${name}\nلن يتم الحذف إذا كان مرتبطًا بجداول/بيانات أخرى.`
-      )
-    )
+  const name = row?.full_name || `#${id}`;
+
+  const ok = await empConfirm({
+    title: "حذف نهائي",
+    message:
+      `سيتم حذف ${name} نهائيًا.\n` +
+      "لن يتم الحذف إذا كان مرتبطًا بجداول أو بيانات أخرى.\n\n" +
+      "الأفضل غالبًا استخدام التعطيل بدل الحذف النهائي.",
+    confirmText: "حذف نهائي",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiFetch(`/employees/${id}`, { method: "DELETE" });
+    toast("تم الحذف النهائي ✅", "success");
+    await loadLists();
+  } catch (err) {
+    if (err?.status === 409) {
+      toast(err.message || "لا يمكن الحذف النهائي — استخدم التعطيل.", "warning");
       return;
-
-    try {
-      await apiFetch(`/employees/${id}`, { method: "DELETE" });
-      toast("تم الحذف النهائي ✅");
-      await loadLists();
-    } catch (err) {
-      if (err?.status === 409) {
-        toast(err.message || "لا يمكن الحذف النهائي — استخدم التعطيل.");
-        return;
-      }
-      throw err;
     }
-  }
 
+    throw err;
+  }
+}
   /* ================== Form ================== */
 
   function validate() {
