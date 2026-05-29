@@ -114,15 +114,27 @@ const frontendPath = path.join(__dirname, "../../frontend");
 const app = express();
 const httpServer = http.createServer(app);
 
+const allowedOrigins = [
+  "http://localhost:5000",
+  "http://localhost:3000",
+  "http://127.0.0.1:5000",
+  process.env.FRONTEND_URL,
+  process.env.RENDER_EXTERNAL_URL,
+].filter(Boolean);
+
 const corsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
 
-    if (/localhost/.test(origin) || /127\.0\.0\.1/.test(origin)) {
+    if (allowedOrigins.includes(origin)) {
       return cb(null, true);
     }
 
-    return cb(new Error("Not allowed by CORS"));
+    if (/^https:\/\/.+\.onrender\.com$/.test(origin)) {
+      return cb(null, true);
+    }
+
+    return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
   allowedHeaders: [
@@ -134,7 +146,6 @@ const corsOptions = {
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   optionsSuccessStatus: 200,
 };
-
 const io = new Server(httpServer, {
   cors: corsOptions,
 });
@@ -188,7 +199,9 @@ app.use(express.urlencoded({ extended: true }));
 // ==============================
 app.use("/frontend", express.static(frontendPath));
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
-
+app.get("/", (req, res) => {
+  res.redirect("/frontend/register/register.html");
+});
 // ==============================
 // Public Routes
 // لا تحتاج تسجيل دخول
