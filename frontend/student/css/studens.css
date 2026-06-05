@@ -1286,3 +1286,784 @@
     font-size: 12px !important;
   }
 }
+
+/* =====================================================
+   RESPONSIVE DESIGN - COMPREHENSIVE FIXES
+   Student Portal - RTL Arabic Layout
+   ===================================================== */
+
+/* ───────── Tablet (768px – 1024px) ───────── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .shell-student {
+    padding-inline: 1rem;
+  }
+
+  .topbar {
+    border-radius: 16px;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .topbar-inner {
+    flex-wrap: wrap;
+  }
+
+  .command-center {
+    order: 3;
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .live-clock {
+    display: none;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .hero-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  .hero-pill-row {
+    justify-content: flex-start;
+  }
+
+  /* Modal */
+  .modal-dialog {
+    max-width: 92vw;
+  }
+
+  .ss-modal .modal-dialog {
+    width: min(96vw, 100%);
+  }
+
+  /* Form cards */
+  .form-card {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  .ss-form-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ss-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stu-modal-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Tables */
+  .ss-table-wrap {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Notifications */
+  .st-nt-search input {
+    min-width: 160px;
+  }
+
+  /* Touch targets */
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .account-item {
+    padding: 0.65rem 0.85rem;
+    min-height: 44px;
+  }
+
+  .st-nt-tab {
+    padding: 0.5rem 0.75rem;
+    min-height: 44px;
+  }
+
+  .st-nt-filter {
+    padding: 0.4rem 0.7rem;
+    min-height: 44px;
+  }
+}
+
+/* ───────── Mobile (max-width: 767px) ───────── */
+@media (max-width: 767px) {
+  /* Shell */
+  .shell-student {
+    padding-inline: 0.7rem;
+    padding-bottom: 1.2rem;
+  }
+
+  /* Navbar */
+  .topbar {
+    border-radius: 14px;
+    padding: 0.35rem 0.6rem;
+    margin-top: 0.5rem;
+    margin-bottom: 0.9rem;
+  }
+
+  .topbar-inner {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .command-center {
+    order: 3;
+    max-width: 100%;
+    flex-basis: 100%;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .live-clock {
+    display: none;
+  }
+
+  .brand-text h1 {
+    font-size: 0.82rem;
+  }
+
+  .brand-text small {
+    font-size: 0.6rem;
+  }
+
+  .user-info strong {
+    font-size: 0.7rem;
+  }
+
+  .user-info small {
+    display: none;
+  }
+
+  /* Hero */
+  .hero-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.65rem 0.75rem;
+    gap: 0.5rem;
+  }
+
+  .hero-pill-row {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .hero-title {
+    font-size: 0.85rem;
+  }
+
+  /* Cards grid - single column */
+  .cards-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.6rem;
+  }
+
+  .card {
+    min-height: 80px;
+    padding: 0.8rem;
+  }
+
+  .card:hover {
+    transform: none;
+  }
+
+  /* Modal - full screen on mobile */
+  .modal {
+    padding: 0.5rem;
+  }
+
+  .modal-dialog {
+    max-width: 100%;
+    max-height: 96vh;
+    border-radius: 16px;
+  }
+
+  .modal-header {
+    padding: 0.65rem 0.8rem;
+  }
+
+  .modal-body {
+    padding: 0.7rem 0.8rem;
+  }
+
+  /* SS Modal full screen */
+  .ss-modal {
+    padding: 6px;
+  }
+
+  .ss-modal .modal-dialog {
+    width: 100%;
+    max-height: calc(100vh - 12px);
+    border-radius: 16px;
+  }
+
+  .ss-modal .modal-header {
+    padding: 0.75rem 0.85rem;
+    flex-wrap: wrap;
+  }
+
+  .ss-modal .modal-body {
+    padding: 0.7rem 0.8rem;
+  }
+
+  /* Form cards - single column */
+  .form-card {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .ss-form-card {
+    grid-template-columns: 1fr;
+    padding: 0.75rem;
+    border-radius: 14px;
+  }
+
+  .field-span-2 {
+    grid-column: auto;
+  }
+
+  /* Summary grid - single column */
+  .ss-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+
+  .ss-summary-card {
+    padding: 0.65rem 0.75rem;
+    border-radius: 14px;
+  }
+
+  /* Modal grid */
+  .stu-modal-grid {
+    grid-template-columns: 1fr;
+    gap: 0.7rem;
+  }
+
+  /* Score card */
+  .stu-score-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.8rem;
+    gap: 0.6rem;
+  }
+
+  .stu-score-value {
+    font-size: 1.6rem;
+  }
+
+  /* Actions */
+  .ss-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Tables - horizontal scroll */
+  .ss-table-wrap {
+    border-radius: 14px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .data-table {
+    min-width: 500px;
+  }
+
+  .ss-modal .data-table {
+    min-width: 500px;
+  }
+
+  .ss-modal .data-table th,
+  .ss-modal .data-table td {
+    padding: 0.55rem 0.45rem;
+    font-size: 0.72rem;
+    white-space: nowrap;
+  }
+
+  /* Timetable */
+  .tt-lesson {
+    padding: 8px;
+    min-width: 130px;
+  }
+
+  .tt-cell {
+    min-width: 130px;
+  }
+
+  /* Notifications */
+  .st-nt-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .st-nt-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .st-nt-tab {
+    white-space: nowrap;
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+
+  .st-nt-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .st-nt-search {
+    width: 100%;
+  }
+
+  .st-nt-search input {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .st-nt-filters {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .st-nt-filter {
+    flex-shrink: 0;
+    white-space: nowrap;
+    min-height: 44px;
+  }
+
+  .st-nt-item {
+    padding: 0.55rem 0.6rem;
+  }
+
+  .st-nt-item-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+  }
+
+  /* Touch targets (44px minimum) */
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+  }
+
+  .icon-btn i {
+    font-size: 1.15rem;
+  }
+
+  .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .ss-modal .modal-close {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .primary-btn {
+    min-height: 44px;
+    padding: 0.5rem 1rem;
+    font-size: 0.82rem;
+  }
+
+  .account-item {
+    padding: 0.7rem 0.85rem;
+    min-height: 44px;
+  }
+
+  .card-tag {
+    font-size: 0.58rem;
+    padding: 0.12rem 0.45rem;
+  }
+
+  /* Panels */
+  .ss-note-box,
+  .stu-detail-block,
+  .stu-panel {
+    padding: 0.7rem 0.75rem;
+    border-radius: 14px;
+  }
+
+  /* Attachment links */
+  .stu-attachment-link {
+    padding: 0.6rem 0.65rem;
+    border-radius: 12px;
+    min-height: 44px;
+  }
+
+  /* Text overflow prevention */
+  .st-nt-title,
+  .stu-paragraph,
+  .st-nt-detail-title,
+  .muted-box,
+  .card p,
+  .card h3 {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* Toast - wider on mobile */
+  .toast {
+    max-width: calc(100vw - 2rem);
+    inset-inline-start: 50%;
+    font-size: 0.76rem;
+    padding: 0.45rem 0.85rem;
+  }
+
+  /* Account dropdown */
+  .account-dropdown {
+    min-width: 180px;
+    inset-inline-end: 0;
+  }
+
+  /* Form inputs */
+  .form-card input,
+  .form-card select,
+  .form-card textarea {
+    min-height: 44px;
+    font-size: 0.82rem;
+    padding: 0.35rem 0.55rem;
+  }
+
+  .ss-form-card input,
+  .ss-form-card select,
+  .ss-form-card textarea {
+    min-height: 44px;
+    font-size: 0.82rem;
+  }
+}
+
+/* ───────── Small Mobile (max-width: 480px) ───────── */
+@media (max-width: 480px) {
+  .shell-student {
+    padding-inline: 0.5rem;
+  }
+
+  .topbar {
+    border-radius: 12px;
+    padding: 0.3rem 0.5rem;
+    margin-top: 0.35rem;
+    margin-bottom: 0.7rem;
+  }
+
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brand-logo span {
+    font-size: 0.95rem;
+  }
+
+  .brand-text h1 {
+    font-size: 0.78rem;
+  }
+
+  .brand-text small {
+    display: none;
+  }
+
+  .brand {
+    gap: 0.5rem;
+  }
+
+  .user-pill {
+    padding: 0.15rem 0.4rem 0.15rem 0.2rem;
+    gap: 0.3rem;
+  }
+
+  .user-info {
+    display: none;
+  }
+
+  .user-arrow {
+    display: none;
+  }
+
+  .command-center {
+    padding: 0.3rem 0.5rem;
+  }
+
+  #command-input {
+    font-size: 0.72rem;
+  }
+
+  .command-key {
+    display: none;
+  }
+
+  /* Hero */
+  .hero-strip {
+    padding: 0.5rem 0.6rem;
+    border-radius: 14px;
+  }
+
+  .hero-title {
+    font-size: 0.8rem;
+  }
+
+  .hero-sub {
+    font-size: 0.7rem;
+  }
+
+  .hero-pill {
+    font-size: 0.62rem;
+    padding: 0.14rem 0.45rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 0.7rem;
+    gap: 0.5rem;
+    min-height: 72px;
+  }
+
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+
+  .card-icon i {
+    font-size: 1.1rem;
+  }
+
+  .card h3 {
+    font-size: 0.82rem;
+  }
+
+  .card p {
+    font-size: 0.68rem;
+  }
+
+  /* Modal - edge to edge */
+  .modal {
+    padding: 0.25rem;
+  }
+
+  .modal-dialog {
+    border-radius: 14px;
+    max-height: 98vh;
+  }
+
+  .modal-header h3 {
+    font-size: 0.88rem;
+  }
+
+  .ss-modal {
+    padding: 3px;
+  }
+
+  .ss-modal .modal-dialog {
+    border-radius: 14px;
+    max-height: calc(100vh - 6px);
+  }
+
+  .ss-modal .modal-title-wrap h3 {
+    font-size: 0.9rem;
+  }
+
+  .ss-modal .modal-body {
+    padding: 0.5rem 0.6rem;
+  }
+
+  /* Summary grid - stacked */
+  .ss-summary-card strong {
+    font-size: 0.9rem;
+  }
+
+  .ss-summary-label {
+    font-size: 0.65rem;
+  }
+
+  /* Tables - ensure scroll */
+  .data-table {
+    min-width: 450px;
+    font-size: 0.7rem;
+  }
+
+  .data-table th,
+  .data-table td {
+    padding: 0.35rem 0.4rem;
+  }
+
+  /* Notification items */
+  .st-nt-item {
+    padding: 0.5rem;
+    border-radius: 12px;
+  }
+
+  .st-nt-title {
+    font-size: 0.85rem;
+  }
+
+  .st-nt-meta {
+    font-size: 0.72rem;
+  }
+
+  .st-nt-pill {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.4rem;
+  }
+
+  .st-nt-detail-title {
+    font-size: 0.9rem;
+  }
+
+  /* Badges */
+  .ss-badge {
+    font-size: 0.62rem;
+    padding: 0.14rem 0.45rem;
+  }
+
+  /* Timetable force scroll */
+  .tt-lesson {
+    min-width: 110px;
+    padding: 6px;
+    font-size: 0.72rem;
+  }
+
+  .tt-subject {
+    font-size: 0.75rem;
+  }
+
+  .tt-teacher {
+    font-size: 0.65rem;
+  }
+
+  /* Chip */
+  .chip {
+    font-size: 0.65rem;
+    padding: 0.1rem 0.35rem;
+  }
+
+  /* Account dropdown full width */
+  .account-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    min-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 50vh;
+    overflow-y: auto;
+    z-index: 200;
+  }
+
+  /* Panel head */
+  .stu-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
+  }
+
+  /* Inline meta */
+  .stu-inline-meta {
+    font-size: 0.68rem;
+  }
+
+  /* Score card */
+  .stu-score-value {
+    font-size: 1.4rem;
+  }
+
+  /* Toast */
+  .toast {
+    bottom: 0.8rem;
+    font-size: 0.72rem;
+    max-width: calc(100vw - 1.5rem);
+  }
+}
+
+/* ───────── Very Small (max-width: 320px) ───────── */
+@media (max-width: 320px) {
+  .shell-student {
+    padding-inline: 0.35rem;
+  }
+
+  .topbar {
+    padding: 0.25rem 0.4rem;
+  }
+
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-text h1 {
+    font-size: 0.72rem;
+  }
+
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .hero-strip {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .card {
+    padding: 0.6rem;
+    min-height: 64px;
+  }
+
+  .card h3 {
+    font-size: 0.78rem;
+  }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .card-icon i {
+    font-size: 1rem;
+  }
+
+  .ss-modal .modal-dialog {
+    border-radius: 12px;
+  }
+
+  .ss-form-card {
+    padding: 0.6rem;
+  }
+
+  .data-table {
+    min-width: 400px;
+    font-size: 0.65rem;
+  }
+}
+
+/* ───────── Global responsive utilities ───────── */
+/* Prevent horizontal overflow on all screens */
+html {
+  overflow-x: hidden;
+}
+
+/* Word break safety for RTL Arabic text */
+.card h3,
+.card p,
+.hero-title,
+.hero-sub,
+.st-nt-title,
+.st-nt-detail-title,
+.stu-paragraph,
+.modal-header h3 {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
+/* Ensure all table containers scroll horizontally */
+.ss-table-wrap,
+.modal-body {
+  -webkit-overflow-scrolling: touch;
+}

@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: smart-school-db
+    environment:
+      POSTGRES_DB: smart_school
+      POSTGRES_USER: smart_user
+      POSTGRES_PASSWORD: smart_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # ربط ملفات التهيئة ليتم تشغيلها تلقائياً عند إقلاع الحاوية لأول مرة
+      - ./school_schema_full.sql:/docker-entrypoint-initdb.d/1-schema.sql
+      - ./seed_school_7_ready_data.sql:/docker-entrypoint-initdb.d/2-seed.sql
+    restart: always
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: smart-school-backend
+    ports:
+      - "5000:5000"
+    environment:
+      NODE_ENV: development
+      PORT: 5000
+      DATABASE_URL: postgres://smart_user:smart_password@db:5432/smart_school
+      JWT_SECRET: super_secret_key_change_me_in_production
+    depends_on:
+      - db
+    restart: always
+
+volumes:
+  pgdata:

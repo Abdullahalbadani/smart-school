@@ -3836,3 +3836,1110 @@ body.modal-open {
       text-align: right;
     }
   }
+
+/* =========================================================
+   COMPREHENSIVE RESPONSIVE FIXES — Teacher Portal
+   Added: 2026-06-04
+   Breakpoints:
+     Tablet:       768px – 1024px
+     Mobile:       max-width 767px
+     Small Mobile: max-width 480px
+   Direction: RTL preserved
+   ========================================================= */
+
+/* ---------- Tablet: 768px – 1024px ---------- */
+@media (min-width: 768px) and (max-width: 1024px) {
+
+  /* Shell */
+  .shell-teacher {
+    padding-inline: 1rem;
+  }
+
+  /* Topbar */
+  .topbar {
+    border-radius: 16px;
+    padding: 0.45rem 0.8rem;
+  }
+  .topbar-inner {
+    flex-wrap: wrap;
+  }
+  .command-center {
+    order: 3;
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+  .live-clock {
+    display: none;
+  }
+
+  /* Hero */
+  .hero-strip {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .hero-right {
+    width: 100%;
+    min-width: 0;
+    align-items: flex-start;
+  }
+  .hero-hints {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Cards grid */
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  /* Profile modal grids */
+  #profile-modal .profile-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  #profile-modal .profile-lists,
+  #profile-modal .scope-list {
+    grid-template-columns: 1fr;
+  }
+
+  /* SS forms/summary */
+  .ss-form-card {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ss-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ss-inline-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* Grade review layout */
+  .grading-review-layout {
+    grid-template-columns: 1fr;
+  }
+  .grading-preview-frame {
+    min-height: 300px;
+  }
+
+  /* Report form */
+  .form-grid {
+    gap: 12px;
+  }
+  .form-group {
+    grid-column: span 12;
+  }
+
+  /* Data tables: enable horizontal scroll */
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .data-table thead,
+  .data-table tbody,
+  .data-table tr,
+  .data-table th,
+  .data-table td {
+    display: revert;
+  }
+
+  /* Wrap any data-table in a scrollable container */
+  .ss-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ss-table-wrap .data-table {
+    min-width: 700px;
+  }
+
+  /* Notification search input */
+  .nt-search input {
+    min-width: 160px;
+  }
+
+  /* Modals */
+  .modal-dialog,
+  .modal-dialog.modal-lg {
+    width: 100%;
+  }
+  .ss-modal .modal-dialog,
+  .ss-modal .modal-dialog.modal-xl,
+  .ss-modal .modal-dialog.modal-2xl {
+    width: 100%;
+  }
+}
+
+/* ---------- Mobile: max-width 767px ---------- */
+@media (max-width: 767px) {
+
+  /* === GLOBAL === */
+  html, body {
+    overflow-x: hidden;
+  }
+
+  /* Shell */
+  .shell-teacher {
+    padding-inline: 0.65rem;
+    padding-bottom: 1.2rem;
+  }
+
+  /* === TOPBAR / NAV === */
+  .topbar {
+    border-radius: 14px;
+    margin-top: 0.5rem;
+    margin-bottom: 0.85rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .topbar-inner {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* Hide command center search on mobile */
+  .command-center {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  /* Hide live clock on mobile */
+  .live-clock {
+    display: none;
+  }
+
+  /* Brand */
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+  .brand-text h1 {
+    font-size: 0.82rem;
+  }
+  .brand-text small {
+    font-size: 0.6rem;
+  }
+
+  /* User pill - smaller */
+  .user-info {
+    display: none;
+  }
+  .user-pill {
+    padding: 0.2rem 0.35rem;
+  }
+
+  /* Icon buttons - touch-friendly */
+  .icon-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+  }
+
+  /* Account dropdown */
+  .account-dropdown {
+    inset-inline-end: -0.5rem;
+    min-width: 190px;
+  }
+  .account-item {
+    padding: 0.65rem 0.85rem;
+    font-size: 0.82rem;
+    min-height: 44px;
+  }
+
+  /* === HERO STRIP === */
+  .hero-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.65rem 0.75rem;
+  }
+  .hero-title {
+    font-size: 0.85rem;
+  }
+  .hero-sub {
+    font-size: 0.72rem;
+  }
+  .hero-pill-row {
+    justify-content: flex-start;
+  }
+
+  /* Hero right + hints */
+  .hero-right {
+    width: 100%;
+    min-width: 0;
+    align-items: flex-start;
+  }
+  .hero-hints {
+    grid-template-columns: 1fr;
+  }
+  .hero-hint-main {
+    white-space: normal;
+    word-break: break-word;
+  }
+  .hero-hint-sub {
+    white-space: normal;
+  }
+
+  /* === CARDS GRID === */
+  .cards-grid {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .card {
+    padding: 0.75rem;
+    min-height: auto;
+  }
+  .card:hover {
+    transform: none;
+  }
+
+  /* === MODALS — full screen on mobile === */
+  .modal {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal-dialog,
+  .modal-dialog.modal-lg {
+    width: 100%;
+    max-height: 95vh;
+    border-radius: 20px 20px 0 0;
+  }
+  .modal-header {
+    padding: 0.75rem 0.85rem;
+    gap: 0.5rem;
+  }
+  .modal-header h3 {
+    font-size: 0.88rem;
+  }
+  .modal-body {
+    padding: 0.75rem 0.85rem;
+  }
+  .modal-close {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+  }
+
+  /* SS modals — full screen on mobile */
+  .ss-modal {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .ss-modal .modal-dialog,
+  .ss-modal .modal-dialog.modal-xl,
+  .ss-modal .modal-dialog.modal-2xl {
+    width: 100%;
+    max-height: 95vh;
+    border-radius: 20px 20px 0 0;
+  }
+  .ss-modal .modal-header {
+    padding: 0.75rem 0.85rem;
+  }
+  .ss-modal .modal-body {
+    padding: 0.75rem 0.85rem;
+  }
+  .ss-modal .modal-close {
+    width: 44px;
+    height: 44px;
+  }
+  .modal-title {
+    font-size: 1.05rem;
+  }
+  .modal-subtitle {
+    font-size: 0.82rem;
+  }
+
+  /* Modal footer */
+  .modal-footer {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 0.75rem 0.85rem;
+    gap: 0.5rem;
+  }
+  .modal-footer-left,
+  .modal-footer-right {
+    width: 100%;
+  }
+  .modal-footer-left .btn,
+  .modal-footer-right .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Profile modal */
+  #profile-modal .modal-dialog {
+    max-width: 100%;
+  }
+  #profile-modal .profile-top {
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  #profile-modal .profile-name-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  #profile-modal #profile-name {
+    white-space: normal;
+    word-break: break-word;
+    font-size: 0.92rem;
+  }
+  #profile-modal .profile-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+  }
+  #profile-modal .profile-lists {
+    grid-template-columns: 1fr;
+  }
+  #profile-modal .scope-list {
+    grid-template-columns: 1fr;
+  }
+
+  /* === FORMS — stack vertically === */
+  .form-card {
+    grid-template-columns: 1fr;
+    padding: 0.7rem;
+    gap: 0.6rem;
+  }
+  .form-card input,
+  .form-card select,
+  .form-card textarea {
+    min-height: 44px;
+    font-size: 0.82rem;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .ss-form-card {
+    grid-template-columns: 1fr;
+    padding: 0.7rem;
+    gap: 0.6rem;
+  }
+  .ss-form-card input,
+  .ss-form-card select,
+  .ss-form-card textarea {
+    min-height: 44px;
+    font-size: 0.82rem;
+  }
+  .field-span-2,
+  .field-span-3,
+  .field-span-4 {
+    grid-column: auto;
+  }
+
+  /* Report form grid */
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .form-group {
+    grid-column: span 1;
+  }
+  .form-group select,
+  .form-group input,
+  .form-group textarea {
+    min-height: 44px;
+  }
+
+  /* === BUTTONS — touch-friendly === */
+  .primary-btn {
+    min-height: 44px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.8rem;
+  }
+  .ss-modal .primary-btn {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+  }
+  .ss-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btn {
+    min-height: 44px;
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* === DATA TABLES — horizontal scroll === */
+  .data-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+  }
+  /* Ensure table content doesn't wrap and stays scrollable */
+  .data-table th,
+  .data-table td {
+    white-space: nowrap;
+  }
+
+  .ss-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-inline: -0.85rem;
+    padding-inline: 0.85rem;
+    border-radius: 0;
+  }
+  .ss-table-wrap .data-table {
+    min-width: 650px;
+  }
+
+  /* === ATTENDANCE COMPONENTS === */
+  .att-tabs {
+    gap: 0.35rem;
+  }
+  .att-tab {
+    padding: 0.55rem 0.7rem;
+    font-size: 0.75rem;
+    min-height: 44px;
+  }
+  .att-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+  .att-search {
+    width: 100%;
+  }
+  .att-search input {
+    min-width: 0;
+    width: 100%;
+  }
+  .att-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+  .att-tools {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  /* Attendance status buttons - touch friendly */
+  .att-status {
+    flex-wrap: wrap;
+    gap: 0.3rem;
+  }
+  .att-status-btn {
+    min-height: 36px;
+    min-width: 36px;
+    font-size: 0.72rem;
+    padding: 0.3rem 0.45rem;
+  }
+
+  /* Attendance detail fields */
+  .att-details {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.35rem;
+  }
+  .att-reason {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+  }
+  .att-late-min {
+    width: 100%;
+    min-width: 0;
+    min-height: 40px;
+  }
+  .att-note {
+    min-height: 40px;
+  }
+  .att-fixed-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  /* === NOTIFICATIONS === */
+  #modal-notifications .modal-dialog {
+    max-width: 100%;
+  }
+  .nt-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+  .nt-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    padding-bottom: 0.3rem;
+  }
+  .nt-tab {
+    flex-shrink: 0;
+    min-height: 44px;
+  }
+  .nt-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .nt-search {
+    width: 100%;
+  }
+  .nt-search input {
+    min-width: 0;
+    width: 100%;
+  }
+  .nt-filters {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    padding-bottom: 0.3rem;
+  }
+  .nt-filter {
+    flex-shrink: 0;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .nt-item {
+    padding: 0.55rem 0.6rem;
+  }
+  .nt-detail-head {
+    flex-direction: column;
+  }
+  .nt-st-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+  .nt-st-actions {
+    width: 100%;
+  }
+  .nt-mini-btn {
+    min-height: 40px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  /* === SS TABS — scrollable on mobile === */
+  .ss-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    gap: 0.35rem;
+    padding-bottom: 0.3rem;
+  }
+  .ss-tab {
+    flex-shrink: 0;
+    min-height: 44px;
+    font-size: 0.75rem;
+  }
+
+  /* === SUMMARY GRIDS === */
+  .ss-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+  .ss-summary-card {
+    padding: 0.65rem;
+  }
+
+  /* === SS INLINE GRID === */
+  .ss-inline-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* === GRADE REVIEW LAYOUT === */
+  .grading-review-layout {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+  .grading-preview-frame {
+    min-height: 220px;
+  }
+  #gvr-grade-form input,
+  #gvr-grade-form select,
+  #gvr-grade-form textarea {
+    min-height: 44px;
+  }
+
+  /* === REPORT PREVIEW === */
+  .report-preview-box iframe {
+    min-height: 260px;
+  }
+  .report-preview-header {
+    padding: 12px 14px;
+  }
+
+  /* === BANNER / STATUS BOXES === */
+  .ss-banner {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .ss-lock-box {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .ss-section-head,
+  .ss-timer-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.35rem;
+  }
+
+  /* === TOAST === */
+  .toast {
+    inset-inline-start: 1rem;
+    inset-inline-end: 1rem;
+    transform: none;
+    text-align: center;
+    border-radius: 14px;
+    bottom: 0.8rem;
+  }
+
+  /* === TEXT OVERFLOW SAFETY === */
+  .card h3,
+  .card p,
+  .hero-title,
+  .hero-sub,
+  .nt-title,
+  .nt-snippet,
+  .ss-summary-card strong,
+  .grd-control-text,
+  .grd-notice-text {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  /* === COMMAND RESULTS DROPDOWN === */
+  .command-results {
+    max-height: 260px;
+    border-radius: 12px;
+  }
+  .command-item {
+    padding: 0.6rem 0.7rem;
+    min-height: 44px;
+  }
+
+  /* === GRD NOTICES === */
+  .grd-notice {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .grd-control-banner {
+    padding: 10px 12px;
+  }
+
+  /* === BADGES (ensure they wrap properly) === */
+  .ss-badge {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.45rem;
+  }
+
+  /* Disable hover effects on touch devices */
+  .card:hover,
+  .icon-btn:hover,
+  .user-pill:hover,
+  .att-tab:hover,
+  .ss-tab:hover,
+  .nt-tab:hover,
+  .nt-item:hover {
+    transform: none;
+  }
+}
+
+/* ---------- Small Mobile: max-width 480px ---------- */
+@media (max-width: 480px) {
+
+  /* Shell */
+  .shell-teacher {
+    padding-inline: 0.45rem;
+  }
+
+  /* Topbar */
+  .topbar {
+    border-radius: 12px;
+    margin-top: 0.35rem;
+    margin-bottom: 0.65rem;
+    padding: 0.35rem 0.45rem;
+  }
+
+  /* Hide command center on very small screens */
+  .command-center {
+    display: none;
+  }
+
+  /* Brand */
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+  }
+  .brand-logo span {
+    font-size: 0.9rem;
+  }
+  .brand-text h1 {
+    font-size: 0.78rem;
+  }
+  .brand-text small {
+    display: none;
+  }
+  .brand {
+    gap: 0.45rem;
+  }
+
+  /* Top actions */
+  .top-actions {
+    gap: 0.25rem;
+  }
+
+  /* Hero strip */
+  .hero-strip {
+    padding: 0.55rem 0.6rem;
+    border-radius: 14px;
+    margin-bottom: 0.75rem;
+  }
+  .hero-title {
+    font-size: 0.8rem;
+  }
+  .hero-pill-row {
+    gap: 0.25rem;
+  }
+  .hero-pill {
+    font-size: 0.62rem;
+    padding: 0.12rem 0.45rem;
+  }
+
+  /* Hero hint cards */
+  .hero-hint-card {
+    padding: 0.45rem 0.5rem;
+    gap: 0.45rem;
+  }
+  .hero-hint-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+  .hero-hint-main {
+    font-size: 0.78rem;
+  }
+  .hero-hint-badge {
+    padding: 0.25rem 0.42rem;
+    font-size: 0.72rem;
+  }
+
+  /* Cards */
+  .cards-grid {
+    gap: 0.5rem;
+  }
+  .card {
+    padding: 0.6rem 0.65rem;
+    gap: 0.5rem;
+  }
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+  }
+  .card h3 {
+    font-size: 0.82rem;
+  }
+  .card p {
+    font-size: 0.68rem;
+  }
+  .card-tag {
+    font-size: 0.55rem;
+    padding: 0.1rem 0.4rem;
+  }
+
+  /* Modals */
+  .modal-dialog,
+  .modal-dialog.modal-lg {
+    max-height: 100vh;
+    border-radius: 0;
+    height: 100vh;
+  }
+  .ss-modal .modal-dialog,
+  .ss-modal .modal-dialog.modal-xl,
+  .ss-modal .modal-dialog.modal-2xl {
+    max-height: 100vh;
+    border-radius: 0;
+    height: 100vh;
+  }
+
+  /* Modal header */
+  .modal-header {
+    padding: 0.55rem 0.65rem;
+  }
+  .ss-modal .modal-header {
+    padding: 0.55rem 0.65rem;
+  }
+  .modal-title {
+    font-size: 0.95rem;
+  }
+
+  /* Modal body */
+  .modal-body {
+    padding: 0.55rem 0.65rem;
+  }
+  .ss-modal .modal-body {
+    padding: 0.55rem 0.65rem;
+  }
+
+  /* Modal footer */
+  .modal-footer {
+    padding: 0.55rem 0.65rem;
+  }
+
+  /* Forms - larger touch targets */
+  .form-card input,
+  .form-card select,
+  .form-card textarea {
+    min-height: 46px;
+    font-size: 16px; /* prevents iOS zoom */
+  }
+  .ss-form-card input,
+  .ss-form-card select,
+  .ss-form-card textarea {
+    min-height: 46px;
+    font-size: 16px;
+  }
+  .form-group select,
+  .form-group input,
+  .form-group textarea {
+    min-height: 46px;
+    font-size: 16px;
+  }
+  #gvr-grade-form input,
+  #gvr-grade-form select,
+  #gvr-grade-form textarea {
+    min-height: 46px;
+    font-size: 16px;
+  }
+
+  /* Summary grid — single column */
+  .ss-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+
+  /* Profile stats — single column on very small screens */
+  #profile-modal .profile-stats {
+    grid-template-columns: 1fr;
+  }
+  #profile-modal .profile-meta {
+    gap: 0.3rem;
+  }
+  #profile-modal .meta-item {
+    font-size: 0.68rem;
+    padding: 0.22rem 0.42rem;
+  }
+
+  /* Attendance tabs — scrollable single row */
+  .att-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    padding-bottom: 0.25rem;
+  }
+  .att-tab {
+    flex-shrink: 0;
+  }
+  .att-status-btn {
+    min-height: 40px;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.7rem;
+  }
+
+  /* Notification items */
+  .nt-item {
+    padding: 0.45rem 0.5rem;
+  }
+  .nt-pill {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.38rem;
+  }
+
+  /* SS tabs */
+  .ss-tab {
+    padding: 0.45rem 0.65rem;
+    font-size: 0.72rem;
+  }
+
+  /* Tables — forced scroll, smaller padding */
+  .data-table th,
+  .data-table td {
+    padding: 0.35rem 0.4rem;
+    font-size: 0.72rem;
+  }
+  .ss-modal .data-table th,
+  .ss-modal .data-table td {
+    padding: 0.4rem 0.45rem;
+    font-size: 0.72rem;
+  }
+
+  /* Table wrap — full bleed on small screens */
+  .ss-table-wrap {
+    margin-inline: -0.65rem;
+    padding-inline: 0.65rem;
+  }
+  .ss-table-wrap .data-table {
+    min-width: 580px;
+  }
+
+  /* GRD notices */
+  .grd-notice {
+    padding: 10px 11px;
+    border-radius: 14px;
+  }
+  .grd-notice-icon {
+    width: 30px;
+    height: 30px;
+    min-width: 30px;
+    font-size: 15px;
+  }
+  .grd-notice-title {
+    font-size: 13px;
+  }
+  .grd-notice-text {
+    font-size: 12px;
+  }
+
+  /* Buttons — full width */
+  .primary-btn,
+  .ss-modal .primary-btn,
+  .btn {
+    width: 100%;
+    justify-content: center;
+    min-height: 46px;
+  }
+
+  /* Toast */
+  .toast {
+    font-size: 0.74rem;
+    padding: 0.4rem 0.75rem;
+    bottom: 0.5rem;
+  }
+
+  /* Account dropdown: ensure it doesn't overflow screen */
+  .account-dropdown {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    inset-inline-start: 0;
+    inset-inline-end: 0;
+    min-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 60vh;
+    overflow-y: auto;
+    z-index: 70;
+  }
+  .account-item {
+    min-height: 48px;
+    padding: 0.7rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  /* Report preview */
+  .report-preview-box iframe {
+    min-height: 200px;
+  }
+  .report-preview-header {
+    padding: 10px 12px;
+  }
+  .report-preview-header h4 {
+    font-size: 0.88rem;
+  }
+  .report-preview-header p {
+    font-size: 0.8rem;
+  }
+
+  /* Grade review */
+  .grading-preview-frame {
+    min-height: 180px;
+  }
+
+  /* Command results */
+  .command-results {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    right: 0;
+    left: 0;
+    max-height: 50vh;
+    border-radius: 14px 14px 0 0;
+    z-index: 1000;
+  }
+}
+
+/* ---------- Very small screens: max-width 320px ---------- */
+@media (max-width: 320px) {
+  .shell-teacher {
+    padding-inline: 0.35rem;
+  }
+
+  .topbar {
+    padding: 0.3rem 0.35rem;
+  }
+
+  .brand-text h1 {
+    font-size: 0.72rem;
+  }
+  .brand-logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .hero-strip {
+    padding: 0.45rem 0.5rem;
+    margin-bottom: 0.55rem;
+  }
+  .hero-title {
+    font-size: 0.75rem;
+  }
+  .hero-pill {
+    font-size: 0.58rem;
+  }
+
+  .card {
+    padding: 0.5rem;
+  }
+  .card h3 {
+    font-size: 0.78rem;
+  }
+
+  .modal-header {
+    padding: 0.5rem 0.55rem;
+  }
+  .modal-body {
+    padding: 0.5rem 0.55rem;
+  }
+  .modal-footer {
+    padding: 0.5rem 0.55rem;
+  }
+
+  .form-card {
+    padding: 0.5rem;
+  }
+  .ss-form-card {
+    padding: 0.5rem;
+  }
+}
+
+/* ---------- Print: hide interactive elements ---------- */
+@media print {
+  .topbar,
+  .modal,
+  .ss-modal,
+  .toast,
+  .command-results,
+  .account-dropdown {
+    display: none !important;
+  }
+
+  .shell-teacher {
+    max-width: 100%;
+    padding: 0;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .card {
+    break-inside: avoid;
+    box-shadow: none;
+    border: 1px solid #ccc;
+  }
+}

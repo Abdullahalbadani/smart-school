@@ -1,5 +1,7 @@
 // src/controllers/feeAdjustmentRequestsController.js
 import { pool } from "../config/db.js";
+import { computeInstallmentStatus } from "../utils/feesInstallments.js";
+import { logAudit } from "../utils/auditLogger.js";
 
 function normalizeStatus(status) {
   const value = String(status || "pending").trim().toLowerCase();
@@ -380,17 +382,19 @@ export const FeeAdjustmentRequestsController = {
 
         const applied = Math.min(remainingDiscount, remainingInInstallment);
         const newAmount = currentAmount - applied;
+        const newStatus = computeInstallmentStatus(newAmount, paidAmount);
 
         await client.query(
           `
           UPDATE fee_installments
           SET
             amount = $1,
+            status = $2,
             updated_at = NOW()
-          WHERE id = $2
-            AND school_id = $3
+          WHERE id = $3
+            AND school_id = $4
           `,
-          [newAmount, installment.id, schoolId]
+          [newAmount, newStatus, installment.id, schoolId]
         );
 
         remainingDiscount -= applied;
@@ -432,6 +436,20 @@ export const FeeAdjustmentRequestsController = {
         `,
         [requestId, adminNote, adminUserId, schoolId]
       );
+
+      res.locals.skipAutoLog = true;
+      await logAudit({
+        req,
+        action: "APPROVE",
+        actionLabel: "قبول طلب تعديل الرسوم",
+        module: "Finance",
+        tableName: "fee_adjustment_requests",
+        recordId: requestId,
+        oldData: request,
+        newData: updatedRequest.rows[0],
+        description: `وافق على طلب خصم الرسوم بقيمة ${discountAmount} للطلب رقم ${requestId}`,
+        reason: adminNote || "موافقة المدير"
+      });
 
       await client.query("COMMIT");
 
@@ -535,6 +553,20 @@ export const FeeAdjustmentRequestsController = {
         `,
         [requestId, adminNote, adminUserId, schoolId]
       );
+
+      res.locals.skipAutoLog = true;
+      await logAudit({
+        req,
+        action: "REJECT",
+        actionLabel: "رفض طلب تعديل الرسوم",
+        module: "Finance",
+        tableName: "fee_adjustment_requests",
+        recordId: requestId,
+        oldData: request,
+        newData: updatedRequest.rows[0],
+        description: `رفض طلب خصم الرسوم للطلب رقم ${requestId}`,
+        reason: adminNote || "رفض المدير"
+      });
 
       await client.query("COMMIT");
 

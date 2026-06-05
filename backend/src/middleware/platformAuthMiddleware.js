@@ -3,10 +3,29 @@ import { pool } from "../config/db.js";
 
 export default async function platformAuthMiddleware(req, res, next) {
   try {
-    const authHeader = req.headers.authorization || "";
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.slice(7)
-      : null;
+    let token = null;
+
+    if (req.headers.cookie) {
+      try {
+        const cookies = {};
+        req.headers.cookie.split(";").forEach((cookie) => {
+          const parts = cookie.split("=");
+          if (parts.length >= 2) {
+            cookies[parts[0].trim()] = decodeURIComponent(parts.slice(1).join("="));
+          }
+        });
+        token = cookies.token;
+      } catch (err) {
+        console.error("Error parsing cookies in platformAuthMiddleware:", err);
+      }
+    }
+
+    if (!token) {
+      const authHeader = req.headers.authorization || "";
+      token = authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7)
+        : null;
+    }
 
     if (!token) {
       return res.status(401).json({

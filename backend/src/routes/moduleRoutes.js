@@ -38,8 +38,7 @@ function checkAnyPermission(codes = []) {
       // الأدمـن الكامل يتخطى الفحص
       if (
         roleName === "admin" ||
-        roleName === "superadmin" ||
-        user.role_id === 1
+        roleName === "superadmin"
       ) {
         return next();
       }

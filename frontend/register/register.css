@@ -171,3 +171,89 @@ button:active {
 .register-container {
     animation: fadeInUp 0.6s ease-out;
 }
+
+/* ===================== Responsive: Tablet ===================== */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .register-container {
+        max-width: 680px;
+        padding: 40px 32px;
+    }
+}
+
+/* ===================== Responsive: Mobile ===================== */
+@media (max-width: 767px) {
+    body {
+        padding: 20px 12px;
+    }
+
+    .register-container {
+        max-width: 100%;
+        padding: 28px 18px;
+        border-radius: 20px;
+    }
+
+    .grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+    }
+
+    .full-width {
+        grid-column: span 1;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+        margin-bottom: 28px;
+    }
+
+    .form-section {
+        margin-bottom: 24px;
+    }
+
+    .form-section h3 {
+        font-size: 1rem;
+    }
+
+    input {
+        min-height: 44px;
+        padding: 12px 14px;
+        font-size: 16px;
+        border-radius: 10px;
+    }
+
+    button {
+        min-height: 48px;
+        font-size: 1rem;
+        padding: 14px;
+        border-radius: 10px;
+    }
+}
+
+/* ===================== Responsive: Small Mobile ===================== */
+@media (max-width: 480px) {
+    body {
+        padding: 12px 8px;
+    }
+
+    .register-container {
+        padding: 22px 14px;
+        border-radius: 16px;
+    }
+
+    h1 {
+        font-size: 1.3rem;
+        margin-bottom: 22px;
+    }
+
+    .grid {
+        gap: 12px;
+    }
+
+    input {
+        font-size: 16px;
+    }
+
+    button {
+        font-size: 0.95rem;
+    }
+}

@@ -414,3 +414,125 @@ body.theme-dark .checkbox-line {
   font-size: 0.85rem;
   color: #6b7280;
 }
+
+/* =========================================================
+   COMPREHENSIVE RESPONSIVE DESIGN - RBAC
+   Added: 2026-06-04
+   Breakpoints:
+     Tablet:       768px – 1024px
+     Mobile:       max-width 767px
+     Small Mobile: max-width 480px
+   RTL preserved.
+   ========================================================= */
+
+/* ---------- Tablet (768px – 1024px) ---------- */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .rbac-two-column .column-main {
+    flex: 1 1 100% !important;
+  }
+  .rbac-two-column .column-side {
+    flex: 1 1 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* ---------- Mobile (max-width: 767px) ---------- */
+@media (max-width: 767px) {
+  .rbac-page {
+    padding: 0.75rem !important;
+  }
+
+  .rbac-tabs {
+    padding: 0 0.75rem 0.75rem !important;
+  }
+
+  /* Two column stack */
+  .rbac-two-column {
+    flex-direction: column !important;
+    gap: 1rem !important;
+  }
+
+  .rbac-two-column .column-main,
+  .rbac-two-column .column-side {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Toolbar */
+  .rbac-toolbar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.75rem !important;
+  }
+
+  .rbac-search-input {
+    width: 100% !important;
+  }
+
+  /* Tables horizontal scrolling */
+  .table-wrapper {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table,
+  .rbac-table {
+    min-width: 600px !important;
+  }
+
+  /* Modals */
+  .rbac-modal__dialog {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 100% !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  .rbac-modal__body {
+    flex: 1 !important;
+    overflow-y: auto !important;
+  }
+
+  .rbac-form__grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Inputs, selects and buttons touch friendly */
+  input, 
+  select, 
+  .primary-btn, 
+  .btn-primary, 
+  .btn-ghost, 
+  .btn-small {
+    min-height: 44px !important;
+    font-size: 15px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  .primary-btn,
+  .btn-primary {
+    width: 100% !important;
+  }
+}
+
+/* ---------- Small Mobile (max-width: 480px) ---------- */
+@media (max-width: 480px) {
+  .rbac-card-header {
+    padding: 1rem 1rem 0.5rem !important;
+  }
+  .rbac-card-body {
+    padding: 0.5rem 1rem 1rem !important;
+  }
+  .rbac-tabs .tab-link {
+    padding: 0.4rem 0.8rem !important;
+    font-size: 0.8rem !important;
+  }
+}

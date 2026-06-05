@@ -14,9 +14,18 @@ document.getElementById('schoolRegisterForm').addEventListener('submit', async (
     formData.append('schoolPhone', document.getElementById('schoolPhone').value);
     formData.append('schoolEmail', document.getElementById('schoolEmail').value);
     
+    // الحقول الجغرافية الجديدة المتفق عليها للهيكل الهندسي
+    formData.append('country', document.getElementById('country').value);
+    formData.append('city', document.getElementById('city').value);
+    formData.append('address', document.getElementById('schoolAddress').value);
+    
     formData.append('adminName', document.getElementById('adminName').value);
     formData.append('adminUsername', document.getElementById('adminUsername').value);
     formData.append('adminEmail', document.getElementById('adminEmail').value);
+    
+    // الحقل الجديد لهاتف المدير الشخصي لتلبية شرط السيرفر
+    formData.append('adminPhone', document.getElementById('adminPhone').value);
+    
     formData.append('password', document.getElementById('password').value);
     formData.append('confirmPassword', document.getElementById('confirmPassword').value);
 
@@ -35,15 +44,15 @@ document.getElementById('schoolRegisterForm').addEventListener('submit', async (
 
         const result = await response.json();
 
-  if (response.ok) {
-    alert('تم تسجيل مدرستك بنجاح!');
+        if (response.ok) {
+            alert('تم تسجيل مدرستك بنجاح!');
 
-    const slug = document.getElementById('slug').value.trim().toLowerCase();
-    localStorage.setItem("school_slug", slug);
-    const loginUrl = `/frontend/login/login.html?school=${encodeURIComponent(slug)}`;
+            const slug = document.getElementById('slug').value.trim().toLowerCase();
+            localStorage.setItem("school_slug", slug);
+            const loginUrl = `/frontend/login/login.html?school=${encodeURIComponent(slug)}`;
 
-    window.location.replace(loginUrl);
-}else {
+            window.location.replace(loginUrl);
+        } else {
             if (result.details && Array.isArray(result.details)) {
                 alert("فشل التحقق من البيانات:\n- " + result.details.join("\n- "));
             } else {

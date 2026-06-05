@@ -1,5 +1,6 @@
 // src/controllers/teacherGradesController.js
 import { pool } from "../config/db.js";
+import { logAudit } from "../utils/auditLogger.js";
 
 function pickUserId(req) {
   return req.user?.id ?? req.user?.user_id ?? req.user?.userId ?? null;
@@ -456,6 +457,25 @@ export async function saveGradeEntry(req, res) {
       throw badRequest("لا يمكن تعديل درجات تم نشرها. اطلب إعادة فتح النشاط أولاً.");
     }
 
+    // 1. جلب الدرجات الحالية للتقييم دفعة واحدة لتجنب الاستعلام في الحلقة التكرارية
+    const existingGradesRes = await client.query(
+      `
+      SELECT id, student_id, status, score
+      FROM assessment_grades
+      WHERE assessment_id = $1 AND school_id = $2
+      `,
+      [assessmentId, schoolId]
+    );
+    const existingMap = new Map(
+      existingGradesRes.rows.map((row) => [Number(row.student_id), row])
+    );
+
+    const gradesToInsert = [];
+    const newLogsForInserts = [];
+
+    const gradesToUpdate = [];
+    const logsForUpdates = [];
+
     for (const item of items) {
       const studentId = Number(item.student_id);
       const status = String(item.status || "missing").trim();
@@ -486,91 +506,143 @@ export async function saveGradeEntry(req, res) {
         }
       }
 
-      const prevQ = await client.query(
-        `
-        SELECT id, status, score
-        FROM assessment_grades
-        WHERE assessment_id = $1
-          AND student_id = $2
-        LIMIT 1
-        `,
-        [assessmentId, studentId]
-      );
+      const prev = existingMap.get(studentId);
+      const newScore = status === "graded" ? score : null;
 
-      if (prevQ.rows.length) {
-        const prev = prevQ.rows[0];
+      if (prev) {
+        const oldScore = prev.score !== null && prev.score !== undefined ? Number(prev.score) : null;
+        const hasChanged = prev.status !== status || oldScore !== newScore;
 
-        // ✅ إضافة school_id للتحديث
-        await client.query(
-          `
-          UPDATE assessment_grades
-          SET status = $1,
-              score = $2,
-              feedback = $3,
-              graded_by = $4,
-              graded_at = NOW(),
-              updated_at = NOW()
-          WHERE id = $5 AND school_id = $6
-          `,
-          [status, status === "graded" ? score : null, feedback, userId, prev.id, schoolId]
-        );
+        if (hasChanged) {
+          gradesToUpdate.push({
+            id: Number(prev.id),
+            status,
+            score: newScore,
+            feedback,
+          });
 
-        if (
-          prev.status !== status ||
-          Number(prev.score ?? -1) !== Number((status === "graded" ? score : null) ?? -1)
-        ) {
-          // ✅ إدخال school_id
-          await client.query(
-            `
-            INSERT INTO grade_change_logs
-              (school_id, grade_id, changed_by, old_status, new_status, old_score, new_score, reason, changed_at)
-            VALUES
-              ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-            `,
-            [
-              schoolId,
-              prev.id,
-              userId,
-              prev.status,
-              status,
-              prev.score,
-              status === "graded" ? score : null,
-              "حفظ مسودة / تعديل من المعلم",
-            ]
-          );
+          logsForUpdates.push({
+            gradeId: Number(prev.id),
+            oldStatus: prev.status,
+            newStatus: status,
+            oldScore: prev.score,
+            newScore: newScore,
+            reason: "حفظ مسودة / تعديل من المعلم",
+          });
         }
       } else {
-        // ✅ إدخال school_id
-        const insertQ = await client.query(
-          `
-          INSERT INTO assessment_grades
-            (school_id, assessment_id, student_id, status, score, feedback, graded_by, graded_at, is_published, created_at, updated_at)
-          VALUES
-            ($1, $2, $3, $4, $5, $6, $7, NOW(), false, NOW(), NOW())
-          RETURNING id
-          `,
-          [schoolId, assessmentId, studentId, status, status === "graded" ? score : null, feedback, userId]
-        );
+        gradesToInsert.push({
+          studentId,
+          status,
+          score: newScore,
+          feedback,
+        });
 
-        await client.query(
-          `
-          INSERT INTO grade_change_logs
-            (school_id, grade_id, changed_by, old_status, new_status, old_score, new_score, reason, changed_at)
-          VALUES
-            ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-          `,
-          [
-            schoolId,
-            insertQ.rows[0].id,
-            userId,
-            null,
-            status,
-            null,
-            status === "graded" ? score : null,
-            "إنشاء درجة جديدة",
-          ]
+        newLogsForInserts.push({
+          studentId, // مؤقت لربط الـ ID بعد الإدخال
+          oldStatus: null,
+          newStatus: status,
+          oldScore: null,
+          newScore: newScore,
+          reason: "إنشاء درجة جديدة",
+        });
+      }
+    }
+
+    // 2. تنفيذ الإدخال المجمع (Bulk INSERT) للدرجات الجديدة
+    if (gradesToInsert.length > 0) {
+      const insertValues = [];
+      const insertParams = [];
+      let p = 1;
+
+      for (const g of gradesToInsert) {
+        insertValues.push(
+          `($${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, NOW(), false, NOW(), NOW())`
+        );
+        insertParams.push(schoolId, assessmentId, g.studentId, g.status, g.score, g.feedback, userId);
+      }
+
+      const insertRes = await client.query(
+        `
+        INSERT INTO assessment_grades
+          (school_id, assessment_id, student_id, status, score, feedback, graded_by, graded_at, is_published, created_at, updated_at)
+        VALUES
+          ${insertValues.join(",\n")}
+        RETURNING id, student_id
+        `,
+        insertParams
+      );
+
+      const newGradeIdsMap = new Map(
+        insertRes.rows.map((row) => [Number(row.student_id), Number(row.id)])
+      );
+
+      for (const log of newLogsForInserts) {
+        log.gradeId = newGradeIdsMap.get(log.studentId);
+      }
+    }
+
+    // 3. تنفيذ التحديث المجمع (Bulk UPDATE) للدرجات المعدلة
+    if (gradesToUpdate.length > 0) {
+      const updateValues = [];
+      const updateParams = [schoolId]; // $1
+      let p = 2;
+
+      for (const g of gradesToUpdate) {
+        updateValues.push(
+          `($${p++}::bigint, $${p++}::text, $${p++}::numeric, $${p++}::text, $${p++}::bigint)`
+        );
+        updateParams.push(g.id, g.status, g.score, g.feedback, userId);
+      }
+
+      await client.query(
+        `
+        UPDATE assessment_grades AS ag
+        SET status = val.status,
+            score = val.score,
+            feedback = val.feedback,
+            graded_by = val.graded_by,
+            graded_at = NOW(),
+            updated_at = NOW()
+        FROM (VALUES
+          ${updateValues.join(",\n")}
+        ) AS val(id, status, score, feedback, graded_by)
+        WHERE ag.id = val.id AND ag.school_id = $1
+        `,
+        updateParams
+      );
+    }
+
+    // 4. تنفيذ الإدخال المجمع لـ grade_change_logs دفعة واحدة
+    const allLogs = [...logsForUpdates, ...newLogsForInserts.filter(l => l.gradeId)];
+    if (allLogs.length > 0) {
+      const logValues = [];
+      const logParams = [schoolId, userId]; // $1, $2
+      let p = 3;
+
+      for (const log of allLogs) {
+        logValues.push(
+          `($1, $${p++}, $2, $${p++}, $${p++}, $${p++}, $${p++}, $${p++}, NOW())`
+        );
+        logParams.push(
+          log.gradeId,
+          log.oldStatus,
+          log.newStatus,
+          log.oldScore,
+          log.newScore,
+          log.reason
         );
       }
+
+      await client.query(
+        `
+        INSERT INTO grade_change_logs
+          (school_id, grade_id, changed_by, old_status, new_status, old_score, new_score, reason, changed_at)
+        VALUES
+          ${logValues.join(",\n")}
+        `,
+        logParams
+      );
     }
 
     if (assessment.status === "draft") {
@@ -584,6 +656,18 @@ export async function saveGradeEntry(req, res) {
         [assessmentId, schoolId]
       );
     }
+
+    res.locals.skipAutoLog = true;
+    await logAudit({
+      req,
+      action: "UPDATE",
+      actionLabel: "رصد الدرجات",
+      module: "Grades",
+      tableName: "assessment_grades",
+      recordId: assessmentId,
+      description: `قام برصد درجات التقييم (رقم: ${assessmentId}) للطلاب`,
+      reason: req.body.reason || "تحديث درجات الطلاب"
+    });
 
     await client.query("COMMIT");
     return res.status(204).send();

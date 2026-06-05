@@ -85,7 +85,7 @@ function userSelectList(cols, alias = "u") {
 /* =========================
    User Roles
 ========================= */
-async function setUserRolesTx(client, userId, roleIds) {
+async function setUserRolesTx(client, userId, roleIds, schoolId) {
   if (!userId) return;
 
   await client.query(`DELETE FROM user_roles WHERE user_id=$1`, [userId]);
@@ -97,13 +97,13 @@ async function setUserRolesTx(client, userId, roleIds) {
   let p = 1;
 
   for (const rid of roleIds.map(Number).filter(Number.isFinite)) {
-    values.push(`($${p++}, $${p++})`);
-    params.push(userId, rid);
+    values.push(`($${p++}, $${p++}, $${p++})`);
+    params.push(userId, rid, schoolId);
   }
 
   if (values.length) {
     await client.query(
-      `INSERT INTO user_roles (user_id, role_id) VALUES ${values.join(",")}`,
+      `INSERT INTO user_roles (user_id, role_id, school_id) VALUES ${values.join(",")}`,
       params
     );
   }
@@ -566,7 +566,7 @@ export const employeeCreate = async (req, res) => {
     let employee = ins.rows[0];
 
     if (userId) {
-      await setUserRolesTx(client, userId, role_ids);
+      await setUserRolesTx(client, userId, role_ids, schoolId);
     }
 
     if (is_teacher) {
@@ -704,7 +704,7 @@ export const employeeUpdate = async (req, res) => {
     let employee = up.rows[0];
 
     if (userId) {
-      await setUserRolesTx(client, userId, role_ids);
+      await setUserRolesTx(client, userId, role_ids, schoolId);
     }
 
     if (is_teacher) {

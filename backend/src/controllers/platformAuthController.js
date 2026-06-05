@@ -77,6 +77,13 @@ export async function loginPlatformAdmin(req, res) {
       [admin.id]
     );
 
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 12 * 60 * 60 * 1000 // 12 hours
+    });
+
     return res.json({
       success: true,
       message: "تم تسجيل الدخول بنجاح",

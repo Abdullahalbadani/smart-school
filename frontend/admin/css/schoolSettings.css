@@ -240,10 +240,12 @@
 
 .ss-tableWrap {
   border-radius: 16px;
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
   border: 1px solid var(--border-soft);
   background: var(--bg-panel);
   box-shadow: var(--shadow-soft);
+  -webkit-overflow-scrolling: touch;
 }
 .ss-table {
   width: 100%;
@@ -676,5 +678,324 @@
   .ss-panel[data-panel="academic"] .academic-grade-grid,
   .ss-panel[data-panel="academic"] .grading-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+/* تنسيقات مستعرض المجلدات من جانب السيرفر */
+.dir-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-soft);
+  transition: background 0.15s ease;
+  color: var(--text-main);
+  font-size: 13px;
+}
+.dir-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+.dir-item:last-child {
+  border-bottom: 0;
+}
+.dir-item i {
+  color: var(--primary);
+  font-size: 18px;
+}
+
+/* =========================================
+   تعديلات التجاوب ودعم الأجهزة المحمولة (Responsive Design)
+   ========================================= */
+
+/* تعديل عرض الجداول لتوفير تمرير أفقي مريح بدلاً من ضغط الأعمدة وتداخل النص */
+@media (max-width: 768px) {
+  .ss-table {
+    min-width: 700px !important;
+  }
+}
+
+/* تحسين مرونة المربعات المرتبطة بأزرار استعراض الملفات على الهواتف */
+.ss-field-row {
+  display: flex;
+  gap: 8px;
+}
+@media (max-width: 480px) {
+  .ss-field-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .ss-field-row button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  
+  .dir-picker-path-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .dir-picker-path-row button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+  /* =========================================
+   MOBILE RESPONSIVE - FINAL FIX
+   ========================================= */
+
+@media (max-width: 768px) {
+  /* 1. الصفحة */
+  .ss-page {
+    padding: 8px;
+  }
+
+  /* 2. الشريط العلوي */
+  .ss-top {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ss-top-left {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ss-title {
+    font-size: 18px;
+  }
+
+  /* 3. التخطيط الرئيسي */
+  .ss-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* 4. القائمة الجانبية */
+ /* ✅ القائمة الجانبية تظهر دائماً */
+.ss-side {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+  /* 5. المحتوى الرئيسي */
+  .ss-main {
+    width: 100%;
+  }
+
+  /* 6. الجداول */
+  .ss-tableWrap {
+    overflow-x: auto;
+    display: block;
+  }
+  .ss-table {
+    min-width: 600px;
+    font-size: 12px;
+  }
+  .ss-table thead th,
+  .ss-table tbody td {
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+
+  /* 7. البطاقات */
+  .ss-panel-head {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ss-panel-head h3 {
+    font-size: 16px;
+  }
+
+  /* 8. الأزرار */
+  .ss-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 12px;
+    font-size: 14px;
+  }
+  .ss-panel-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .ss-panel-actions .ss-btn {
+    width: 100%;
+  }
+
+  /* 9. النماذج */
+  .ss-form {
+    grid-template-columns: 1fr;
+  }
+  .ss-field-inline {
+    width: 100%;
+  }
+  .ss-field-inline select,
+  .ss-field-inline input {
+    width: 100%;
+    min-width: auto;
+  }
+
+  /* 10. Grid المنهج */
+  .ss-curr-body {
+    grid-template-columns: 1fr;
+  }
+  .ss-subjectGrid {
+    grid-template-columns: 1fr;
+  }
+  .ss-curr-filters {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 11. MODAL - النسخ الاحتياطي */
+  .ss-modal {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .ss-modal.is-open {
+    display: flex;
+  }
+  .ss-modal-dialog {
+    width: 100%;
+    max-width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    border-radius: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .ss-modal-head {
+    padding: 12px;
+    flex-shrink: 0;
+  }
+  .ss-modal-head h3 {
+    font-size: 16px;
+  }
+  .ss-modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .ss-modal-foot {
+    padding: 12px;
+    flex-shrink: 0;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ss-modal-foot .ss-btn {
+    width: 100%;
+  }
+
+  /* 12. محتوى Modal النسخ الاحتياطي */
+  .ss-modal-body [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  .ss-modal-body .ss-tableWrap {
+    overflow-x: auto;
+    display: block;
+  }
+  .ss-modal-body .ss-table {
+    min-width: 500px;
+  }
+  .ss-modal-body .ss-btn {
+    width: 100%;
+  }
+
+  /* 13. مستعرض المجلدات */
+  #dirPickerModal .ss-modal-dialog {
+    height: 100vh;
+  }
+  #dirPickerList {
+    max-height: calc(100vh - 200px);
+  }
+  .dir-picker-path-row {
+    flex-direction: column;
+    gap: 8px;
+  }
+  .dir-picker-path-row input {
+    width: 100%;
+  }
+
+  /* 14. Pagination */
+  #backupPagination {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  #backupPagination button {
+    width: 100%;
+  }
+
+  /* 15. Toggle switches */
+  .ss-toggle {
+    width: 40px;
+    height: 22px;
+  }
+  .ss-toggle::after {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* 16. الإعدادات الأكاديمية */
+  .ss-panel[data-panel="academic"] [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+  .ss-panel[data-panel="academic"] .ss-grade-settings,
+  .ss-panel[data-panel="academic"] .academic-grade-settings,
+  .ss-panel[data-panel="academic"] .grading-settings {
+    grid-template-columns: 1fr !important;
+  }
+  .ss-panel[data-panel="academic"] .ss-grade-grid,
+  .ss-panel[data-panel="academic"] .academic-grade-grid,
+  .ss-panel[data-panel="academic"] .grading-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 17. أيام العمل */
+  .day-check {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  /* 18. النظام والمالية */
+  .ss-panel[data-panel="system_finance"] [style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* 19. البوابات */
+  .ss-panel[data-panel="portals"] [style*="justify-content: space-between"] {
+    flex-direction: column;
+    gap: 15px;
+  }
+}
+
+/* =========================================
+   TABLET (769px - 1024px)
+   ========================================= */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .ss-layout {
+    grid-template-columns: 260px 1fr;
+  }
+  .ss-table {
+    font-size: 13px;
+  }
+}
+
+/* =========================================
+   SMALL MOBILE (320px - 480px)
+   ========================================= */
+@media (max-width: 480px) {
+  .ss-title {
+    font-size: 16px;
+  }
+  .ss-table {
+    min-width: 500px;
+    font-size: 11px;
+  }
+  .ss-modal-head h3 {
+    font-size: 14px;
+  }
+  .ss-field label {
+    font-size: 11px;
   }
 }

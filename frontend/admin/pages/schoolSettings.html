@@ -95,6 +95,12 @@
             <span>منهج الصفوف</span>
             <span class="ss-count ss-count--accent" id="cntCurr">•</span>
           </button>
+
+          <button class="ss-nav-item" data-target="backups">
+            <i class="ri-database-2-line"></i>
+            <span>النسخ الاحتياطي</span>
+            <span class="ss-count ss-count--accent" id="cntBackups">•</span>
+          </button>
         </div>
       </div>
 
@@ -750,6 +756,184 @@
         <div class="ss-toggle is-on" role="switch" aria-checked="true" id="toggleParentPortal"></div>
       </div>
 
+</section>
+<section class="ss-panel" data-panel="backups">
+  <div class="ss-panel-head">
+    <div>
+      <h3>نظام النسخ الاحتياطي لقاعدة البيانات</h3>
+      <p>حماية بياناتك وإعداد نسخ احتياطية دورية (يدوية وتلقائية) مع إمكانية التحميل والحذف والتخزين السحابي.</p>
+    </div>
+  </div>
+
+  <div style="padding: 20px; display: flex; flex-direction: column; gap: 30px;">
+    
+    <div style="background: rgba(34, 197, 94, 0.05); padding: 20px; border-radius: 12px; border: 1px solid rgba(34, 197, 94, 0.2);">
+      <h4 style="margin-bottom: 10px; color: #22c55e; display: flex; align-items: center; gap: 8px;">
+        <i class="ri-google-fill"></i> ربط السحاب الشخصي للمدرسة (BYOD)
+      </h4>
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;">
+        <div>
+          <div style="font-size: 14px; color: #fff; font-weight: bold;">مساحة تخزين Google Drive الآمنة للمستأجر</div>
+          <div style="font-size: 13px; color: #888; margin-top: 4px;">
+            حالة الاتصال السحابي: <span id="gDriveStatus" style="color: #ef4444; font-weight: bold;">غير متصل 🔴</span>
+          </div>
+        </div>
+        <button type="button" class="ss-btn" id="btnLinkGoogleDrive" style="background: #22c55e; color: #fff; white-space: nowrap;">
+          <i class="ri-link"></i> ربط حساب جوجل درايف
+        </button>
+      </div>
+    </div>
+
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+      <h4 style="margin-bottom: 15px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+        <i class="ri-download-cloud-2-line"></i> النسخ الاحتياطي اليدوي والاستعادة الفورية
+      </h4>
+      <div style="display: flex; flex-direction: column; gap: 15px;">
+        
+        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 15px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); gap: 15px;">
+          <div>
+            <div style="font-weight: bold; margin-bottom: 5px; color: #fff;">إنشاء نسخة احتياطية شاملة الآن</div>
+            <div style="font-size: 13px; color: #888;">سيقوم النظام بتوليد ملف SQL كامل لكافة البيانات وحفظه على الخادم والسحاب (إذا كان متصلاً).</div>
+          </div>
+          <button type="button" class="ss-btn ss-btn-primary" id="btnRunManualBackup" style="white-space: nowrap;">
+            <i class="ri-database-2-line"></i> إنشاء نسخة احتياطية الآن
+          </button>
+        </div>
+
+       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.15); padding: 15px 20px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); gap: 15px;">
+          <div style="flex: 1; min-width: 250px;">
+            <div style="font-weight: bold; margin-bottom: 5px; color: #fff;">استعادة نسخة احتياطية للمدرسة</div>
+            <div style="font-size: 13px; color: #888;">قم برفع ملف SQL من جهاز الكمبيوتر الخاص بك لاستعادة قاعدة البيانات بالكامل عند الكوارث.</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <select id="restoreMode" class="ss-select" style="background: #111; color: #fff; border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: 6px; font-size: 13px; cursor: pointer;">
+              <option value="merge" selected>🔄 دمج البيانات (الاحتفاظ بالشعب الجديدة)</option>
+              <option value="clean">🧹 استبدال وتطهير (حذف أي شعب أو بيانات جديدة)</option>
+            </select>
+            
+            <input type="file" id="restoreBackupFile" accept=".sql" style="display: none;">
+            <button type="button" class="ss-btn ss-btn-ghost" id="btnTriggerRestoreBackup" style="white-space: nowrap; border-color: var(--accent);">
+              <i class="ri-upload-cloud-line"></i> رفع واستعادة قاعدة البيانات
+            </button>
+          </div>
+        </div>
+        
+        <div id="lastBackupSummary" style="display: none; background: rgba(255,255,255,0.01); padding: 15px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03); font-size: 14px;">
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+            <div>حالة آخر عملية: <span id="lastBackupStatus"></span></div>
+            <div>التاريخ والوقت: <strong id="lastBackupTime">—</strong></div>
+            <div>الحجم الإجمالي: <strong id="lastBackupSize">—</strong></div>
+          </div>
+          <div id="lastBackupErrorInfo" style="display: none; margin-top: 10px; color: #ef4444; font-size: 13px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+        <h4 style="margin: 0; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+          <i class="ri-time-line"></i> إعدادات الجدولة والنسخ التلقائي
+        </h4>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 13px; color: #888;">تفعيل النسخ التلقائي</span>
+          <div class="ss-toggle" role="switch" aria-checked="false" id="toggleAutoBackup"></div>
+        </div>
+      </div>
+
+      <form id="backupSettingsForm" style="display: flex; flex-direction: column; gap: 20px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+          <div class="ss-field">
+            <label>تكرار النسخ الاحتياطي (Frequency)</label>
+            <select id="backupFreq">
+              <option value="hourly">كل ساعة</option>
+              <option value="daily" selected>يومياً</option>
+              <option value="weekly">أسبوعياً</option>
+              <option value="monthly">شهرياً</option>
+              <option value="custom">كل عدد ساعات مخصص</option>
+            </select>
+          </div>
+
+          <div class="ss-field" id="fieldBackupDay" style="display: none;">
+            <label>يوم النسخ الاحتياطي</label>
+            <select id="backupDay">
+              <option value="0">الأحد</option>
+              <option value="1">الإثنين</option>
+              <option value="2">الثلاثاء</option>
+              <option value="3">الأربعاء</option>
+              <option value="4">الخميس</option>
+              <option value="5">الجمعة</option>
+              <option value="6">السبت</option>
+            </select>
+          </div>
+
+          <div class="ss-field" id="fieldBackupInterval" style="display: none;">
+            <label>تكرار النسخ (كل X ساعة)</label>
+            <input type="number" id="backupInterval" value="24" min="1" step="1">
+          </div>
+
+          <div class="ss-field" id="fieldBackupTime">
+            <label>وقت النسخ الاحتياطي التلقائي (⏰)</label>
+            <input type="time" id="backupTime" value="02:00">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px;">
+          <div class="ss-field">
+            <label>مسار حفظ النسخ الاحتياطية على الخادم (مجلد مخصص)</label>
+            <div class="ss-field-row">
+              <input type="text" id="backupPath" value="backups" placeholder="اكتب أو حدد المجلد..." style="flex: 1;" title="المسار الحاكم لحفظ ملفات الـ SQL على الخادم">
+              <button type="button" class="ss-btn ss-btn-ghost" id="btnBrowseBackupPath" style="padding: 10px 14px; white-space: nowrap;">
+                <i class="ri-folder-open-line"></i> استعراض...
+              </button>
+            </div>
+            <small style="color: #888;">سيتم حفظ الملفات تلقائياً في هذا المسار المحدد داخل السيرفر المعزول.</small>
+          </div>
+
+          <div class="ss-field">
+            <label>الاحتفاظ بأحدث (Keep Backups Count)</label>
+            <input type="number" id="backupKeepCount" value="10" min="1" step="1">
+            <small style="color: #888;">العدد الأقصى للنسخ المحفوظة بالخادم قبل حذف النسخ الأقدم تلقائياً.</small>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+          <button type="button" class="ss-btn ss-btn-primary" id="btnSaveBackupSettings">
+            <i class="ri-save-3-line"></i> حفظ الإعدادات التلقائية والمسار
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05);">
+      <h4 style="margin-bottom: 20px; color: var(--accent); display: flex; align-items: center; gap: 8px;">
+        <i class="ri-file-list-3-line"></i> سجل وتاريخ عمليات النسخ الاحتياطي
+      </h4>
+      
+      <div class="ss-tableWrap">
+        <table class="ss-table">
+          <thead>
+            <tr>
+              <th style="width: 100px;">النوع</th>
+              <th>التاريخ والوقت</th>
+              <th style="width: 140px;">الحجم</th>
+              <th style="width: 120px;">الحالة</th>
+              <th>المسؤول / المشغل</th>
+              <th style="width: 180px;">إجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="tbBackupLogs">
+            <tr><td colspan="6" class="ss-empty">جاري تحميل سجل الأنشطة...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div id="backupPagination" style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; font-size: 13px;">
+        <div style="color: #888;" id="backupPaginationText">عرض 0 من 0 سجل</div>
+        <div style="display: flex; gap: 8px;">
+          <button class="ss-btn ss-btn-ghost ss-btn-sm" id="btnPrevBackupPage" disabled>السابق</button>
+          <button class="ss-btn ss-btn-ghost ss-btn-sm" id="btnNextBackupPage" disabled>التالي</button>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -765,6 +949,43 @@
       </div>
       <div class="ss-modal-body" id="ssModalBody"></div>
       <div class="ss-modal-foot" id="ssModalFoot"></div>
+    </div>
+  </div>
+
+  <!-- مودال مستعرض المجلدات من جانب السيرفر -->
+  <div class="ss-modal" id="dirPickerModal" aria-hidden="true">
+    <div class="ss-modal-dialog" style="width: min(650px, 100%);">
+      <div class="ss-modal-head">
+        <h3><i class="ri-folder-open-line"></i> مستعرض مجلدات السيرفر</h3>
+        <button class="ss-icon" id="btnDirPickerClose">×</button>
+      </div>
+      <div class="ss-modal-body" style="padding: 15px; display: flex; flex-direction: column; gap: 15px;">
+        
+        <!-- الأقراص المتاحة (لـ Windows) -->
+        <div id="dirPickerDrivesBox" style="display: none; flex-direction: column; gap: 6px;">
+          <span style="font-size: 12px; color: var(--text-muted);">الأقراص المتاحة:</span>
+          <div id="dirPickerDrives" style="display: flex; gap: 8px; flex-wrap: wrap;"></div>
+        </div>
+
+        <!-- المسار الحالي والرجوع للأعلى -->
+        <div class="dir-picker-path-row" style="display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.15); padding: 10px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap;">
+          <button type="button" class="ss-btn ss-btn-ghost ss-btn-sm" id="btnDirPickerUp" style="padding: 6px 10px; white-space: nowrap;">
+            <i class="ri-arrow-up-line"></i> المجلد الأعلى
+          </button>
+          <input type="text" id="dirPickerCurrentPath" readonly style="flex: 1; background: transparent; border: 0; outline: none; font-size: 13px; color: #fff; font-family: monospace;" dir="ltr">
+        </div>
+
+        <!-- المجلدات الفرعية -->
+        <div style="border: 1px solid var(--border-soft); border-radius: 12px; background: var(--bg-panel-soft); overflow: hidden;">
+          <div id="dirPickerList" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column;">
+            <!-- سيتم ملؤها ديناميكياً -->
+          </div>
+        </div>
+      </div>
+      <div class="ss-modal-foot">
+        <button class="ss-btn ss-btn-ghost" id="btnDirPickerCancel">إلغاء</button>
+        <button class="ss-btn ss-btn-primary" id="btnDirPickerSelect"><i class="ri-checkbox-circle-line"></i> تحديد هذا المجلد</button>
+      </div>
     </div>
   </div>
 </section>

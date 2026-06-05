@@ -38,22 +38,37 @@ export default async function authMiddleware(req, res, next) {
       });
     }
 
-    const authHeader = req.headers.authorization || "";
-    const match = authHeader.match(/^Bearer\s+(.+)$/i);
+    let token = null;
 
-    if (!match) {
-      return res.status(401).json({
-        success: false,
-        message: "غير مصرح",
-      });
+    if (req.headers.cookie) {
+      try {
+        const cookies = {};
+        req.headers.cookie.split(";").forEach((cookie) => {
+          const parts = cookie.split("=");
+          if (parts.length >= 2) {
+            cookies[parts[0].trim()] = decodeURIComponent(parts.slice(1).join("="));
+          }
+        });
+        token = cookies.token;
+      } catch (err) {
+        console.error("Error parsing cookies in authMiddleware:", err);
+      }
     }
 
-    const token = match[1]?.trim();
+    if (!token) {
+      const authHeader = req.headers.authorization || "";
+      const match = authHeader.match(/^Bearer\s+(.+)$/i);
+      token = match ? match[1]?.trim() : null;
+    }
+
+    if (!token) {
+      token = req.query.token;
+    }
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "توكن غير موجود",
+        message: "غير مصرح، التوكن غير موجود",
       });
     }
 
@@ -260,6 +275,8 @@ export default async function authMiddleware(req, res, next) {
       id: userFromDb.id,
       school_id: userFromDb.school_id,
       school_slug: userFromDb.school_slug,
+      name: userFromDb.name || userFromDb.full_name || userFromDb.username || "مستخدم",
+      username: userFromDb.username,
 
       role_id: userFromDb.role_id,
       role: userFromDb.role_name,

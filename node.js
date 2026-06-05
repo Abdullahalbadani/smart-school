@@ -1,1 +1,0 @@
-find . -not -path '*/.*' -not -path './node_modules*'

@@ -334,6 +334,7 @@ async function loadFeeAdjustmentRequests() {
 
             <div style="display:flex; gap:8px; margin-top:8px; flex-wrap:wrap;">
               <button
+                id="btn-approve-${item.id}"
                 type="button"
                 onclick="approveFeeAdjustmentRequest(${item.id})"
                 style="
@@ -351,6 +352,7 @@ async function loadFeeAdjustmentRequests() {
               </button>
 
               <button
+                id="btn-reject-${item.id}"
                 type="button"
                 onclick="rejectFeeAdjustmentRequest(${item.id})"
                 style="
@@ -387,8 +389,21 @@ async function loadFeeAdjustmentRequests() {
 }
 
 window.approveFeeAdjustmentRequest = async function (id) {
+  const btnApprove = document.getElementById(`btn-approve-${id}`);
+  const btnReject = document.getElementById(`btn-reject-${id}`);
+
   const adminNote =
     prompt("اكتب ملاحظة الموافقة:", "تمت الموافقة على تعديل الرسوم") || "";
+
+  if (btnApprove) {
+    btnApprove.disabled = true;
+    btnApprove.style.opacity = "0.6";
+    btnApprove.innerText = "جاري القبول...";
+  }
+  if (btnReject) {
+    btnReject.disabled = true;
+    btnReject.style.opacity = "0.6";
+  }
 
   try {
     const response = await fetch(apiUrl(`/admin/fee-adjustment-requests/${id}/approve`), {
@@ -413,16 +428,38 @@ window.approveFeeAdjustmentRequest = async function (id) {
   } catch (error) {
     console.error("Approve fee adjustment request error:", error);
     alert(error.message || "تعذر قبول طلب تعديل الرسوم");
+    if (btnApprove) {
+      btnApprove.disabled = false;
+      btnApprove.style.opacity = "1";
+      btnApprove.innerText = "قبول";
+    }
+    if (btnReject) {
+      btnReject.disabled = false;
+      btnReject.style.opacity = "1";
+    }
   }
 };
 
 window.rejectFeeAdjustmentRequest = async function (id) {
+  const btnApprove = document.getElementById(`btn-approve-${id}`);
+  const btnReject = document.getElementById(`btn-reject-${id}`);
+
   const adminNote = prompt("اكتب سبب الرفض:");
   if (adminNote === null) return;
 
   if (!String(adminNote).trim()) {
     alert("سبب الرفض مطلوب.");
     return;
+  }
+
+  if (btnApprove) {
+    btnApprove.disabled = true;
+    btnApprove.style.opacity = "0.6";
+  }
+  if (btnReject) {
+    btnReject.disabled = true;
+    btnReject.style.opacity = "0.6";
+    btnReject.innerText = "جاري الرفض...";
   }
 
   try {
@@ -448,6 +485,15 @@ window.rejectFeeAdjustmentRequest = async function (id) {
   } catch (error) {
     console.error("Reject fee adjustment request error:", error);
     alert(error.message || "تعذر رفض طلب تعديل الرسوم");
+    if (btnApprove) {
+      btnApprove.disabled = false;
+      btnApprove.style.opacity = "1";
+    }
+    if (btnReject) {
+      btnReject.disabled = false;
+      btnReject.style.opacity = "1";
+      btnReject.innerText = "رفض";
+    }
   }
 };
 async function loadAssessmentReopenRequests() {
@@ -941,12 +987,22 @@ result.data.forEach(activity => {
 
         const actionNamesAr = { 'CREATE': 'إضافة', 'UPDATE': 'تعديل', 'DELETE': 'حذف' };
         const resourceNamesAr = {
-          'students': 'طالب', 'fees': 'بيانات مالية', 'roles': 'صلاحيات', 'role-permissions': 'صلاحيات النظام',
-          'users': 'مستخدم', 'employees': 'موظف', 'schools': 'إعدادات المدرسة', 'system': 'نظام'
+          'students': 'طالب',
+          'fees': 'بيانات مالية',
+          'roles': 'صلاحيات',
+          'role-permissions': 'صلاحيات النظام',
+          'users': 'مستخدم',
+          'employees': 'موظف',
+          'schools': 'إعدادات المدرسة',
+          'school-settings': 'إعدادات المدرسة',
+          'backups': 'النسخ الاحتياطي',
+          'student-transfer-requests': 'طلبات انتقال الطلاب',
+          'system': 'نظام'
         };
 
         const actionTitle = actionNamesAr[activity.action] || 'عملية';
-        const sectionTitle = resourceNamesAr[activity.resource_type] || activity.resource_type;
+        const rawModule = activity.module || activity.resource_type || '';
+        const sectionTitle = resourceNamesAr[rawModule] || rawModule || 'نظام';
         
         // 🎯 عرض الحدث بدقة كما جاء من الباك إند الذكي
         let exactDetails = activity.description || '';

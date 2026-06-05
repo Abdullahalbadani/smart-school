@@ -1,5 +1,6 @@
 // backend/src/controllers/studentReportsController.js
 import { pool } from "../config/db.js";
+import { logAudit } from "../utils/auditLogger.js";
 
 function getSchoolId(req) {
   return req.user?.school_id || req.user?.school?.id || null;

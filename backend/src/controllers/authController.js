@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import PermissionRoleModel from "../modules/permissionRoleModel.js";
 import { getPortalsSettings } from "../modules/schoolSettingsModel.js";
 import { pool } from "../config/db.js";
+import { logAudit } from "../utils/auditLogger.js";
 
 function buildSubscriptionRedirectUrl(school, code) {
   const params = new URLSearchParams({
@@ -221,6 +222,19 @@ export const AuthController = {
       const match = await bcrypt.compare(password, user.password_hash);
 
       if (!match) {
+        await logAudit({
+          req,
+          action: "LOGIN",
+          actionLabel: "فشل تسجيل الدخول",
+          module: "Security",
+          tableName: "users",
+          recordId: user.id,
+          description: `محاولة تسجيل دخول فاشلة للمستخدم (${user.username}) - كلمة مرور خاطئة`,
+          schoolIdFallback: user.school_id,
+          userIdFallback: user.id,
+          userNameFallback: user.name || user.full_name || user.username || "مستخدم",
+          userRoleFallback: user.role_name || "system"
+        });
         return res.status(401).json({
           success: false,
           message: "بيانات الدخول غير صحيحة",
@@ -315,6 +329,28 @@ export const AuthController = {
 
       const token = jwt.sign(payload, process.env.JWT_SECRET, {
         expiresIn: "24h",
+      });
+
+      res.cookie("token", token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "strict",
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
+
+      await logAudit({
+        req,
+        action: "LOGIN",
+        actionLabel: "تسجيل دخول ناجح",
+        module: "Security",
+        tableName: "users",
+        recordId: user.id,
+        newData: { username: user.username, role: user.role_name },
+        description: `قام المستخدم (${user.username}) بتسجيل الدخول إلى النظام بنجاح`,
+        schoolIdFallback: user.school_id,
+        userIdFallback: user.id,
+        userNameFallback: user.name || user.full_name || user.username || "مستخدم",
+        userRoleFallback: user.role_name || "system"
       });
 
       return res.json({

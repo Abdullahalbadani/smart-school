@@ -1867,3 +1867,282 @@ table.data-table {
 #modal-notifications .nt-view{
   overflow: visible !important;
 }
+
+/* =====================================================
+   RESPONSIVE DESIGN - COMPREHENSIVE FIXES
+   Parent Portal - RTL Arabic Layout
+   ===================================================== */
+
+/* ───────── Tablet (768px – 1024px) ───────── */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .shell-parent {
+    padding-inline: 1rem;
+  }
+
+  .topbar {
+    border-radius: 16px;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .topbar-inner {
+    flex-wrap: wrap;
+  }
+
+  .command-center {
+    order: 3;
+    max-width: 100%;
+    flex-basis: 100%;
+  }
+
+  .live-clock {
+    display: none;
+  }
+
+  .cards-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 0.75rem;
+  }
+
+  .hero-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+  }
+
+  /* Modal */
+  .modal-dialog {
+    max-width: 92vw;
+  }
+
+  /* Form cards */
+  .form-card {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+
+  /* Touch targets */
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+/* ───────── Mobile (max-width: 767px) ───────── */
+@media (max-width: 767px) {
+  .shell-parent {
+    padding: 8px;
+  }
+
+  /* Topbar navigation */
+  .topbar {
+    border-radius: 14px;
+    padding: 0.4rem 0.6rem;
+  }
+
+  .topbar-inner {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .brand-logo {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brand-text h1 {
+    font-size: 0.95rem;
+  }
+
+  .brand-text small {
+    font-size: 0.7rem;
+  }
+
+  .command-center {
+    width: 100%;
+    margin-top: 4px;
+  }
+
+  .live-clock {
+    display: none !important;
+  }
+
+  /* Hero Banner */
+  .hero-strip {
+    padding: 0.75rem 0.85rem;
+    border-radius: 16px;
+    margin-bottom: 0.75rem;
+    gap: 0.45rem;
+  }
+
+  .hero-title {
+    font-size: 1.1rem;
+    text-align: center;
+  }
+
+  .hero-sub {
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  /* Grid layout to single column */
+  .cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.65rem;
+  }
+
+  /* Cards */
+  .card {
+    padding: 0.85rem;
+    border-radius: 16px;
+    min-height: 80px;
+  }
+
+  .card-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+  }
+
+  .card h3 {
+    font-size: 0.9rem;
+  }
+
+  .card p {
+    font-size: 0.75rem;
+  }
+
+  /* Modals */
+  .modal-dialog {
+    width: 100% !important;
+    max-height: 95vh !important;
+    max-height: 95dvh !important;
+    border-radius: 20px 20px 0 0 !important;
+  }
+
+  .modal-header {
+    padding: 10px 12px;
+  }
+
+  .modal-body {
+    padding: 12px;
+  }
+
+  .modal-footer {
+    padding: 10px 12px;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .modal-footer button {
+    width: 100%;
+  }
+
+  /* Data tables vertical scrolling support */
+  .ss-table-wrap,
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+  }
+
+  table.data-table {
+    min-width: 620px;
+  }
+
+  /* Forms fields stack */
+  .form-card {
+    grid-template-columns: 1fr !important;
+    padding: 10px;
+  }
+
+  .form-card label {
+    grid-column: span 1 !important;
+  }
+
+  input,
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 15px;
+    border-radius: 10px;
+  }
+
+  /* Buttons & links min height */
+  .btn,
+  .primary-btn,
+  .secondary-btn,
+  .close-btn {
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 14px;
+  }
+}
+
+/* ───────── Small Mobile (max-width: 480px) ───────── */
+@media (max-width: 480px) {
+  body, html {
+    font-size: 90%;
+  }
+
+  .shell-parent {
+    padding-inline: 0.35rem;
+  }
+
+  .topbar {
+    padding: 0.25rem 0.4rem;
+  }
+
+  .brand-logo {
+    width: 32px;
+    height: 32px;
+  }
+
+  .brand-text h1 {
+    font-size: 0.72rem;
+  }
+
+  .icon-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .hero-strip {
+    padding: 0.4rem 0.5rem;
+  }
+
+  .card {
+    padding: 0.6rem;
+    min-height: 64px;
+  }
+
+  .card h3 {
+    font-size: 0.78rem;
+  }
+
+  .card-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 10px;
+  }
+
+  .card-icon i {
+    font-size: 1rem;
+  }
+
+  .modal-dialog {
+    border-radius: 12px;
+  }
+
+  .form-card {
+    padding: 0.6rem;
+  }
+
+  table.data-table {
+    min-width: 400px;
+    font-size: 0.65rem;
+  }
+}

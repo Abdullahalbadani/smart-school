@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <title>تسجيل مدرسة جديدة - منصتي التعليمية</title>
-    <link rel="stylesheet" href="../shared/style.css"> <style>
+    <link rel="stylesheet" href="../shared/style.css"> 
+    <style>
         .form-section { border-bottom: 1px solid #eee; margin-bottom: 20px; padding-bottom: 10px; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .full-width { grid-column: span 2; }
@@ -14,22 +15,27 @@
     <div class="register-container">
         <h1>أنشئ حساب مدرستك الآن</h1>
         <form id="schoolRegisterForm">
-     <div class="form-section">
-    <h3>بيانات المدرسة</h3>
-    <div class="grid">
-        <input type="text" id="schoolNameAr" placeholder="اسم المدرسة (بالعربي)*" required>
-        <input type="text" id="schoolNameEn" placeholder="School Name (English)">
-        <input type="text" id="slug" placeholder="معرف الرابط (slug)* مثل: alnajah" required>
-        <input type="text" id="code" placeholder="كود المدرسة* مثل: SCH-001" required>
-        <input type="text" id="schoolPhone" placeholder="رقم هاتف المدرسة">
-        <input type="email" id="schoolEmail" placeholder="البريد الإلكتروني للمدرسة">
-        
-        <div class="full-width" style="margin-top: 10px;">
-            <label for="schoolLogo" style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.9rem;">شعار المدرسة (اختياري)</label>
-            <input type="file" id="schoolLogo" accept="image/png, image/jpeg, image/jpg" style="padding: 10px; border: 1px dashed var(--primary-color); background: #f8fafc; cursor: pointer;">
-        </div>
-    </div>
-</div>
+            
+            <div class="form-section">
+                <h3>بيانات المدرسة</h3>
+                <div class="grid">
+                    <input type="text" id="schoolNameAr" placeholder="اسم المدرسة (بالعربي)*" required>
+                    <input type="text" id="schoolNameEn" placeholder="School Name (English)">
+                    <input type="text" id="slug" placeholder="معرف الرابط (slug)* مثل: alnajah" required>
+                    <input type="text" id="code" placeholder="كود المدرسة* مثل: SCH-001" required>
+                    <input type="text" id="schoolPhone" placeholder="رقم هاتف المدرسة">
+                    <input type="email" id="schoolEmail" placeholder="البريد الإلكتروني للمدرسة">
+                    
+                    <input type="text" id="country" value="اليمن" placeholder="الدولة*" required>
+                    <input type="text" id="city" placeholder="المدينة*" required>
+                    <input type="text" id="schoolAddress" placeholder="العنوان التفصيلي للمدرسة (المديرية، الحي، الشارع)*" required class="full-width">
+                    
+                    <div class="full-width" style="margin-top: 10px;">
+                        <label for="schoolLogo" style="display: block; margin-bottom: 8px; color: var(--text-muted); font-size: 0.9rem;">شعار المدرسة (اختياري)</label>
+                        <input type="file" id="schoolLogo" accept="image/png, image/jpeg, image/jpg" style="padding: 10px; border: 1px dashed var(--primary-color); background: #f8fafc; cursor: pointer;">
+                    </div>
+                </div>
+            </div>
 
             <div class="form-section">
                 <h3>بيانات مدير النظام</h3>
@@ -37,6 +43,9 @@
                     <input type="text" id="adminName" placeholder="الاسم الكامل للمدير*" required class="full-width">
                     <input type="text" id="adminUsername" placeholder="اسم المستخدم*" required>
                     <input type="email" id="adminEmail" placeholder="بريد المدير*" required>
+                    
+                    <input type="text" id="adminPhone" placeholder="رقم هاتف المدير الشخصي*" required>
+                    
                     <input type="password" id="password" placeholder="كلمة المرور*" required>
                     <input type="password" id="confirmPassword" placeholder="تأكيد كلمة المرور*" required>
                 </div>

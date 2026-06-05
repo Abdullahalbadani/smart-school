@@ -19,11 +19,10 @@ export default function checkPermission(permissionCode) {
 
       const roleName = String(user.role || user.role_name || "").toLowerCase();
 
-      // ✅ الأدمـن / سوبر أدمن / الدور رقم 1 له كل الصلاحيات
+      // ✅ الأدمـن / سوبر أدمن له كل الصلاحيات
       if (
         roleName === "admin" ||
-        roleName === "superadmin" ||
-        user.role_id === 1          // لو رقم دور السوبر أدمن غير 1 عدّله هنا
+        roleName === "superadmin"
       ) {
         console.log("-> bypass as admin");
         return next();

@@ -69,8 +69,8 @@ export const UserController = {
 
       // ربط المستخدم بالدور
       await client.query(
-        `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`,
-        [newUserId, role_id]
+        `INSERT INTO user_roles (user_id, role_id, school_id) VALUES ($1, $2, $3)`,
+        [newUserId, role_id, schoolId]
       );
 
       await client.query("COMMIT");
@@ -224,8 +224,8 @@ export const UserController = {
         userId,
       ]);
       await client.query(
-        `INSERT INTO user_roles (user_id, role_id) VALUES ($1, $2)`,
-        [userId, role_id]
+        `INSERT INTO user_roles (user_id, role_id, school_id) VALUES ($1, $2, $3)`,
+        [userId, role_id, schoolId]
       );
 
       await client.query("COMMIT");

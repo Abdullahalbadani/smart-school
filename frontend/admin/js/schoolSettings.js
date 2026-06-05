@@ -140,6 +140,10 @@ async function ssConfirm(options = {}) {
         if (panel) panel.classList.add("is-active");
         const sum = $("#ssSummary", root);
         if (sum) sum.textContent = summaryText(key);
+
+        if (key === "backups") {
+          initBackupsSection(root);
+        }
       });
     });
 
@@ -444,6 +448,7 @@ function bindAcademicTotals(root) {
       curriculum: "منهج الصفوف: فعّل مواد كل صف. هذه تحدد ما يظهر في تعيين المدرسين.",
       qualifications:
         "تأهيل المدرسين: حدِّد أي المدرسين مسموح لهم بتدريس كل مادة (هذا الذي يحدد من يظهر داخل سيلكت تعيين المدرسين).",
+      backups: "إدارة إعدادات النسخ الاحتياطي اليدوي والتلقائي لسجلات المدرسة وقاعدة البيانات.",
     };
     return map[key] || "جاهز ✅";
   }
@@ -1465,6 +1470,481 @@ recalcAcademicTotals(root);
     };
   }
 
+  let backupPage = 1;
+  const backupLimit = 10;
+
+  async function initBackupsSection(root) {
+    if (root.dataset.backupsInited === "1") {
+      await loadBackupSettings(root);
+      await loadBackupLogs(root, 1);
+      return;
+    }
+    root.dataset.backupsInited = "1";
+
+    const tAuto = $("#toggleAutoBackup", root);
+    if (tAuto) {
+      tAuto.addEventListener("click", () => {
+        tAuto.classList.toggle("is-on");
+        tAuto.setAttribute("aria-checked", tAuto.classList.contains("is-on"));
+      });
+    }
+
+    const freqSelect = $("#backupFreq", root);
+    if (freqSelect) {
+      freqSelect.addEventListener("change", () => {
+        const freq = freqSelect.value;
+        $("#fieldBackupDay", root).style.display = freq === "weekly" ? "block" : "none";
+        $("#fieldBackupInterval", root).style.display = freq === "custom" ? "block" : "none";
+        $("#fieldBackupTime", root).style.display = (freq === "hourly" || freq === "custom") ? "none" : "block";
+      });
+    }
+
+    $("#btnSaveBackupSettings", root)?.addEventListener("click", async () => {
+      const btn = $("#btnSaveBackupSettings", root);
+      btn.disabled = true;
+      btn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> جاري الحفظ...`;
+      try {
+        const payload = {
+          auto_backup_enabled: tAuto.classList.contains("is-on"),
+          auto_backup_frequency: $("#backupFreq", root).value,
+          auto_backup_day: parseInt($("#backupDay", root).value || 0, 10),
+          auto_backup_interval_hours: parseInt($("#backupInterval", root).value || 24, 10),
+          auto_backup_time: $("#backupTime", root).value || "02:00",
+          backup_path: $("#backupPath", root).value || "backups",
+          keep_backups_count: parseInt($("#backupKeepCount", root).value || 10, 10),
+        };
+        await apiFetch("/admin/backups/settings", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        toast("تم حفظ إعدادات النسخ الاحتياطي بنجاح ✅");
+        await loadBackupSettings(root);
+      } catch (err) {
+        toast("فشل حفظ الإعدادات: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="ri-save-3-line"></i> حفظ الإعدادات التلقائية`;
+      }
+    });
+
+    $("#btnRunManualBackup", root)?.addEventListener("click", async () => {
+      const btn = $("#btnRunManualBackup", root);
+      btn.disabled = true;
+      btn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> جاري النسخ...`;
+      try {
+        await apiFetch("/admin/backups/run-manual", { method: "POST" });
+        toast("تم إنشاء النسخة الاحتياطية بنجاح ✅");
+        await loadBackupSettings(root);
+        await loadBackupLogs(root, 1);
+      } catch (err) {
+        toast("فشل النسخ الاحتياطي: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i class="ri-database-2-line"></i> إنشاء نسخة احتياطية الآن`;
+      }
+    });
+
+    // استعادة النسخة الاحتياطية من ملف محلي
+    const restoreInput = $("#restoreBackupFile", root);
+    const triggerBtn = $("#btnTriggerRestoreBackup", root);
+    
+    triggerBtn?.addEventListener("click", () => {
+      restoreInput?.click();
+    });
+    
+    restoreInput?.addEventListener("change", async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const isConfirmed = await ssConfirm({
+        message: "⚠️ تحذير هام جداً: هل أنت متأكد من استعادة قاعدة البيانات من الملف المختار؟ سيؤدي ذلك إلى استبدال كافة البيانات الحالية بالكامل ولا يمكن التراجع عن هذه العملية!",
+        confirmText: "نعم، استعد قاعدة البيانات",
+        cancelText: "إلغاء"
+      });
+      
+      if (!isConfirmed) {
+        restoreInput.value = "";
+        return;
+      }
+      
+      triggerBtn.disabled = true;
+      triggerBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> جاري استعادة قاعدة البيانات...`;
+      
+   try {
+        // 🟢 لقط خيار المدير (هل يريد دمج أم تطهير واستبدال؟)
+        const restoreMode = $("#restoreMode", root)?.value || "merge";
+
+        const formData = new FormData();
+        formData.append("backupFile", file);
+        formData.append("restoreMode", restoreMode); // 🟢 إرسال الخيار المختار للباك إند
+        await apiFetchFormData("/admin/backups/restore", formData);
+        
+        toast("تم استعادة قاعدة البيانات بنجاح بنسبة 100%! سيتم إعادة تحميل الصفحة الآن ✅");
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } catch (err) {
+        toast("فشلت عملية الاستعادة: " + err.message);
+        triggerBtn.disabled = false;
+        triggerBtn.innerHTML = `<i class="ri-upload-cloud-line"></i> رفع واستعادة قاعدة البيانات`;
+        restoreInput.value = "";
+      }
+    });
+
+    $("#btnPrevBackupPage", root)?.addEventListener("click", async () => {
+      if (backupPage > 1) {
+        backupPage--;
+        await loadBackupLogs(root, backupPage);
+      }
+    });
+
+    $("#btnNextBackupPage", root)?.addEventListener("click", async () => {
+      backupPage++;
+      await loadBackupLogs(root, backupPage);
+    });
+
+    // ربط أحداث مستعرض المجلدات بالسيرفر
+    $("#btnBrowseBackupPath", root)?.addEventListener("click", () => openDirPicker(root));
+    $("#backupPath", root)?.addEventListener("click", () => openDirPicker(root));
+    $("#btnDirPickerClose", root)?.addEventListener("click", () => closeDirPicker(root));
+    $("#btnDirPickerCancel", root)?.addEventListener("click", () => closeDirPicker(root));
+    $("#btnDirPickerSelect", root)?.addEventListener("click", () => {
+      if (selectedDirPath) {
+        if ($("#backupPath", root)) {
+          $("#backupPath", root).value = selectedDirPath;
+        }
+        closeDirPicker(root);
+      }
+    });
+// 🟢 ربط حدث زر قوقل درايف (BYOD) المضاف حديثاً
+  $("#btnLinkGoogleDrive", root)?.addEventListener("click", () => {
+      const token = localStorage.getItem("token");
+      window.location.href = apiUrl(`/public/auth/google?token=${token}`);
+    });
+
+    // 🟢 فحص حالة الربط مع قوقل درايف فوراً عند فتح تبويب النسخ الاحتياطي
+    await checkGoogleDriveConnection(root);
+    await loadBackupSettings(root);
+    await loadBackupLogs(root, 1);
+  }
+
+  let selectedDirPath = "";
+
+  async function openDirPicker(root) {
+    const modal = $("#dirPickerModal", root);
+    if (!modal) return;
+    
+    modal.classList.add("is-open");
+    modal.setAttribute("aria-hidden", "false");
+    
+    let initialPath = $("#backupPath", root).value || "";
+    if (initialPath === "backups") {
+      initialPath = "";
+    }
+    
+    await loadDirectory(root, initialPath);
+  }
+
+  function closeDirPicker(root) {
+    const modal = $("#dirPickerModal", root);
+    if (modal) {
+      modal.classList.remove("is-open");
+      modal.setAttribute("aria-hidden", "true");
+    }
+  }
+
+  async function loadDirectory(root, path) {
+    try {
+      const url = `/admin/backups/browse-directories` + (path ? `?path=${encodeURIComponent(path)}` : '');
+      const res = await apiFetch(url);
+      if (res && res.data) {
+        const d = res.data;
+        selectedDirPath = d.currentPath;
+        
+        if ($("#dirPickerCurrentPath", root)) {
+          $("#dirPickerCurrentPath", root).value = d.currentPath;
+        }
+        
+        const btnUp = $("#btnDirPickerUp", root);
+        if (btnUp) {
+          btnUp.disabled = !d.parentPath;
+          btnUp.onclick = d.parentPath ? () => loadDirectory(root, d.parentPath) : null;
+        }
+        
+        const listContainer = $("#dirPickerList", root);
+        if (listContainer) {
+          listContainer.innerHTML = "";
+          
+          if (d.directories.length === 0) {
+            listContainer.innerHTML = `<div class="ss-empty">لا توجد مجلدات فرعية في هذا المسار</div>`;
+          } else {
+            d.directories.forEach(dir => {
+              const item = document.createElement("div");
+              item.className = "dir-item";
+              item.innerHTML = `<i class="ri-folder-fill"></i> <span>${escapeHtml(dir.name)}</span>`;
+              item.addEventListener("click", () => {
+                loadDirectory(root, dir.path);
+              });
+              listContainer.appendChild(item);
+            });
+          }
+        }
+        
+        const drivesBox = $("#dirPickerDrivesBox", root);
+        const drivesContainer = $("#dirPickerDrives", root);
+        if (drivesBox && drivesContainer) {
+          if (d.drives && d.drives.length > 0) {
+            drivesBox.style.display = "flex";
+            drivesContainer.innerHTML = "";
+            d.drives.forEach(drive => {
+              const btn = document.createElement("button");
+              btn.type = "button";
+              btn.className = "ss-btn ss-btn-ghost ss-btn-sm";
+              btn.style.padding = "4px 8px";
+              btn.style.fontSize = "12px";
+              btn.innerHTML = `<i class="ri-drive-line"></i> ${drive}`;
+              btn.addEventListener("click", () => {
+                loadDirectory(root, drive);
+              });
+              drivesContainer.appendChild(btn);
+            });
+          } else {
+            drivesBox.style.display = "none";
+          }
+        }
+      }
+    } catch (err) {
+      toast("خطأ أثناء تصفح المجلدات: " + err.message);
+    }
+  }
+
+  async function loadBackupSettings(root) {
+    try {
+      const res = await apiFetch("/admin/backups/settings");
+      if (res && res.data) {
+        const s = res.data;
+        const tAuto = $("#toggleAutoBackup", root);
+        if (tAuto) {
+          if (s.auto_backup_enabled) tAuto.classList.add("is-on");
+          else tAuto.classList.remove("is-on");
+          tAuto.setAttribute("aria-checked", s.auto_backup_enabled);
+        }
+        
+        if ($("#backupFreq", root)) $("#backupFreq", root).value = s.auto_backup_frequency || "daily";
+        if ($("#backupDay", root)) $("#backupDay", root).value = String(s.auto_backup_day ?? 0);
+        if ($("#backupInterval", root)) $("#backupInterval", root).value = String(s.auto_backup_interval_hours ?? 24);
+        
+        if ($("#backupTime", root)) {
+          let t = s.auto_backup_time || "02:00:00";
+          $("#backupTime", root).value = t.slice(0, 5);
+        }
+        
+        if ($("#backupPath", root)) $("#backupPath", root).value = s.backup_path || "backups";
+        if ($("#backupKeepCount", root)) $("#backupKeepCount", root).value = String(s.keep_backups_count ?? 10);
+        
+        $("#backupFreq", root)?.dispatchEvent(new Event("change"));
+
+        const summary = $("#lastBackupSummary", root);
+        if (summary) {
+          if (s.last_backup_status) {
+            summary.style.display = "block";
+            const statusEl = $("#lastBackupStatus", root);
+            if (statusEl) {
+              if (s.last_backup_status === "success") {
+                statusEl.innerHTML = pill("نجاح ✅", "ok");
+              } else {
+                statusEl.innerHTML = pill("فشل ❌", "off");
+              }
+            }
+            if ($("#lastBackupTime", root)) {
+              $("#lastBackupTime", root).textContent = new Date(s.last_backup_at).toLocaleString('ar-YE');
+            }
+            if ($("#lastBackupSize", root)) {
+              $("#lastBackupSize", root).textContent = s.last_backup_path ? pathBasename(s.last_backup_path) : "—";
+            }
+            
+            const errorInfo = $("#lastBackupErrorInfo", root);
+            if (errorInfo) {
+              if (s.last_backup_status === "failed" && s.last_backup_error) {
+                errorInfo.style.display = "block";
+                errorInfo.textContent = "السبب: " + s.last_backup_error;
+              } else {
+                errorInfo.style.display = "none";
+              }
+            }
+          } else {
+            summary.style.display = "none";
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("Could not load backup settings", e.message);
+    }
+  }
+
+  function pathBasename(p) {
+    if (!p) return "";
+    return p.split(/[\\/]/).pop();
+  }
+
+  async function loadBackupLogs(root, page) {
+    try {
+      const res = await apiFetch(`/admin/backups/logs?page=${page}&limit=${backupLimit}`);
+      const tb = $("#tbBackupLogs", root);
+      if (!tb) return;
+      
+      const rows = pickRows(res);
+      const pag = res.pagination || { page: 1, limit: backupLimit, total: 0, totalPages: 1 };
+      backupPage = pag.page;
+      
+      if (rows.length === 0) {
+        tb.innerHTML = `<tr><td colspan="6" class="ss-empty">لا توجد سجلات نسخ احتياطي</td></tr>`;
+      } else {
+        tb.innerHTML = rows.map(log => {
+          const typeLabel = log.backup_type === "manual" ? "يدوي" : "تلقائي";
+          const typeClass = log.backup_type === "manual" ? "ss-pill--ok" : "ss-pill--off";
+          
+          const timeStr = new Date(log.started_at).toLocaleString('ar-YE');
+          const sizeStr = log.file_size ? formatBytes(log.file_size) : "—";
+          
+          let statusPill = "";
+          if (log.status === "success") {
+            statusPill = `<span class="ss-pill ss-pill--ok">نجاح ✅</span>`;
+          } else if (log.status === "failed") {
+            statusPill = `<span class="ss-pill ss-pill--off" style="cursor: pointer;" title="${escapeHtml(log.error_message)}">فشل ❌</span>`;
+          } else {
+            statusPill = `<span class="ss-pill" style="background: var(--accent); color: #fff;">جاري التشغيل...</span>`;
+          }
+          
+          let actions = "";
+          if (log.status === "success") {
+            actions = `
+              <button class="ss-miniBtn ss-miniBtn--accent" data-act="download-backup" data-id="${log.id}">تحميل</button>
+              <button class="ss-miniBtn ss-miniBtn--danger" data-act="delete-backup" data-id="${log.id}">حذف</button>
+            `;
+          } else if (log.status === "failed") {
+            actions = `
+              <button class="ss-miniBtn" data-act="show-error" data-error="${escapeAttr(log.error_message || '')}">التفاصيل</button>
+              <button class="ss-miniBtn ss-miniBtn--danger" data-act="delete-backup" data-id="${log.id}">حذف</button>
+            `;
+          } else {
+            actions = `—`;
+          }
+          
+          return `
+            <tr>
+              <td><span class="ss-pill ${typeClass}">${typeLabel}</span></td>
+              <td>${timeStr}</td>
+              <td>${sizeStr}</td>
+              <td>${statusPill}</td>
+              <td>${escapeHtml(log.created_by_name || 'النظام')}</td>
+              <td>
+                <div class="ss-row-actions">
+                  ${actions}
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join("");
+        
+        tb.querySelectorAll("[data-act]").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            if (btn.dataset.act === "download-backup") {
+              window.open(apiUrl(`/admin/backups/download/${id}?token=${localStorage.getItem("token")}`), '_blank');
+            }
+            if (btn.dataset.act === "delete-backup") {
+              const ok = await ssConfirm({
+                title: "حذف النسخة الاحتياطية",
+                message: "هل أنت متأكد من رغبتك في حذف ملف وسجل هذه النسخة الاحتياطية نهائياً من الخادم؟",
+                confirmText: "حذف نهائي",
+                cancelText: "إلغاء",
+                type: "danger"
+              });
+              if (ok) {
+                try {
+                  await apiFetch(`/admin/backups/${id}`, { method: "DELETE" });
+                  toast("تم حذف النسخة الاحتياطية بنجاح ✅");
+                  await loadBackupLogs(root, backupPage);
+                  await loadBackupSettings(root);
+                } catch (err) {
+                  toast("فشل الحذف: " + err.message);
+                }
+              }
+            }
+            if (btn.dataset.act === "show-error") {
+              alert(btn.dataset.error || "لا توجد تفاصيل خطأ");
+            }
+          });
+        });
+      }
+
+      if ($("#backupPaginationText", root)) {
+        $("#backupPaginationText", root).textContent = `عرض الصفحة ${pag.page} من ${pag.totalPages} (إجمالي ${pag.total} سجل)`;
+      }
+      
+      const btnPrev = $("#btnPrevBackupPage", root);
+      const btnNext = $("#btnNextBackupPage", root);
+      
+      if (btnPrev) btnPrev.disabled = pag.page <= 1;
+      if (btnNext) btnNext.disabled = pag.page >= pag.totalPages;
+      
+    } catch (e) {
+      console.warn("Could not load backup logs", e.message);
+    }
+  }
+
+  function formatBytes(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+  }
+// 🟢 دالة فحص حالة الربط مع قوقل درايف وتحديث المؤشر مرئياً في الواجهة
+  async function checkGoogleDriveConnection(root) {
+    try {
+      const res = await apiFetch("/admin/backups/google-drive-status");
+      const statusSpan = $("#gDriveStatus", root);
+      const linkBtn = $("#btnLinkGoogleDrive", root);
+      
+      if (res && res.connected) {
+        if (statusSpan) {
+          statusSpan.innerHTML = `متصل 🟢 (${res.email})`;
+          statusSpan.style.color = "#22c55e";
+        }
+        if (linkBtn) {
+          linkBtn.innerHTML = '<i class="ri-link-unlink"></i> إلغاء ربط الحساب';
+          linkBtn.style.background = "#ef4444";
+          linkBtn.onclick = () => disconnectGoogleDrive(root);
+        }
+      }
+    } catch (err) {
+      console.warn("تعذر جلب حالة Google Drive السحابية:", err.message);
+    }
+  }
+
+  // 🟢 دالة فصل الحساب السحابي وإلغاء الربط بأمان
+  async function disconnectGoogleDrive(root) {
+    const ok = await ssConfirm({
+      title: "فصل حساب Google Drive",
+      message: "هل أنت متأكد من فصل حساب Google Drive الخاص بالمدرسة؟ سيتوقف الرفع السحابي التلقائي فوراً.",
+      confirmText: "نعم، افصل الحساب",
+      cancelText: "إلغاء",
+      type: "danger"
+    });
+    
+    if (!ok) return;
+    
+    try {
+      await apiFetch("/admin/backups/google-drive-disconnect", { method: "POST" });
+      toast("تم فصل الحساب السحابي بنجاح ✅");
+      window.location.reload();
+    } catch (err) {
+      toast("فشل إلغاء ربط الحساب: " + err.message);
+    }
+  }
   // ---------- ACTIONS ----------
 async function toggleItem(root, type, id) {
   const labels = {

@@ -186,3 +186,109 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===================== Responsive: Tablet ===================== */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .card {
+    padding: 30px;
+  }
+
+  .school-box {
+    padding: 14px;
+  }
+}
+
+/* ===================== Responsive: Mobile ===================== */
+@media (max-width: 767px) {
+  .expired-page {
+    padding: 16px;
+  }
+
+  .card {
+    padding: 24px 18px;
+    border-radius: 22px;
+  }
+
+  .glow-a {
+    width: 200px;
+    height: 200px;
+    top: -60px;
+    right: -50px;
+  }
+
+  .glow-b {
+    width: 160px;
+    height: 160px;
+    bottom: -60px;
+    left: -40px;
+  }
+
+  .logo {
+    width: 58px;
+    height: 58px;
+    font-size: 26px;
+    border-radius: 18px;
+  }
+
+  .school-box {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .school-box strong {
+    font-size: 17px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .info-grid div {
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .actions {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn {
+    min-height: 44px;
+    width: 100%;
+    text-align: center;
+    padding: 12px 18px;
+    font-size: 14px;
+  }
+
+  p {
+    font-size: 14px;
+  }
+}
+
+/* ===================== Responsive: Small Mobile ===================== */
+@media (max-width: 480px) {
+  .expired-page {
+    padding: 10px;
+  }
+
+  .card {
+    padding: 20px 14px;
+    border-radius: 18px;
+  }
+
+  .badge {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+
+  .school-box strong {
+    font-size: 15px;
+    word-break: break-word;
+  }
+
+  .hint {
+    font-size: 12px;
+  }
+}

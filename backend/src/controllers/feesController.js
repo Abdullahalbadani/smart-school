@@ -2,6 +2,7 @@
 import { pool } from "../config/db.js";
 import { generateInstallments, computeInstallmentStatus } from "../utils/feesInstallments.js";
 import { genReceiptNumber } from "../utils/receipt.js";
+import { logAudit } from "../utils/auditLogger.js";
 
 async function hasTable(db, name) {
   const { rows } = await db.query(`SELECT to_regclass($1) AS t`, [`public.${name}`]);
@@ -726,6 +727,15 @@ export async function reportCollections(req, res) {
     const schoolId = req.user?.school_id;
     if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
 
+    await logAudit({
+      req,
+      action: "VIEW",
+      actionLabel: "استعراض تقرير المقبوضات المالية",
+      module: "Finance",
+      tableName: "fee_payments",
+      description: "قام باستعراض كشف التحصيلات والمقبوضات المالية للمدرسة"
+    });
+
     const yearId = parseInt(req.query.yearId || "0", 10);
     const gradeId = parseInt(req.query.gradeId || "0", 10);
     const classId = parseInt(req.query.classId || "0", 10);
@@ -892,6 +902,15 @@ export async function reportOutstanding(req, res) {
   try {
     const schoolId = req.user?.school_id;
     if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
+
+    await logAudit({
+      req,
+      action: "VIEW",
+      actionLabel: "استعراض تقرير المتأخرات المالية",
+      module: "Finance",
+      tableName: "fee_installments",
+      description: "قام باستعراض كشف الرسوم المتأخرة والمستحقة على الطلاب"
+    });
 
     const yearId = parseInt(req.query.yearId || "0", 10);
     const gradeId = parseInt(req.query.gradeId || "0", 10);

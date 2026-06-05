@@ -43,15 +43,15 @@ async function grantAllPermissionsToSchoolAdmin(client, schoolId) {
     const roleId = roleRes.rows[0].id;
     
     // ربط هذا الدور بكل الصلاحيات الموجودة في جدول permissions العام
-    // نستخدم INSERT INTO ... SELECT لإضافة كل الصلاحيات بضربة واحدة
     await client.query(
       `INSERT INTO role_permissions (role_id, permission_id)
        SELECT $1, id FROM permissions`,
-      [roleId]
+       [roleId]
     );
   }
 }
 
+// ✅ 3. دالة التحقق المحدثة بالحقول الأربعة الجديدة
 function validateRegisterSchoolInput(payload) {
   const errors = [];
 
@@ -61,6 +61,10 @@ function validateRegisterSchoolInput(payload) {
   const code = String(payload.code || '').trim();
   const schoolPhone = String(payload.schoolPhone || '').trim();
   const schoolEmail = String(payload.schoolEmail || '').trim().toLowerCase();
+  
+  // لقط الحقول الجغرافية المتفق عليها
+  const country = String(payload.country || '').trim();
+  const city = String(payload.city || '').trim();
   const address = String(payload.address || '').trim();
   const logoUrl = String(payload.logoUrl || '').trim();
 
@@ -71,6 +75,7 @@ function validateRegisterSchoolInput(payload) {
   const password = String(payload.password || '');
   const confirmPassword = String(payload.confirmPassword || '');
 
+  // شروط التحقق القياسية
   if (!schoolNameAr) errors.push('اسم المدرسة بالعربي مطلوب');
   if (!slug) errors.push('Slug المدرسة مطلوب');
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) {
@@ -78,9 +83,16 @@ function validateRegisterSchoolInput(payload) {
   }
   if (!code) errors.push('كود المدرسة مطلوب');
 
+  // التحقق الإلزامي من الحقول الجغرافية المضافة للهيكل الهندسي
+  if (!country) errors.push('الدولة مطلوبة');
+  if (!city) errors.push('المدينة مطلوبة');
+  if (!address) errors.push('العنوان التفصيلي للمدرسة مطلوب');
+
+  // التحقق من بيانات المدير
   if (!adminName) errors.push('اسم الأدمن مطلوب');
   if (!adminUsername) errors.push('اسم المستخدم مطلوب');
   if (!adminEmail) errors.push('بريد الأدمن مطلوب');
+  if (!adminPhone) errors.push('رقم هاتف المدير الشخصي مطلوب');
 
   if (!password) errors.push('كلمة المرور مطلوبة');
   if (password.length < 8) errors.push('كلمة المرور يجب ألا تقل عن 8 أحرف');
@@ -101,16 +113,19 @@ function validateRegisterSchoolInput(payload) {
     code,
     schoolPhone: schoolPhone || null,
     schoolEmail: schoolEmail || null,
-    address: address || null,
+    country,
+    city,
+    address,
     logoUrl: logoUrl || null,
     adminName,
     adminUsername,
     adminEmail,
-    adminPhone: adminPhone || null,
+    adminPhone,
     password,
   };
 }
 
+// ✅ 4. خدمة تسجيل المدرسة المحدثة والمطابقة بالكامل لقاعدة البيانات
 export async function registerSchoolService(payload) {
   const data = validateRegisterSchoolInput(payload);
   const client = await pool.connect();
@@ -129,19 +144,20 @@ export async function registerSchoolService(payload) {
       throw error;
     }
 
-    // 2. إدخال المدرسة الجديدة
+    // 2. إدخال المدرسة الجديدة شاملة المدينة والدولة
     const insertSchoolQuery = `
       INSERT INTO schools (
         name_ar, name_en, slug, code, phone, email, address, logo_url,
-        timezone, currency_code, subscription_status, is_active
+        city, country, timezone, currency_code, subscription_status, is_active
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'Asia/Aden', 'YER', 'trial', TRUE)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 'Asia/Aden', 'YER', 'trial', TRUE)
       RETURNING id, name_ar, slug
     `;
 
     const schoolResult = await client.query(insertSchoolQuery, [
       data.schoolNameAr, data.schoolNameEn, data.slug, data.code,
-      data.schoolPhone, data.schoolEmail, data.address, data.logoUrl
+      data.schoolPhone, data.schoolEmail, data.address, data.logoUrl,
+      data.city, data.country // حقن الحقول الجديدة في استعلام الـ SQL
     ]);
 
     const school = schoolResult.rows[0];
@@ -156,13 +172,13 @@ export async function registerSchoolService(payload) {
     `;
     await client.query(insertSettingsQuery, [school.id]);
 
-    // 4. 🔥 توليد الأدوار الأساسية للمدرسة
+    // 4. توليد الأدوار الأساسية للمدرسة
     await seedDefaultRoles(client, school.id);
 
-    // 5. 🔥 منح مدير المدرسة (school_admin) جميع الصلاحيات تلقائياً لكي تظهر له القوائم
+    // 5. منح مدير المدرسة جميع الصلاحيات تلقائياً
     await grantAllPermissionsToSchoolAdmin(client, school.id);
 
-    // 6. إنشاء حساب الأدمن للمدرسة
+    // 6. إنشاء حساب الأدمن للمدرسة وحفظ هاتف المدير بشكل إلزامي
     const passwordHash = await bcrypt.hash(data.password, 12);
     const insertUserQuery = `
       INSERT INTO users (
@@ -185,12 +201,11 @@ export async function registerSchoolService(payload) {
     const roleResult = await client.query(roleQuery, [school.id]);
     const roleId = roleResult.rows[0].id;
 
-    // 8. تعيين الدور للمستخدم
-  // 8. تعيين الدور للمستخدم داخل نفس المدرسة
-await client.query(
-  `INSERT INTO user_roles (school_id, user_id, role_id) VALUES ($1, $2, $3)`,
-  [school.id, user.id, roleId]
-);
+    // 8. تعيين الدور للمستخدم داخل نفس المدرسة
+    await client.query(
+      `INSERT INTO user_roles (school_id, user_id, role_id) VALUES ($1, $2, $3)`,
+      [school.id, user.id, roleId]
+    );
 
     await client.query('COMMIT');
 

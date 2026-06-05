@@ -10,8 +10,10 @@ import platformAuthRoutes from "./routes/platformAuthRoutes.js";
 import platformSchoolsRoutes from "./routes/platformSchoolsRoutes.js";
 // Middlewares
 import authMiddleware from "./middleware/authMiddleware.js";
+import { tenantMiddleware } from "./middleware/tenantMiddleware.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { autoActivityLogger } from "./middleware/activityLogger.js";
+import xssSanitizer from "./middleware/xssSanitizer.js";
 
 // Utils
 import { startFeesCronJob } from "./utils/feesCron.js";
@@ -20,7 +22,7 @@ import { startSubscriptionsCronJob } from "./utils/subscriptionsCron.js";
 // Public/Auth Routes
 import publicRoutes from "./routes/public.routes.js";
 import authRoutes from "./routes/authRoutes.js";
-
+import googleAuthRouter from "./routes/googleAuthRouter.js"; // 🟢 إضافة استيراد راوتر قوقل درايف
 // Core System Routes
 import moduleRoutes from "./routes/moduleRoutes.js";
 import permissionRoutes from "./routes/permissionRoutes.js";
@@ -94,6 +96,8 @@ import assessmentReopenRequestsRoutes from "./routes/assessmentReopenRequestsRou
 import adminTermWorksRoutes from "./routes/adminTermWorksRoutes.js";
 import adminTermResultsRoutes from "./routes/adminTermResultsRoutes.js";
 import monthlyCertificatesRoutes from "./routes/monthlyCertificatesRoutes.js";
+import backupRoutes from "./routes/backupRoutes.js";
+import { startBackupsCronJob } from "./utils/backupsCron.js";
 
 // Notifications Routes
 import notificationsInboxRoutes from "./routes/notificationsInboxRoutes.js";
@@ -126,14 +130,23 @@ const corsOptions = {
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
 
-    if (allowedOrigins.includes(origin)) {
-      return cb(null, true);
-    }
+   if (allowedOrigins.includes(origin)) {
+  return cb(null, true);
+}
 
-    if (/^https:\/\/.+\.onrender\.com$/.test(origin)) {
-      return cb(null, true);
-    }
+// السماح بأي subdomain محلي مثل al-king.localhost:5000
+if (/^http:\/\/([a-z0-9-]+\.)?localhost:\d+$/i.test(origin)) {
+  return cb(null, true);
+}
 
+if (/^http:\/\/127\.0\.0\.1:\d+$/i.test(origin)) {
+  return cb(null, true);
+}
+
+// السماح بروابط Render
+if (/^https:\/\/.+\.onrender\.com$/.test(origin)) {
+  return cb(null, true);
+}
     return cb(new Error(`Not allowed by CORS: ${origin}`));
   },
   credentials: true,
@@ -193,6 +206,17 @@ app.options(/.*/, cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use((req, res, next) => {
+  const query = req.query;
+  Object.defineProperty(req, 'query', {
+    value: query,
+    writable: true,
+    configurable: true,
+    enumerable: true
+  });
+  next();
+});
+app.use(xssSanitizer);
 
 // ==============================
 // Static Files
@@ -206,10 +230,15 @@ app.get("/", (req, res) => {
 // Public Routes
 // لا تحتاج تسجيل دخول
 // ==============================
+// ==============================
+// Public Routes
+// لا تحتاج تسجيل دخول
+// ==============================
 mountRoutes([
   { path: "/api/public", router: publicRoutes },
   { path: "/api/auth", router: authRoutes },
   { path: "/api/platform/auth", router: platformAuthRoutes },
+  { path: "/api/public/auth", router: googleAuthRouter }, // 🟢 حقن مسارات قوقل درايف (Init & Callback)
 ]);
 
 // ==============================
@@ -244,7 +273,7 @@ mountRoutes([
 // Protected Routes
 // تحتاج تسجيل دخول
 // ==============================
-const protectedMiddlewares = [authMiddleware];
+const protectedMiddlewares = [authMiddleware, tenantMiddleware];
 
 mountRoutes([
   // Core System
@@ -297,6 +326,7 @@ mountRoutes([
   { path: "/api/employees", middlewares: protectedMiddlewares, router: employeesRoutes },
   { path: "/api/admin/assign-teachers", middlewares: protectedMiddlewares, router: assignTeachersRoutes },
   { path: "/api/admin/school-settings", middlewares: protectedMiddlewares, router: schoolSettingsRoutes },
+  { path: "/api/admin/backups", middlewares: protectedMiddlewares, router: backupRoutes },
   { path: "/api/admin/teacher-attendance", middlewares: protectedMiddlewares, router: adminTeacherAttendanceRoutes },
   { path: "/api/admin/teacher-permits", middlewares: protectedMiddlewares, router: adminTeacherPermitsRoutes },
   { path: "/api/admin/reports", middlewares: protectedMiddlewares, router: attendanceReportsRoutes },
@@ -333,6 +363,7 @@ const PORT = process.env.PORT || 5000;
 
 startFeesCronJob(io);
 startSubscriptionsCronJob();
+startBackupsCronJob();
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log("Socket.io is ready!");

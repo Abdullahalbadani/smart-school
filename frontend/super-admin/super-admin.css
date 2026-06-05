@@ -1081,3 +1081,163 @@ select:focus {
     flex-direction: column;
   }
 }
+
+/* =========================================================
+   COMPREHENSIVE RESPONSIVE DESIGN - Super Admin Portal
+   Added: 2026-06-04
+   Breakpoints:
+     Tablet:       768px – 1024px
+     Mobile:       max-width 767px
+     Small Mobile: max-width 480px
+   RTL preserved.
+   ========================================================= */
+
+/* ---------- Tablet (768px – 1024px) ---------- */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .app {
+    grid-template-columns: 1fr !important;
+  }
+  .sidebar {
+    position: static !important;
+    height: auto !important;
+    width: 100% !important;
+  }
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+  .details-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+}
+
+/* ---------- Mobile (max-width: 767px) ---------- */
+@media (max-width: 767px) {
+  /* Layout structure */
+  .app {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .sidebar {
+    position: static !important;
+    height: auto !important;
+    width: 100% !important;
+    padding: 12px !important;
+    border-radius: 0 0 16px 16px !important;
+  }
+
+  .content {
+    padding: 12px !important;
+  }
+
+  /* Header & Topbar */
+  .topbar {
+    padding: 12px !important;
+    border-radius: 14px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    align-items: stretch !important;
+  }
+
+  .schools-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  /* Cards and grids */
+  .dashboard-grid,
+  .stats-grid,
+  .school-info-grid,
+  .details-grid,
+  .details-info-grid,
+  .details-stats,
+  .alert-card {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .usage-summary {
+    grid-template-columns: 1fr !important;
+  }
+
+  .school-actions {
+    grid-template-columns: 1fr !important; /* Stack actions vertically */
+    gap: 8px !important;
+  }
+
+  /* Table responsive wrapper */
+  .table-wrap {
+    width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
+  }
+
+  table {
+    min-width: 600px !important; /* Force table to have space to overflow-x scroll */
+  }
+
+  /* Modals */
+  .modal-card {
+    width: 100% !important;
+    max-height: 100vh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .modal-header {
+    padding: 16px !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .modal-body {
+    padding: 16px !important;
+    overflow-y: auto !important;
+  }
+
+  .modal-footer {
+    padding: 16px !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .modal-footer .btn {
+    width: 100% !important;
+  }
+
+  /* Inputs and select options */
+  input, 
+  select, 
+  button {
+    min-height: 44px !important;
+    font-size: 15px !important;
+  }
+}
+
+/* ---------- Small Mobile (max-width: 480px) ---------- */
+@media (max-width: 480px) {
+  body, html {
+    font-size: 90%;
+  }
+
+  .sidebar {
+    padding: 10px !important;
+  }
+
+  .topbar h1 {
+    font-size: 24px !important;
+  }
+
+  .btn {
+    padding: 10px 14px !important;
+    font-size: 13px !important;
+  }
+
+  .badge {
+    padding: 5px 9px !important;
+    font-size: 11px !important;
+  }
+}

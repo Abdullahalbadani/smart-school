@@ -7,10 +7,7 @@ import { ensureFeeContractForEnrollmentTx } from "../services/fees/ensureFeeCont
  * IMPORTANT:
  * - users مرتبطة بالأدوار عبر user_roles
  * - users فيها school_id و password_hash و status
- * - عدّل أرقام الأدوار حسب جدول roles عندك
  */
-const ROLE_STUDENT_ID = 3;
-const ROLE_GUARDIAN_ID = 4;
 
 function normalizeEmail(email) {
   const e = (email || "").trim();
@@ -99,10 +96,10 @@ async function createUserWithRole(client, { schoolId, name, email, phone, passwo
 
   await client.query(
     `
-    INSERT INTO user_roles (user_id, role_id)
-    VALUES ($1, $2)
+    INSERT INTO user_roles (user_id, role_id, school_id)
+    VALUES ($1, $2, $3)
     `,
-    [userId, roleId]
+    [userId, roleId, schoolId]
   );
 
   return userId;
@@ -284,6 +281,33 @@ export const registerStudent = async (req, res) => {
 
     const studentId = stuRes.rows[0].id;
 
+    // استعلام ديناميكي لجلب معرفات الأدوار للمدرسة الحالية
+    const studentRoleRes = await client.query(
+      `SELECT id FROM roles WHERE LOWER(name) = 'student' AND school_id = $1 LIMIT 1`,
+      [schoolId]
+    );
+ const guardianRoleRes = await client.query(
+  `SELECT id FROM roles WHERE LOWER(name) IN ('guardian', 'parent') AND school_id = $1 LIMIT 1`,
+  [schoolId]
+);
+
+    const studentRoleId = studentRoleRes.rows[0]?.id;
+    const guardianRoleId = guardianRoleRes.rows[0]?.id;
+
+    if (account?.create_student_account && !studentRoleId) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        message: "دور الطالب غير معرف لهذه المدرسة. يرجى تهيئة الأدوار أولاً.",
+      });
+    }
+
+    if (guardian?.create_account && !guardianRoleId) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({
+        message: "دور ولي الأمر غير معرف لهذه المدرسة. يرجى تهيئة الأدوار أولاً.",
+      });
+    }
+
     if (!sectionId) {
       const sec = await client.query(
         `
@@ -404,7 +428,7 @@ export const registerStudent = async (req, res) => {
             email: gRow.email || guardian.email || null,
             phone: gRow.phone || null,
             passwordPlain: guardian.password,
-            roleId: ROLE_GUARDIAN_ID,
+            roleId: guardianRoleId,
           });
 
           await client.query(
@@ -454,7 +478,7 @@ export const registerStudent = async (req, res) => {
           email: gEmail,
           phone: String(guardian.phone).trim(),
           passwordPlain: guardian.password,
-          roleId: ROLE_GUARDIAN_ID,
+          roleId: guardianRoleId,
         });
 
         await client.query(
@@ -480,7 +504,7 @@ export const registerStudent = async (req, res) => {
         email: sEmail,
         phone: student.phone || null,
         passwordPlain: account.password,
-        roleId: ROLE_STUDENT_ID,
+        roleId: studentRoleId,
       });
 
       await client.query(
