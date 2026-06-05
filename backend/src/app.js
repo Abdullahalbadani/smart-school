@@ -57,7 +57,10 @@ import studentLearningRoutes from "./routes/studentLearningRoutes.js";
 import studentNotificationsRoutes from "./routes/studentNotificationsRoutes.js";
 import studentFeesPortalRoutes from "./routes/studentFeesPortalRoutes.js";
 import studentTermResultsRoutes from "./routes/studentTermResultsRoutes.js";
+// 1. أضف الاستيراد في قسم الاستيرادات
+import adminTeachersRoutes from "./routes/adminTeachersRoutes.js";
 
+// 2. أضف في قسم Protected Routes
 // Parent Portal Routes
 import parentPortalRoutes from "./routes/parentPortalRoutes.js";
 import parentRoutes from "./routes/parentRoutes.js";
@@ -308,6 +311,7 @@ mountRoutes([
   { path: "/api/teacher/reports", middlewares: protectedMiddlewares, router: teacherReportsRoutes },
   { path: "/api/teacher/notifications", middlewares: protectedMiddlewares, router: teacherNotificationsRoutes },
   { path: "/api/teacher/notifications", middlewares: protectedMiddlewares, router: teacherNotificationsSendRoutes },
+{ path: "/api/admin/teachers", middlewares: protectedMiddlewares, router: adminTeachersRoutes },
 
   // Student Portal
   { path: "/api/student/attendance", middlewares: protectedMiddlewares, router: studentAttendanceRoutes },
