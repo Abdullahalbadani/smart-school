@@ -54,12 +54,9 @@ const EP = {
     `/sections?gradeId=${encodeURIComponent(gradeId)}`,
   ],
 
-  attendanceReasons: [
-    "/attendance-reasons",
-    "/attendance_reasons",
-    "/admin/attendance-reasons",
-    "/admin/attendance_reasons",
-  ],
+ attendanceReasons: [
+  "/teacher/attendance/reasons",
+],
 };
 
   // =========================

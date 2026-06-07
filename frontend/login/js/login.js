@@ -8,36 +8,178 @@ const API_BASE = "/api";
   const state = { inited: false };
 
   // --- دالة استخراج معرف المدرسة (Slug) من الرابط ---
- function getSchoolSlug() {
-    const params = new URLSearchParams(window.location.search);
-    const fromQuery = String(params.get("school") || params.get("slug") || "").trim().toLowerCase();
+// استخراج رابط المدرسة من:
+// 1. query parameter
+// 2. subdomain في بيئة الإنتاج
+// 3. التخزين المحلي كحل احتياطي فقط
+function getSchoolSlug() {
+  const params = new URLSearchParams(window.location.search);
 
-    if (fromQuery) {
-        localStorage.setItem("school_slug", fromQuery);
-        return fromQuery;
+  const fromQuery = String(
+    params.get("school") ||
+    params.get("slug") ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (fromQuery) {
+    localStorage.setItem("school_slug", fromQuery);
+    return fromQuery;
+  }
+
+  const hostname = window.location.hostname.toLowerCase();
+  const parts = hostname.split(".");
+
+  // دعم روابط مثل:
+  // september.localhost
+  if (hostname.endsWith(".localhost") && parts[0]) {
+    const fromLocalSubdomain = parts[0];
+    localStorage.setItem("school_slug", fromLocalSubdomain);
+    return fromLocalSubdomain;
+  }
+
+  // دعم روابط الإنتاج مثل:
+  // september.example.com
+  if (
+    parts.length > 2 &&
+    !hostname.endsWith(".onrender.com")
+  ) {
+    const fromSubdomain = parts[0];
+
+    if (fromSubdomain && fromSubdomain !== "www") {
+      localStorage.setItem("school_slug", fromSubdomain);
+      return fromSubdomain;
     }
+  }
 
-    const fromStorage = String(localStorage.getItem("school_slug") || "").trim().toLowerCase();
-    if (fromStorage) return fromStorage;
+  // حل احتياطي لتسهيل إعادة الدخول من المتصفح نفسه
+  const fromStorage = String(
+    localStorage.getItem("school_slug") || ""
+  )
+    .trim()
+    .toLowerCase();
 
-    const hostname = window.location.hostname;
-    const parts = hostname.split(".");
+  if (fromStorage) {
+    return fromStorage;
+  }
 
-    if (hostname === "localhost" || hostname === "127.0.0.1") {
-        return "smart-school";
-    }
-
-    if (hostname.endsWith(".localhost")) {
-        return parts[0];
-    }
-
-    if (parts.length > 2 && !hostname.endsWith(".onrender.com")) {
-        return parts[0];
-    }
-
-    return "smart-school";
+  // لا تستخدم قيمة افتراضية وهمية
+  return "";
 }
+function showSchoolLoginLink() {
+  const slug = getSchoolSlug();
 
+  // لا يمكن عرض رابط مدرسة إذا لم تكن المدرسة محددة
+  if (!slug || !document.body) return;
+
+  const existingBox = document.getElementById("school-login-link-box");
+
+  // منع تكرار المربع عند تشغيل MutationObserver
+  if (existingBox) return;
+
+  const schoolName = String(
+    localStorage.getItem("school_name") || ""
+  ).trim();
+
+  const schoolLoginUrl =
+    `${window.location.origin}` +
+    `/frontend/login/login.html?school=${encodeURIComponent(slug)}`;
+
+  const box = document.createElement("div");
+  box.id = "school-login-link-box";
+
+  box.innerHTML = `
+    <div style="
+      font-weight: 800;
+      font-size: 15px;
+      margin-bottom: 6px;
+      color: #0f172a;
+    ">
+      ${schoolName ? `مدرسة ${schoolName}` : `المدرسة: ${slug}`}
+    </div>
+
+    <div style="
+      font-size: 12px;
+      color: #475569;
+      margin-bottom: 8px;
+    ">
+      رابط تسجيل الدخول الخاص بمدرستك
+    </div>
+
+    <a
+      href="${schoolLoginUrl}"
+      style="
+        display: block;
+        color: #0369a1;
+        font-size: 12px;
+        direction: ltr;
+        word-break: break-all;
+        text-decoration: underline;
+        margin-bottom: 10px;
+      "
+    >
+      ${schoolLoginUrl}
+    </a>
+
+    <button
+      id="copy-school-login-link"
+      type="button"
+      style="
+        border: none;
+        border-radius: 8px;
+        padding: 8px 14px;
+        background: #0ea5e9;
+        color: white;
+        cursor: pointer;
+        font-family: inherit;
+        font-weight: 700;
+      "
+    >
+      نسخ الرابط
+    </button>
+  `;
+
+  Object.assign(box.style, {
+    position: "fixed",
+    left: "16px",
+    bottom: "16px",
+    zIndex: "99999",
+    width: "min(360px, calc(100vw - 32px))",
+    padding: "14px",
+    borderRadius: "14px",
+    background: "#ffffff",
+    boxShadow: "0 8px 24px rgba(15, 23, 42, 0.18)",
+    border: "1px solid #e2e8f0",
+    direction: "rtl",
+    textAlign: "right"
+  });
+
+  document.body.appendChild(box);
+
+  const copyButton = document.getElementById(
+    "copy-school-login-link"
+  );
+
+  copyButton?.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(schoolLoginUrl);
+
+      const oldText = copyButton.textContent;
+      copyButton.textContent = "تم النسخ ✅";
+
+      setTimeout(() => {
+        copyButton.textContent = oldText;
+      }, 1500);
+    } catch {
+      await window.AppUI.alert({
+        title: "تعذر النسخ التلقائي",
+        message: `انسخ الرابط يدويًا:\n${schoolLoginUrl}`,
+        type: "info",
+      });
+    }
+  });
+}
   function $(sel, root = document) {
     return root.querySelector(sel);
   }
@@ -56,7 +198,17 @@ const API_BASE = "/api";
 
     const name = (user && (user.role || user.role_name || user.roleName)) || "";
     const n = String(name).trim().toLowerCase();
-    if (["admin", "teacher", "student", "parent"].includes(n)) return n;
+   if (
+  [
+    "admin",
+    "school_admin",
+    "teacher",
+    "student",
+    "parent"
+  ].includes(n)
+) {
+  return n;
+}
 
     const id = Number(user && user.role_id);
     if (id === 1) return "admin";
@@ -67,13 +219,29 @@ const API_BASE = "/api";
     return "";
   }
 
-  function dashboardUrlFor(roleKey) {
-    if (roleKey === "teacher") return "/frontend/teacher/index.html";
-    if (roleKey === "student") return "/frontend/student/index.html";
-    if (roleKey === "parent") return "/frontend/parent/index.html";
+ function dashboardUrlFor(roleKey) {
+  if (roleKey === "teacher") {
+    return "/frontend/teacher/index.html";
+  }
+
+  if (roleKey === "student") {
+    return "/frontend/student/index.html";
+  }
+
+  if (roleKey === "parent") {
+    return "/frontend/parent/index.html";
+  }
+
+  if (
+    roleKey === "school_admin" ||
+    roleKey === "admin"
+  ) {
     return "/frontend/admin/index.html";
   }
 
+  // للأدوار الإدارية المخصصة
+  return "/frontend/admin/index.html";
+}
   function goto(url) {
     console.log("تم الانتقال إلى", url);
     window.location.replace(url);
@@ -89,16 +257,44 @@ const API_BASE = "/api";
     localStorage.removeItem("user");
   }
 
-  function redirectIfAlreadyLoggedIn() {
-    const token = localStorage.getItem("token");
-    const user = safeJsonParse(localStorage.getItem("user") || "");
-    if (token && user) {
-      const roleKey = getRoleKeyFromUser(user);
-      goto(dashboardUrlFor(roleKey));
-      return true;
-    }
+ function redirectIfAlreadyLoggedIn() {
+  const token = localStorage.getItem("token");
+  const user = safeJsonParse(
+    localStorage.getItem("user") || ""
+  );
+
+  if (!token || !user) {
     return false;
   }
+
+  const requestedSlug = getSchoolSlug();
+
+  const sessionSlug = String(
+    user.school_slug ||
+    user.schoolSlug ||
+    user.slug ||
+    localStorage.getItem("school_slug") ||
+    ""
+  )
+    .trim()
+    .toLowerCase();
+
+  // إذا فتح المستخدم رابط مدرسة مختلفة:
+  // نحذف الجلسة القديمة ونتركه يسجل الدخول من جديد
+  if (
+    requestedSlug &&
+    sessionSlug &&
+    requestedSlug !== sessionSlug
+  ) {
+    clearSession();
+    return false;
+  }
+
+  const roleKey = getRoleKeyFromUser(user);
+  goto(dashboardUrlFor(roleKey));
+
+  return true;
+}
 
   function findLoginElements() {
     const form = $("#loginForm") || $("form");
@@ -161,10 +357,11 @@ const API_BASE = "/api";
   async function apiLogin(identifier, password) {
   const slug = getSchoolSlug();
 
-  if (!slug) {
-    throw new Error("لم نتمكن من تحديد هوية المدرسة من الرابط الحالي.");
-  }
-
+ if (!slug) {
+  throw new Error(
+    "لم يتم تحديد المدرسة. يرجى استخدام رابط تسجيل الدخول الخاص بمدرستك."
+  );
+}
   const body = {
     slug: slug,
     email: identifier,
@@ -242,15 +439,34 @@ const API_BASE = "/api";
     const { email, password, submit } = getEls();
 
     if (!email || !password) {
-      alert("لم أجد حقول تسجيل الدخول في الصفحة.");
+      await window.AppUI.alert({
+        title: "تعذر تسجيل الدخول",
+        message: "لم يتم العثور على حقول تسجيل الدخول في الصفحة.",
+        type: "danger",
+      });
       return;
     }
 
     const identifier = String(email.value || "").trim();
     const pass = String(password.value || "");
 
-    if (!identifier) return alert("اكتب البريد/اسم المستخدم");
-    if (!pass) return alert("اكتب كلمة المرور");
+    if (!identifier) {
+      await window.AppUI.alert({
+        title: "بيانات مطلوبة",
+        message: "اكتب البريد الإلكتروني أو اسم المستخدم.",
+        type: "warning",
+      });
+      return;
+    }
+
+    if (!pass) {
+      await window.AppUI.alert({
+        title: "بيانات مطلوبة",
+        message: "اكتب كلمة المرور.",
+        type: "warning",
+      });
+      return;
+    }
 
     if (submit) submit.disabled = true;
 
@@ -267,17 +483,23 @@ const API_BASE = "/api";
 
       saveSession(token, user);
       const roleKey = getRoleKeyFromUser(user);
-      goto(dashboardUrlFor(roleKey));
+      window.AppUI.toast("تم تسجيل الدخول بنجاح ✅", "success", { timeout: 1600 });
+      setTimeout(() => goto(dashboardUrlFor(roleKey)), 550);
     } catch (e) {
       console.error("login error:", e);
       clearSession();
-      alert(e.message || "فشل تسجيل الدخول");
+      await window.AppUI.alert({
+        title: "تعذر تسجيل الدخول",
+        message: e.message || "فشل تسجيل الدخول.",
+        type: "danger",
+      });
     } finally {
       if (submit) submit.disabled = false;
     }
   }
 
   function initIfReady() {
+    showSchoolLoginLink();
     if (state.inited) return;
 
     if (redirectIfAlreadyLoggedIn()) {

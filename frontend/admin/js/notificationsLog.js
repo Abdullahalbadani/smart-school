@@ -203,7 +203,11 @@ async function apiRequest(url, options = {}) {
         await loadList();
       } catch (err) {
         console.error("sent log refresh error:", err);
-        alert(err.message || "فشل تحديث السجل");
+        window.AppUI?.alert({
+          title: "تعذر تحديث سجل الإشعارات",
+          message: err.message || "فشل تحديث السجل",
+          type: "error",
+        });
       }
     });
 
@@ -227,7 +231,11 @@ async function apiRequest(url, options = {}) {
         await loadList();
       } catch (err) {
         console.error(err);
-        alert(err.message || "فشل البحث");
+        window.AppUI?.alert({
+          title: "تعذر البحث في سجل الإشعارات",
+          message: err.message || "فشل البحث",
+          type: "error",
+        });
       }
     });
 
@@ -243,7 +251,11 @@ async function apiRequest(url, options = {}) {
         await loadDetails(id);
       } catch (err) {
         console.error("load sent details error:", err);
-        alert(err.message || "فشل جلب التفاصيل");
+        window.AppUI?.alert({
+          title: "تعذر جلب تفاصيل الإشعار",
+          message: err.message || "فشل جلب التفاصيل",
+          type: "error",
+        });
       }
     });
   }
@@ -258,7 +270,11 @@ async function apiRequest(url, options = {}) {
       await loadList();
     } catch (err) {
       console.error("init notifications log error:", err);
-      alert(err.message || "فشل تحميل سجل الإشعارات");
+      window.AppUI?.alert({
+        title: "تعذر تحميل سجل الإشعارات",
+        message: err.message || "فشل تحميل سجل الإشعارات",
+        type: "error",
+      });
     }
 
     state.initialized = true;

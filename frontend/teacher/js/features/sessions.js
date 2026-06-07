@@ -98,7 +98,7 @@ function findFinishedSessionInLog(dateVal, periodId, scope) {
         };
 
   const toast = (msg) =>
-    typeof window.showToast === "function" ? window.showToast(msg) : alert(msg);
+    typeof window.showToast === "function" ? window.showToast(msg) : console.warn(msg);
 
   const toInt = (v) => {
     const n = parseInt(String(v ?? "").trim(), 10);
@@ -1753,11 +1753,21 @@ try {
   closeBtns.forEach((btn) => {
     btn.addEventListener(
       "click",
-      (e) => {
-        if (!canLeaveTakeTab()) {
-          e.preventDefault();
-          e.stopPropagation();
+      async (e) => {
+        if (__ATT_ALLOW_CLOSE_ONCE) {
+          __ATT_ALLOW_CLOSE_ONCE = false;
+          return;
         }
+
+        if (ACTIVE_LOCKED || !HAS_DIRTY) return;
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        if (!(await canLeaveTakeTab())) return;
+
+        __ATT_ALLOW_CLOSE_ONCE = true;
+        btn.click();
       },
       true
     );
@@ -2425,11 +2435,24 @@ dateInput.addEventListener("change", async () => {
 
   // ============== Tab switch ==============
  let __ATT_CURRENT_TAB = "take";
+ let __ATT_ALLOW_CLOSE_ONCE = false;
 
-function canLeaveTakeTab() {
+async function canLeaveTakeTab() {
   if (ACTIVE_LOCKED) return true;
   if (!HAS_DIRTY) return true;
-  return window.confirm("لديك تغييرات غير محفوظة في الحضور. هل تريد المتابعة بدون حفظ؟");
+
+  if (window.AppUI?.confirm) {
+    return await window.AppUI.confirm({
+      title: "تغييرات غير محفوظة",
+      message: "لديك تغييرات غير محفوظة في الحضور. هل تريد المتابعة بدون حفظ؟",
+      confirmText: "متابعة بدون حفظ",
+      cancelText: "العودة للحفظ",
+      type: "warning",
+    });
+  }
+
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
 function updateQrViewUI() {
   // معرفات HTML كما أرسلتها لي سابقاً
@@ -2460,7 +2483,7 @@ function updateQrViewUI() {
     if (live) live.style.display = "none";
   }
 }
-function setAttendanceTab(which) {
+async function setAttendanceTab(which) {
   const w =
     which === "perms" ? "perms" :
     which === "history" ? "history" :
@@ -2471,7 +2494,7 @@ if (w === "scan") {
       updateQrViewUI(); // <--- هذا السطر سيحل مشكلتك
   }
   if (__ATT_CURRENT_TAB === "take" && w !== "take") {
-    if (!canLeaveTakeTab()) return;
+    if (!(await canLeaveTakeTab())) return false;
   }
 
   __ATT_CURRENT_TAB = w;
@@ -2493,6 +2516,7 @@ if (w === "scan") {
   if (viewPerms) viewPerms.style.display = w === "perms" ? "" : "none";
   if (viewHist) viewHist.style.display = w === "history" ? "" : "none";
   if (viewRep) viewRep.style.display = w === "report" ? "" : "none";
+  return true;
 }
 
 (function bindScanStartButtonOnce(){
@@ -2514,7 +2538,9 @@ if (w === "scan") {
       if (ACTIVE_LOCKED) return toast("الجلسة معتمدة/مقفولة — لا يمكن تشغيل الكاميرا.");
 
       // افتح تبويب المسح (بدون تشغيل تلقائي)
-      try { setAttendanceTab("scan"); } catch {}
+      try {
+        if (!(await setAttendanceTab("scan"))) return;
+      } catch {}
 
       resetScanInputKeepLog();
 
@@ -2531,14 +2557,14 @@ if (w === "scan") {
 
 
  tabTake?.addEventListener("click", () => setAttendanceTab("take"));
-tabPerms?.addEventListener("click", () => {                 // ✅
-  setAttendanceTab("perms");
+tabPerms?.addEventListener("click", async () => {                 // ✅
+  if (!(await setAttendanceTab("perms"))) return;
 window.loadPermitsList?.().catch((e) => toast("فشل تحميل الأذونات: " + (e.message || "")));
 });
-tabHist?.addEventListener("click", () => setAttendanceTab("history"));
-tabRep?.addEventListener("click", () => setAttendanceTab("report"));
+tabHist?.addEventListener("click", async () => { await setAttendanceTab("history"); });
+tabRep?.addEventListener("click", async () => { await setAttendanceTab("report"); });
 tabScan?.addEventListener("click", async () => {
-  setAttendanceTab("scan");
+  if (!(await setAttendanceTab("scan"))) return;
 
   // ✅ مهم: حمّل الجلسة من السياق قبل التحقق
   await refreshFromContext().catch(() => {});

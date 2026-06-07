@@ -74,9 +74,10 @@
   }
 }
 
-  function showToast(msg) {
-    if (window.toast && typeof window.toast === "function") return window.toast(msg);
-    if (window.showToast && typeof window.showToast === "function") return window.showToast(msg);
+  function showToast(msg, type = "info") {
+    if (window.AppUI?.toast) return window.AppUI.toast(msg, type);
+    if (window.toast && typeof window.toast === "function") return window.toast(msg, type);
+    if (window.showToast && typeof window.showToast === "function") return window.showToast(msg, type);
     console.log(msg);
   }
 
@@ -453,6 +454,7 @@ function showComposeStatus(msg, isError = false) {
   box.style.display = msg ? "" : "none";
   box.style.border = isError ? "1px solid rgba(239,68,68,.35)" : "";
   box.textContent = msg || "";
+  if (msg && isError && window.AppUI?.toast) window.AppUI.toast(msg, "warning");
 }
 
 function getComposeMessage() {

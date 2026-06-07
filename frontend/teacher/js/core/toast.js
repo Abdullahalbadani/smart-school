@@ -3,10 +3,11 @@
   "use strict";
 
   if (!window.showToast) {
-    window.showToast = function showToast(message) {
+    window.showToast = function showToast(message, type = "info") {
+      if (window.AppUI?.toast) return window.AppUI.toast(message, type);
       const toast = window.$ ? window.$("toast") : document.getElementById("toast");
       if (!toast) {
-        alert(message);
+        console.warn(message);
         return;
       }
       toast.textContent = message;

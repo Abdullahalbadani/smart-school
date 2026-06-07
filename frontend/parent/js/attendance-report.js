@@ -13,7 +13,7 @@
 
   function toast(msg) {
     if (typeof window.showToast === "function") return window.showToast(msg);
-    alert(msg);
+    console.warn(msg);
   }
 
   function pad2(n) {

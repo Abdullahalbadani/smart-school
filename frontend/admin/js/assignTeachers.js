@@ -56,7 +56,7 @@ const apiUrl =
   function showToast(msg) {
     // لو عندك Toast عام في admin استخدمه. وإلا fallback:
     if (window.showToast) return window.showToast(msg);
-    alert(msg);
+    console.warn(msg);
   }
 
   let META = null;
@@ -174,19 +174,24 @@ const apiUrl =
         return;
       }
 
-      await apiFetch("/admin/assign-teachers/section", {
-        method: "POST",
-        body: JSON.stringify({
-          academic_year_id: yearId,
-          term,
-          section_id: sectionId,
-          assignments,
-        }),
-      });
+      try {
+        await apiFetch("/admin/assign-teachers/section", {
+          method: "POST",
+          body: JSON.stringify({
+            academic_year_id: yearId,
+            term,
+            section_id: sectionId,
+            assignments,
+          }),
+        });
 
-      showToast("تم الحفظ ✅");
-      markDirty(false);
-      await tryLoad();
+        showToast("تم حفظ تعيين المدرسين بنجاح ✅");
+        markDirty(false);
+        await tryLoad();
+      } catch (error) {
+        console.error("assign teachers save error:", error);
+        showToast(error.message || "تعذر حفظ تعيين المدرسين.");
+      }
     });
 
     searchInp.addEventListener("input", () => {

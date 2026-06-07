@@ -66,8 +66,9 @@ async function apiGet(path) {
     return new Intl.DateTimeFormat("ar", { weekday: "long" }).format(d);
   }
 
-  function toast(msg) {
-    alert(msg);
+  function toast(msg, type = "info") {
+    if (window.AppUI?.toast) return window.AppUI.toast(msg, type);
+    console.warn(msg);
   }
 
   function openModal(modal, open) {
@@ -303,7 +304,14 @@ async function apiGet(path) {
     };
 
     $("#fpRejectBtn", root).onclick = async () => {
-      const reason = prompt("سبب الرفض (اختياري):") || "";
+      const reason =
+        (await window.AppUI.prompt({
+          title: "رفض طلب الرسوم",
+          message: "اكتب سبب الرفض إذا رغبت في توضيحه للمستخدم.",
+          defaultValue: "",
+          confirmText: "رفض الطلب",
+          cancelText: "إلغاء",
+        })) || "";
       try {
         await apiPost(`/fees/requests/${reqId}/reject`, { reason });
         toast("تم رفض الطلب ✅");

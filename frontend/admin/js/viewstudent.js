@@ -162,6 +162,12 @@ async function stuConfirm(options) {
     const tbody = $("#stuTbody");
     const cardsWrap = $("#stuCards");
 
+    const paginationSummary = $("#stuPaginationSummary");
+    const paginationPages = $("#stuPaginationPages");
+    const pagePrevBtn = $("#stuPagePrev");
+    const pageNextBtn = $("#stuPageNext");
+    const pageLimitEl = $("#stuPageLimit");
+
     const statTotal = $("#stuStatTotal");
     const statActive = $("#stuStatActive");
     const statInactive = $("#stuStatInactive");
@@ -235,6 +241,10 @@ async function stuConfirm(options) {
       allGrades: [],
       allSections: [],
       filters: { stage: "", grade: "", section: "", q: "", onlyActive: false },
+      page: 1,
+      limit: 20,
+      total: 0,
+      pages: 0,
       currentStudent: null,
       studentsAbort: null,
       gradesAbort: null,
@@ -570,9 +580,10 @@ const res = await apiFetch(apiUrl(`/sections?grade_id=${encodeURIComponent(grade
       if (state.filters.grade) u.searchParams.set("grade_id", state.filters.grade);
       if (state.filters.section) u.searchParams.set("section_id", state.filters.section);
 
-      // السيرفر عندك عادة يقيّد limit (أحياناً 100). نخليها 100 آمن.
-      u.searchParams.set("page", "1");
-      u.searchParams.set("limit", String(window.STU_FETCH_LIMIT || 100));
+      if (state.filters.onlyActive) u.searchParams.set("status", "active");
+
+      u.searchParams.set("page", String(state.page));
+      u.searchParams.set("limit", String(state.limit));
 
       u.searchParams.set("sort_by", "created_at");
       u.searchParams.set("sort_dir", "desc");
@@ -594,36 +605,80 @@ const res = await apiFetch(apiUrl(`/sections?grade_id=${encodeURIComponent(grade
         // شكل API عندك: {page,limit,total,pages,data:[...]}
         const rows = Array.isArray(res) ? res : res?.data || res?.students || [];
         state.list = rows.map(normalizeStudent);
+        state.total = Array.isArray(res) ? rows.length : Number(res?.total || 0);
+        state.pages = Array.isArray(res) ? (rows.length ? 1 : 0) : Number(res?.pages || 0);
+        state.page = Array.isArray(res) ? 1 : Number(res?.page || state.page || 1);
+        state.limit = Array.isArray(res) ? state.limit : Number(res?.limit || state.limit || 20);
+        if (state.pages > 0 && state.page > state.pages) {
+          state.page = state.pages;
+          return await loadStudents();
+        }
+        if (pageLimitEl) pageLimitEl.value = String(state.limit);
         render();
       } catch (e) {
         if (String(e?.name || "").toLowerCase() === "aborterror") return;
         console.error(e);
         toast(e.message || "فشل تحميل الطلاب");
         state.list = [];
+        state.total = 0;
+        state.pages = 0;
         render();
       }
     }
 
     function computeVisible(items) {
-      const onlyActive = !!state.filters.onlyActive;
-      const q = (state.filters.q || "").trim().toLowerCase();
+      // الفلاتر تنفذ داخل الخادم حتى يكون الترقيم والعدد الإجمالي صحيحين.
+      return items || [];
+    }
 
-      const st = state.filters.stage;
-      const gr = state.filters.grade;
-      const se = state.filters.section;
+    function getVisiblePageNumbers(current, totalPages) {
+      if (totalPages <= 7) return Array.from({ length: totalPages }, (_, index) => index + 1);
 
-      return (items || []).filter((s) => {
-        if (st && String(s.stage_id) !== String(st)) return false;
-        if (gr && String(s.grade_id) !== String(gr)) return false;
-        if (se && String(s.section_id) !== String(se)) return false;
+      const values = new Set([1, totalPages, current - 1, current, current + 1]);
+      if (current <= 3) [2, 3, 4].forEach((value) => values.add(value));
+      if (current >= totalPages - 2) [totalPages - 3, totalPages - 2, totalPages - 1].forEach((value) => values.add(value));
+      return [...values].filter((value) => value >= 1 && value <= totalPages).sort((a, b) => a - b);
+    }
 
-        if (onlyActive && !isActiveStatus(s.status)) return false;
+    function renderPagination() {
+      const total = Math.max(0, Number(state.total || 0));
+      const pages = Math.max(0, Number(state.pages || 0));
+      const current = Math.max(1, Number(state.page || 1));
+      const limit = Math.max(1, Number(state.limit || 20));
+      const start = total ? (current - 1) * limit + 1 : 0;
+      const end = total ? Math.min(current * limit, total) : 0;
 
-        if (q) {
-          const hay = `${s.id} ${s.code} ${s.name} ${s.phone} ${s.guardian} ${s.guardianPhone}`.toLowerCase();
-          if (!hay.includes(q)) return false;
+      if (paginationSummary) {
+        paginationSummary.textContent = total
+          ? `عرض ${start} - ${end} من أصل ${total} طالبًا`
+          : "لا توجد نتائج للعرض";
+      }
+
+      if (pagePrevBtn) pagePrevBtn.disabled = current <= 1 || pages <= 1;
+      if (pageNextBtn) pageNextBtn.disabled = current >= pages || pages <= 1;
+      if (!paginationPages) return;
+
+      paginationPages.innerHTML = "";
+      const numbers = getVisiblePageNumbers(current, pages);
+      let previous = null;
+
+      numbers.forEach((number) => {
+        if (previous !== null && number - previous > 1) {
+          const dots = document.createElement("span");
+          dots.className = "stu-page-dots";
+          dots.textContent = "…";
+          paginationPages.appendChild(dots);
         }
-        return true;
+
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `stu-page-number${number === current ? " is-active" : ""}`;
+        button.textContent = String(number);
+        button.dataset.page = String(number);
+        button.setAttribute("aria-label", `الانتقال إلى الصفحة ${number}`);
+        if (number === current) button.setAttribute("aria-current", "page");
+        paginationPages.appendChild(button);
+        previous = number;
       });
     }
 
@@ -637,6 +692,7 @@ const res = await apiFetch(apiUrl(`/sections?grade_id=${encodeURIComponent(grade
       if (statTotal) statTotal.textContent = String(total);
       if (statActive) statActive.textContent = String(active);
       if (statInactive) statInactive.textContent = String(inactive);
+      renderPagination();
 
       if (tbody) tbody.innerHTML = "";
       if (cardsWrap) cardsWrap.innerHTML = "";
@@ -1451,6 +1507,7 @@ try {
     // ===== Events =====
     stageEl?.addEventListener("change", async () => {
       state.filters.stage = stageEl.value;
+      state.page = 1;
       state.filters.grade = "";
       state.filters.section = "";
       if (gradeEl) gradeEl.value = "";
@@ -1463,6 +1520,7 @@ try {
 
     gradeEl?.addEventListener("change", async () => {
       state.filters.grade = gradeEl.value;
+      state.page = 1;
       state.filters.section = "";
       if (secEl) secEl.value = "";
       await loadSections(gradeEl.value, secEl);
@@ -1471,19 +1529,21 @@ try {
 
     secEl?.addEventListener("change", async () => {
       state.filters.section = secEl.value;
+      state.page = 1;
       await loadStudents();
     });
 
-    onlyAEl?.addEventListener("change", () => {
+    onlyAEl?.addEventListener("change", async () => {
       state.filters.onlyActive = !!onlyAEl.checked;
-      render();
+      state.page = 1;
+      await loadStudents();
     });
 
     qEl?.addEventListener("input", () => {
       clearTimeout(qEl.__t);
       qEl.__t = setTimeout(async () => {
         state.filters.q = qEl.value || "";
-        render();
+        state.page = 1;
         await loadStudents();
       }, 320);
     });
@@ -1491,13 +1551,14 @@ try {
     clearBtn?.addEventListener("click", async () => {
       if (qEl) qEl.value = "";
       state.filters.q = "";
-      render();
+      state.page = 1;
       await loadStudents();
       qEl?.focus?.();
     });
 
     resetBtn?.addEventListener("click", async () => {
       state.filters = { stage: "", grade: "", section: "", q: "", onlyActive: false };
+      state.page = 1;
 
       if (stageEl) stageEl.value = "";
       if (gradeEl) {
@@ -1514,24 +1575,60 @@ try {
       setSelect(gradeEl, [], { allLabel: "الكل" });
       setSelect(secEl, [], { allLabel: "الكل" });
 
-      render();
       await loadStudents();
     });
 
     emptyReset?.addEventListener("click", () => resetBtn?.click());
     refreshBtn?.addEventListener("click", loadStudents);
 
-    exportBtn?.addEventListener("click", () => {
-      const rows = state.lastVisible?.length ? state.lastVisible : computeVisible(state.list);
-      if (!rows.length) return toast("لا توجد بيانات للتصدير");
-      const csv = toCSV(rows);
-      downloadFile(`students_${new Date().toISOString().slice(0, 10)}.csv`, csv, "text/csv;charset=utf-8");
-      toast("تم تصدير CSV ✅");
+    function currentSchoolReportFilters() {
+      return {
+        stage_id: state.filters.stage || null,
+        grade_id: state.filters.grade || null,
+        section_id: state.filters.section || null,
+      };
+    }
+
+    exportBtn?.addEventListener("click", async () => {
+      if (!window.SchoolReports?.openStudentsReport) return toast("تعذر تحميل نظام التقارير");
+      await window.SchoolReports.openStudentsReport({
+        action: "pdf",
+        filters: currentSchoolReportFilters(),
+      });
     });
 
     printBtn?.addEventListener("click", async () => {
-      const rows = state.lastVisible?.length ? state.lastVisible : computeVisible(state.list);
-      await printStudentCards(rows, { title: "طباعة بطاقات الطلاب" });
+      if (!window.SchoolReports?.openStudentsReport) return toast("تعذر تحميل نظام التقارير");
+      await window.SchoolReports.openStudentsReport({
+        action: "print",
+        filters: currentSchoolReportFilters(),
+      });
+    });
+
+    pagePrevBtn?.addEventListener("click", async () => {
+      if (state.page <= 1) return;
+      state.page -= 1;
+      await loadStudents();
+    });
+
+    pageNextBtn?.addEventListener("click", async () => {
+      if (state.page >= state.pages) return;
+      state.page += 1;
+      await loadStudents();
+    });
+
+    paginationPages?.addEventListener("click", async (event) => {
+      const button = event.target.closest("[data-page]");
+      const nextPage = Number(button?.dataset?.page || 0);
+      if (!nextPage || nextPage === state.page) return;
+      state.page = nextPage;
+      await loadStudents();
+    });
+
+    pageLimitEl?.addEventListener("change", async () => {
+      state.limit = Number(pageLimitEl.value || 20);
+      state.page = 1;
+      await loadStudents();
     });
 
     // page click (once)

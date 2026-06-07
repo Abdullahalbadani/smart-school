@@ -393,7 +393,13 @@ window.approveFeeAdjustmentRequest = async function (id) {
   const btnReject = document.getElementById(`btn-reject-${id}`);
 
   const adminNote =
-    prompt("اكتب ملاحظة الموافقة:", "تمت الموافقة على تعديل الرسوم") || "";
+    (await window.AppUI.prompt({
+      title: "قبول طلب تعديل الرسوم",
+      message: "اكتب ملاحظة الموافقة إذا رغبت في توضيحها للمستخدم.",
+      defaultValue: "تمت الموافقة على تعديل الرسوم",
+      confirmText: "قبول الطلب",
+      cancelText: "إلغاء",
+    })) || "";
 
   if (btnApprove) {
     btnApprove.disabled = true;
@@ -423,11 +429,15 @@ window.approveFeeAdjustmentRequest = async function (id) {
       throw new Error(result.message || "فشل قبول طلب تعديل الرسوم");
     }
 
-    alert(result.message || "تم قبول الطلب");
+    window.AppUI.toast(result.message || "تم قبول طلب تعديل الرسوم بنجاح ✅", "success");
     loadAdminHomeDashboard();
   } catch (error) {
     console.error("Approve fee adjustment request error:", error);
-    alert(error.message || "تعذر قبول طلب تعديل الرسوم");
+    await window.AppUI.alert({
+      title: "تعذر قبول الطلب",
+      message: error.message || "تعذر قبول طلب تعديل الرسوم.",
+      type: "danger",
+    });
     if (btnApprove) {
       btnApprove.disabled = false;
       btnApprove.style.opacity = "1";
@@ -444,11 +454,23 @@ window.rejectFeeAdjustmentRequest = async function (id) {
   const btnApprove = document.getElementById(`btn-approve-${id}`);
   const btnReject = document.getElementById(`btn-reject-${id}`);
 
-  const adminNote = prompt("اكتب سبب الرفض:");
+  const adminNote = await window.AppUI.prompt({
+    title: "رفض طلب تعديل الرسوم",
+    message: "اكتب سبب الرفض لإظهاره للمستخدم.",
+    defaultValue: "",
+    confirmText: "رفض الطلب",
+    cancelText: "إلغاء",
+    required: true,
+    requiredMessage: "سبب الرفض مطلوب.",
+  });
   if (adminNote === null) return;
 
   if (!String(adminNote).trim()) {
-    alert("سبب الرفض مطلوب.");
+    await window.AppUI.alert({
+      title: "بيانات مطلوبة",
+      message: "سبب الرفض مطلوب.",
+      type: "warning",
+    });
     return;
   }
 
@@ -480,11 +502,15 @@ window.rejectFeeAdjustmentRequest = async function (id) {
       throw new Error(result.message || "فشل رفض طلب تعديل الرسوم");
     }
 
-    alert(result.message || "تم رفض الطلب");
+    window.AppUI.toast(result.message || "تم رفض طلب تعديل الرسوم بنجاح ✅", "success");
     loadAdminHomeDashboard();
   } catch (error) {
     console.error("Reject fee adjustment request error:", error);
-    alert(error.message || "تعذر رفض طلب تعديل الرسوم");
+    await window.AppUI.alert({
+      title: "تعذر رفض الطلب",
+      message: error.message || "تعذر رفض طلب تعديل الرسوم.",
+      type: "danger",
+    });
     if (btnApprove) {
       btnApprove.disabled = false;
       btnApprove.style.opacity = "1";
@@ -705,7 +731,13 @@ async function loadStudentTransferRequests() {
 
 window.approveStudentTransferRequest = async function (id) {
   const adminNote =
-    prompt("اكتب ملاحظة الموافقة:", "تمت الموافقة على نقل الطالب") || "";
+    (await window.AppUI.prompt({
+      title: "قبول طلب نقل الطالب",
+      message: "اكتب ملاحظة الموافقة إذا رغبت في توضيحها للمستخدم.",
+      defaultValue: "تمت الموافقة على نقل الطالب",
+      confirmText: "قبول الطلب",
+      cancelText: "إلغاء",
+    })) || "";
 
   try {
     const response = await fetch(apiUrl(`/admin/student-transfer-requests/${id}/approve`), {
@@ -725,20 +757,36 @@ window.approveStudentTransferRequest = async function (id) {
       throw new Error(result.message || "فشل قبول طلب النقل");
     }
 
-    alert(result.message || "تم قبول طلب النقل");
+    window.AppUI.toast(result.message || "تم قبول طلب نقل الطالب بنجاح ✅", "success");
     loadAdminHomeDashboard();
   } catch (error) {
     console.error("Approve student transfer request error:", error);
-    alert(error.message || "تعذر قبول طلب النقل");
+    await window.AppUI.alert({
+      title: "تعذر قبول طلب النقل",
+      message: error.message || "تعذر قبول طلب نقل الطالب.",
+      type: "danger",
+    });
   }
 };
 
 window.rejectStudentTransferRequest = async function (id) {
-  const adminNote = prompt("اكتب سبب الرفض:");
+  const adminNote = await window.AppUI.prompt({
+    title: "رفض طلب نقل الطالب",
+    message: "اكتب سبب رفض طلب النقل لإظهاره للمستخدم.",
+    defaultValue: "",
+    confirmText: "رفض الطلب",
+    cancelText: "إلغاء",
+    required: true,
+    requiredMessage: "سبب الرفض مطلوب.",
+  });
   if (adminNote === null) return;
 
   if (!String(adminNote).trim()) {
-    alert("سبب الرفض مطلوب.");
+    await window.AppUI.alert({
+      title: "بيانات مطلوبة",
+      message: "سبب الرفض مطلوب.",
+      type: "warning",
+    });
     return;
   }
 
@@ -760,19 +808,37 @@ window.rejectStudentTransferRequest = async function (id) {
       throw new Error(result.message || "فشل رفض طلب النقل");
     }
 
-    alert(result.message || "تم رفض طلب النقل");
+    window.AppUI.toast(result.message || "تم رفض طلب نقل الطالب بنجاح ✅", "success");
     loadAdminHomeDashboard();
   } catch (error) {
     console.error("Reject student transfer request error:", error);
-    alert(error.message || "تعذر رفض طلب النقل");
+    await window.AppUI.alert({
+      title: "تعذر رفض طلب النقل",
+      message: error.message || "تعذر رفض طلب نقل الطالب.",
+      type: "danger",
+    });
   }
 };
 window.approveAssessmentReopenRequest = async function (id) {
-  const hours = prompt("كم ساعة تريد إعادة فتح التقييم؟", "24");
+  const hours = await window.AppUI.prompt({
+    title: "مدة إعادة فتح التقييم",
+    message: "أدخل عدد الساعات التي سيبقى فيها التقييم مفتوحًا للتعديل.",
+    defaultValue: "24",
+    confirmText: "متابعة",
+    cancelText: "إلغاء",
+    required: true,
+    requiredMessage: "عدد الساعات مطلوب.",
+  });
   if (hours === null) return;
 
   const adminNote =
-    prompt("اكتب ملاحظة الموافقة:", "تمت الموافقة لإصلاح الدرجات") || "";
+    (await window.AppUI.prompt({
+      title: "قبول طلب إعادة فتح التقييم",
+      message: "اكتب ملاحظة الموافقة إذا رغبت في توضيحها للمعلم.",
+      defaultValue: "تمت الموافقة لإصلاح الدرجات",
+      confirmText: "قبول الطلب",
+      cancelText: "إلغاء",
+    })) || "";
 
   try {
     const response = await fetch(apiUrl(`/admin/assessment-reopen-requests/${id}/approve`), {
@@ -793,20 +859,36 @@ window.approveAssessmentReopenRequest = async function (id) {
       throw new Error(result.message || "فشل قبول الطلب");
     }
 
-    alert(result.message || "تم قبول الطلب");
+    window.AppUI.toast(result.message || "تم قبول طلب إعادة فتح التقييم بنجاح ✅", "success");
     loadAdminHomeDashboard();
   } catch (error) {
     console.error("Approve reopen request error:", error);
-    alert(error.message || "تعذر قبول الطلب");
+    await window.AppUI.alert({
+      title: "تعذر قبول الطلب",
+      message: error.message || "تعذر قبول طلب إعادة فتح التقييم.",
+      type: "danger",
+    });
   }
 };
 
 window.rejectAssessmentReopenRequest = async function (id) {
-  const adminNote = prompt("اكتب سبب الرفض:");
+  const adminNote = await window.AppUI.prompt({
+    title: "رفض طلب إعادة فتح التقييم",
+    message: "اكتب سبب الرفض لإظهاره للمعلم.",
+    defaultValue: "",
+    confirmText: "رفض الطلب",
+    cancelText: "إلغاء",
+    required: true,
+    requiredMessage: "سبب الرفض مطلوب.",
+  });
   if (adminNote === null) return;
 
   if (!String(adminNote).trim()) {
-    alert("سبب الرفض مطلوب.");
+    await window.AppUI.alert({
+      title: "بيانات مطلوبة",
+      message: "سبب الرفض مطلوب.",
+      type: "warning",
+    });
     return;
   }
 
@@ -828,11 +910,15 @@ window.rejectAssessmentReopenRequest = async function (id) {
       throw new Error(result.message || "فشل رفض الطلب");
     }
 
-    alert(result.message || "تم رفض الطلب");
+    window.AppUI.toast(result.message || "تم رفض طلب إعادة فتح التقييم بنجاح ✅", "success");
     loadAdminHomeDashboard();
   } catch (error) {
     console.error("Reject reopen request error:", error);
-    alert(error.message || "تعذر رفض الطلب");
+    await window.AppUI.alert({
+      title: "تعذر رفض الطلب",
+      message: error.message || "تعذر رفض طلب إعادة فتح التقييم.",
+      type: "danger",
+    });
   }
 };
   // 🕒 دالة احترافية لتحويل الوقت إلى صيغة "منذ..."
@@ -1371,10 +1457,16 @@ const IDLE_LIMIT = 15 * 60 * 1000; // 15 دقيقة
 let idleTimer;
 
 function logoutDueToIdle() {
-  alert("تم تسجيل خروجك بسبب عدم النشاط للحفاظ على أمان البيانات.");
+  window.AppUI?.toast(
+    "تم تسجيل خروجك بسبب عدم النشاط للحفاظ على أمان البيانات.",
+    "warning",
+    { timeout: 1800 }
+  );
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  window.location.href = "/frontend/login/login.html";
+  setTimeout(() => {
+    window.location.href = "/frontend/login/login.html";
+  }, 900);
 }
 
 function resetIdleTimer() {

@@ -36,6 +36,19 @@ function toApiUrl(url) {
   }
 
   function showAlert(type, message) {
+    if (window.AppUI) {
+      if (type === "error") {
+        window.AppUI.alert({
+          title: "تعذر تسجيل الطالب",
+          message,
+          type: "danger",
+        });
+      } else {
+        window.AppUI.toast(message, "success");
+      }
+      return;
+    }
+
     const box = $("#sr-alert");
     if (!box) return;
     box.classList.remove("sr-alert-hidden", "sr-alert-success", "sr-alert-error");

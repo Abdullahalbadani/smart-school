@@ -63,7 +63,7 @@ const apiUrl =
   }
 
   const t = document.getElementById("toast");
-  if (!t) return alert(msg);
+  if (!t) return console.warn(msg);
 
   t.hidden = false;
   t.textContent = msg;
@@ -78,7 +78,8 @@ async function empConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
   function esc(s) {
     return String(s ?? "")
@@ -98,6 +99,7 @@ async function empConfirm(options = {}) {
     mainTab: "form",
     viewTab: "teachers",
     editingId: null,
+    editingTeacherId: null,
 
     // modal state
     lastViewedId: null,
@@ -161,6 +163,7 @@ async function empConfirm(options = {}) {
 
     els.roleSearch = requireEl("empRoleSearch");
     els.rolesList = requireEl("empRolesList");
+    els.rolesBox = requireEl("empRolesBox") || els.rolesList?.closest(".emp-roles") || null;
 
     els.viewModal = requireEl("empViewModal");
     els.viewBody = requireEl("empViewBody");
@@ -211,6 +214,8 @@ async function empConfirm(options = {}) {
         els.userPreview.innerHTML = `<span style="color:rgba(229,231,235,.75)">لا توجد حسابات مناسبة لهذا النوع — تأكد من /api/employees/meta</span>`;
       }
     }
+
+    syncRolesVisibility();
   }
 
   /* ================== Roles Filtering ================== */
@@ -240,19 +245,51 @@ async function empConfirm(options = {}) {
     } ${r?.slug || ""}`.toLowerCase();
   }
 
-  function isExactSystemRole(r, key) {
-    const id = roleId(r);
-    const name = roleName(r);
-    const code = roleCode(r);
+  function roleTokens(r) {
+    return [r?.name, r?.code, r?.key, r?.slug]
+      .map(norm)
+      .filter(Boolean);
+  }
 
-    if (key === "admin")
-      return id === 1 || name === "admin" || code === "admin";
-    if (key === "teacher")
-      return id === 2 || name === "teacher" || code === "teacher";
-    if (key === "student")
-      return id === 3 || name === "student" || code === "student";
-    if (key === "parent")
-      return id === 4 || name === "parent" || code === "parent";
+  function normalizedRoleToken(x) {
+    return norm(x).replace(/[\s-]+/g, "_");
+  }
+
+  function hasExactRoleToken(r, acceptedTokens) {
+    const accepted = new Set(acceptedTokens.map(normalizedRoleToken));
+    return roleTokens(r).some((token) => accepted.has(normalizedRoleToken(token)));
+  }
+
+  function isExactSystemRole(r, key) {
+    // لا نعتمد على أرقام ثابتة للأدوار؛ لأن رقم الدور يختلف من قاعدة بيانات لأخرى.
+    if (key === "admin") {
+      return hasExactRoleToken(r, [
+        "admin",
+        "school_admin",
+        "school administrator",
+        "مدير",
+        "مدير المدرسة",
+      ]);
+    }
+
+    if (key === "teacher") {
+      return hasExactRoleToken(r, ["teacher", "teachers", "معلم", "مدرس"]);
+    }
+
+    if (key === "student") {
+      return hasExactRoleToken(r, ["student", "students", "طالب"]);
+    }
+
+    if (key === "parent") {
+      return hasExactRoleToken(r, [
+        "parent",
+        "parents",
+        "guardian",
+        "ولي أمر",
+        "ولي الامر",
+      ]);
+    }
+
     return false;
   }
 
@@ -275,7 +312,11 @@ async function empConfirm(options = {}) {
   }
 
   function isAdminRole(r) {
-    return isExactSystemRole(r, "admin");
+    if (isExactSystemRole(r, "admin")) return true;
+    return roleTokens(r).some((token) => {
+      const t = normalizedRoleToken(token);
+      return t.includes("admin") || t.includes("مدير");
+    });
   }
 
   function currentKind() {
@@ -302,6 +343,27 @@ async function empConfirm(options = {}) {
     return $$("input[type='checkbox']", els.rolesList)
       .filter((x) => x.checked)
       .map((x) => Number(x.value));
+  }
+
+  function teacherRoleIds() {
+    return (state.roles || [])
+      .filter(isTeacherRole)
+      .map((r) => Number(r.id))
+      .filter((id) => Number.isFinite(id));
+  }
+
+  function shouldShowRolesBox() {
+    // الأدوار يختارها المدير فقط عند إنشاء حساب جديد لموظف.
+    // عند ربط حساب موجود نحافظ على أدواره السابقة ولا نعرضها هنا.
+    // المعلم يأخذ دور teacher تلقائيًا، وبدون حساب لا توجد أدوار دخول.
+    if (currentKind() === "teacher") return false;
+    if (!els.hasAccount?.checked) return false;
+    return accMode() === "create";
+  }
+
+  function syncRolesVisibility() {
+    if (!els.rolesBox) return;
+    els.rolesBox.hidden = !shouldShowRolesBox();
   }
 
   function setRoleIds(ids) {
@@ -359,6 +421,7 @@ async function empConfirm(options = {}) {
     renderRoles();
     setRoleIds(prev);
     applyRoleSearch();
+    syncRolesVisibility();
   }
 
   /* ================== Users select (FILTERED) ================== */
@@ -439,13 +502,49 @@ async function empConfirm(options = {}) {
     return "unknown";
   }
 
+  function linkedEmployeeId(u) {
+    const v =
+      u.linked_employee_id ??
+      u.employee_id ??
+      u.staff_employee_id ??
+      u.emp_id ??
+      null;
+    const n = Number(v);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function linkedTeacherId(u) {
+    const n = Number(u.linked_teacher_id ?? null);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  }
+
+  function isUserAvailableForCurrentRecord(u) {
+    const employeeId = linkedEmployeeId(u);
+    const teacherId = linkedTeacherId(u);
+
+    const employeeAllowed =
+      !employeeId ||
+      (state.editingId && Number(employeeId) === Number(state.editingId));
+
+    const teacherAllowed =
+      !teacherId ||
+      (state.editingTeacherId &&
+        Number(teacherId) === Number(state.editingTeacherId));
+
+    return !!employeeAllowed && !!teacherAllowed;
+  }
+
   function visibleUsers() {
     const kind = currentKind();
     const all = state.usersAll || [];
 
-    if (kind === "teacher")
-      return all.filter((u) => classifyUser(u) === "teacher");
-    return all.filter((u) => classifyUser(u) === "employee");
+    return all.filter((u) => {
+      if (!isUserAvailableForCurrentRecord(u)) return false;
+
+      const c = classifyUser(u);
+      if (kind === "teacher") return c === "teacher";
+      return c === "employee";
+    });
   }
 
   function ensureSelectedUserVisible(selectedId) {
@@ -556,6 +655,14 @@ async function empConfirm(options = {}) {
       `الاسم: <b>${esc(u.full_name || "—")}</b><br>` +
       `الجوال: <b>${esc(u.phone || "—")}</b><br>` +
       `البريد: <b>${esc(u.email || "—")}</b>`;
+  }
+
+  function handleLinkedUserChange() {
+    const id = els.userSelect?.value || "";
+    previewUser(id);
+
+    // عند ربط حساب موجود لا نعدّل أدواره من شاشة الموظفين.
+    // إدارة أدوار الحساب المرتبط تتم من واجهة المستخدمين والصلاحيات.
   }
 
   /* ================== Tabs ================== */
@@ -771,6 +878,7 @@ async function empConfirm(options = {}) {
     const { employee, role_ids } = res.data;
 
     state.editingId = Number(employee.id);
+    state.editingTeacherId = employee.teacher_id ? Number(employee.teacher_id) : null;
     if (els.modeBadge) els.modeBadge.textContent = "تعديل";
     if (els.idBadge) {
       els.idBadge.hidden = false;
@@ -802,8 +910,9 @@ async function empConfirm(options = {}) {
       previewUser("");
     }
 
-    setRoleIds(role_ids || []);
+    setRoleIds(employee.is_teacher ? teacherRoleIds() : role_ids || []);
     applyRoleSearch();
+    syncRolesVisibility();
 
     setMainTab("form");
   }
@@ -882,17 +991,37 @@ async function empConfirm(options = {}) {
     if (!els.fullName.value.trim()) throw new Error("الاسم مطلوب");
     if (!els.phone.value.trim()) throw new Error("الجوال مطلوب");
 
+    const isTeacher = els.isTeacher.value === "1";
+
     if (!els.hasAccount.checked) return;
 
     const mode = accMode();
     if (mode === "link") {
       if (!els.userSelect.value) throw new Error("اختر حسابًا للربط");
+
+      const u = (state.usersAll || []).find(
+        (x) => Number(x.id) === Number(els.userSelect.value)
+      );
+      if (!u) throw new Error("الحساب المختار غير موجود");
+
+      const c = classifyUser(u);
+      if (isTeacher && c !== "teacher")
+        throw new Error("لا يمكن ربط المعلم إلا بحساب يحمل دور معلم");
+      if (!isTeacher && c !== "employee")
+        throw new Error("لا يمكن ربط الموظف إلا بحساب موظف مناسب");
+
+      if (!isUserAvailableForCurrentRecord(u))
+        throw new Error("هذا الحساب مرتبط بالفعل بسجل موظف أو معلم آخر");
     } else if (mode === "create") {
       if (!els.username.value.trim()) throw new Error("اسم المستخدم مطلوب");
       if (!els.email.value.trim()) throw new Error("البريد مطلوب");
       if (!els.password.value) throw new Error("كلمة المرور مطلوبة");
       if (els.password.value !== els.password2.value)
         throw new Error("كلمتا المرور غير متطابقتين");
+    }
+
+    if (!isTeacher && mode === "create" && !selectedRoleIds().length) {
+      throw new Error("اختر دورًا واحدًا على الأقل للموظف");
     }
   }
 
@@ -906,7 +1035,12 @@ async function empConfirm(options = {}) {
       notes: els.notes.value.trim() || null,
       is_teacher: els.isTeacher.value === "1",
       is_active: els.isActive.checked,
-      role_ids: selectedRoleIds(),
+      // المعلم لا يختار دوره يدويًا؛ الباك إند يعيّن teacher تلقائيًا.
+      // الموظف يرسل الأدوار فقط عند إنشاء حساب جديد، لا عند ربط حساب موجود.
+      role_ids:
+        els.isTeacher.value === "0" && mode === "create"
+          ? selectedRoleIds()
+          : [],
       account: { mode },
     };
 
@@ -949,6 +1083,7 @@ async function empConfirm(options = {}) {
 
   function resetForm(opts = { toForm: true }) {
     state.editingId = null;
+    state.editingTeacherId = null;
     if (els.modeBadge) els.modeBadge.textContent = "إضافة";
     if (els.idBadge) els.idBadge.hidden = true;
 
@@ -963,6 +1098,7 @@ async function empConfirm(options = {}) {
 
     refreshRolesUI(false);
     refreshUsersUI(false);
+    syncRolesVisibility();
 
     if (els.userSelect) els.userSelect.value = "";
     previewUser("");
@@ -982,6 +1118,7 @@ async function empConfirm(options = {}) {
 
     applyRoleSearch();
     toggleAccUI();
+    syncRolesVisibility();
   }
 
   async function loadLists() {
@@ -1050,21 +1187,29 @@ async function empConfirm(options = {}) {
       );
     }
 
-    if (els.hasAccount) els.hasAccount.addEventListener("change", toggleAccUI);
-    for (const r of $$("input[name='accMode']", els.page))
-      r.addEventListener("change", toggleAccUI);
+    if (els.hasAccount) {
+      els.hasAccount.addEventListener("change", () => {
+        toggleAccUI();
+        syncRolesVisibility();
+      });
+    }
+    for (const r of $$("input[name='accMode']", els.page)) {
+      r.addEventListener("change", () => {
+        toggleAccUI();
+        syncRolesVisibility();
+      });
+    }
 
     if (els.userSelect)
-      els.userSelect.addEventListener("change", () =>
-        previewUser(els.userSelect.value)
-      );
+      els.userSelect.addEventListener("change", handleLinkedUserChange);
     if (els.roleSearch)
       els.roleSearch.addEventListener("input", applyRoleSearch);
 
     if (els.isTeacher) {
       els.isTeacher.addEventListener("change", () => {
-        refreshRolesUI(true);
-        refreshUsersUI(true);
+        refreshRolesUI(false);
+        refreshUsersUI(false);
+        syncRolesVisibility();
       });
     }
 

@@ -55,9 +55,10 @@
   /* ===================== Toast ===================== */
   const toastEl = $("#toast");
   let toastTimer;
-  function showToast(msg) {
+  function showToast(msg, type = "info") {
     if (!msg) return;
-    if (!toastEl) return alert(msg);
+    if (window.AppUI?.toast) return window.AppUI.toast(msg, type);
+    if (!toastEl) return console.warn(msg);
     toastEl.textContent = msg;
     toastEl.classList.add("show");
     clearTimeout(toastTimer);

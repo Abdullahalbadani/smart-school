@@ -99,7 +99,8 @@ async function trConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
   function setButtonLoading(button, loading, text = "جاري التنفيذ") {
     if (!button) return;
@@ -691,11 +692,14 @@ async function trConfirm(options = {}) {
 
       if (!state.batch) {
         showAlert("لا توجد نتائج محفوظة لهذا النطاق. اضغط احتساب النتائج.", "error");
+        window.AppUI?.toast("لا توجد نتائج محفوظة لهذا النطاق. اضغط احتساب النتائج.", "warning");
       } else {
         showAlert("تم عرض النتائج المحفوظة.", "success");
+        window.AppUI?.toast("تم عرض النتائج المحفوظة.", "success");
       }
     } catch (err) {
       showAlert(err.message || "تعذر عرض النتائج.", "error");
+      window.AppUI?.toast(err.message || "تعذر عرض النتائج.", "error");
     } finally {
       setButtonLoading(btn, false);
       updateActionButtons();
@@ -725,8 +729,10 @@ async function trConfirm(options = {}) {
     applyPayload(data);
 
     showAlert(data?.message || "تم احتساب النتائج.", "success");
+    window.AppUI?.toast(data?.message || "تم احتساب النتائج.", "success");
   } catch (err) {
     showAlert(err.message || "تعذر احتساب النتائج.", "error");
+    window.AppUI?.toast(err.message || "تعذر احتساب النتائج.", "error");
   } finally {
     setButtonLoading(btn, false);
     updateActionButtons();
@@ -756,8 +762,10 @@ async function trConfirm(options = {}) {
     applyPayload(data);
 
     showAlert(data?.message || "تم اعتماد النتائج.", "success");
+    window.AppUI?.toast(data?.message || "تم اعتماد النتائج.", "success");
   } catch (err) {
     showAlert(err.message || "تعذر اعتماد النتائج.", "error");
+    window.AppUI?.toast(err.message || "تعذر اعتماد النتائج.", "error");
   } finally {
     setButtonLoading(btn, false);
     updateActionButtons();
@@ -787,8 +795,10 @@ async function trConfirm(options = {}) {
     applyPayload(data);
 
     showAlert(data?.message || "تم نشر النتائج.", "success");
+    window.AppUI?.toast(data?.message || "تم نشر النتائج.", "success");
   } catch (err) {
     showAlert(err.message || "تعذر نشر النتائج.", "error");
+    window.AppUI?.toast(err.message || "تعذر نشر النتائج.", "error");
   } finally {
     setButtonLoading(btn, false);
     updateActionButtons();
@@ -817,8 +827,10 @@ async function trConfirm(options = {}) {
     applyPayload(data);
 
     showAlert(data?.message || "تم إلغاء نشر النتائج.", "success");
+    window.AppUI?.toast(data?.message || "تم إلغاء نشر النتائج.", "success");
   } catch (err) {
     showAlert(err.message || "تعذر إلغاء النشر.", "error");
+    window.AppUI?.toast(err.message || "تعذر إلغاء النشر.", "error");
   } finally {
     setButtonLoading(btn, false);
     updateActionButtons();
@@ -1267,16 +1279,23 @@ function buildStudentResultSheetHTML(student) {
   `;
 }
 
-function previewStudentResultSheet(student) {
+async function previewStudentResultSheet(student) {
   if (!student) {
     showAlert("اختر طالبًا أولًا.", "error");
+    window.AppUI?.toast("اختر طالبًا أولًا.", "warning");
     return;
   }
 
   const subjects = Array.isArray(student.subjects) ? student.subjects : [];
 
   if (!subjects.length) {
-    const ok = confirm("لا توجد تفاصيل مواد لهذا الطالب. هل تريد فتح الكشف بالملخص فقط؟");
+    const ok = await window.AppUI.confirm({
+      title: "لا توجد تفاصيل مواد",
+      message: "لا توجد تفاصيل مواد لهذا الطالب. هل تريد فتح الكشف بالملخص فقط؟",
+      confirmText: "فتح الملخص",
+      cancelText: "إلغاء",
+      type: "warning",
+    });
     if (!ok) return;
   }
 
@@ -1284,6 +1303,7 @@ function previewStudentResultSheet(student) {
 
   if (!win) {
     showAlert("المتصفح منع فتح نافذة المعاينة. اسمح بالنوافذ المنبثقة ثم حاول مرة أخرى.", "error");
+    window.AppUI?.toast("المتصفح منع فتح نافذة المعاينة. اسمح بالنوافذ المنبثقة ثم حاول مرة أخرى.", "warning");
     return;
   }
 
@@ -1294,6 +1314,7 @@ function previewStudentResultSheet(student) {
 }
   function printResults() {
     if (!state.students.length) {
+      window.AppUI?.toast("لا توجد نتائج للطباعة.", "warning");
       return showAlert("لا توجد نتائج للطباعة.", "error");
     }
 
@@ -1339,6 +1360,7 @@ function previewStudentResultSheet(student) {
       showAlert("اختر الفلاتر ثم اضغط احتساب النتائج أو عرض النتائج المحفوظة.");
     } catch (err) {
       showAlert(err.message || "تعذر تحميل بيانات الصفحة.", "error");
+      window.AppUI?.toast(err.message || "تعذر تحميل بيانات الصفحة.", "error");
     }
   };
 

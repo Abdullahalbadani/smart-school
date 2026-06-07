@@ -1090,14 +1090,22 @@ function printTermResultSheet() {
   const result = activeTermResult();
 
   if (!result) {
-    alert("لا توجد نتيجة منشورة للطباعة.");
+    window.AppUI?.alert({
+      title: "تعذر الطباعة",
+      message: "لا توجد نتيجة منشورة للطباعة.",
+      type: "warning",
+    });
     return;
   }
 
   const win = window.open("", "_blank", "width=950,height=720");
 
   if (!win) {
-    alert("المتصفح منع فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة ثم حاول مرة أخرى.");
+    window.AppUI?.alert({
+      title: "تعذر فتح نافذة الطباعة",
+      message: "المتصفح منع فتح نافذة الطباعة. اسمح بالنوافذ المنبثقة ثم حاول مرة أخرى.",
+      type: "warning",
+    });
     return;
   }
 
@@ -1119,7 +1127,11 @@ function printTermResultSheet() {
   const hasData = state.assessmentGrades.length > 0;
 
   if (!hasData) {
-    alert("لا توجد درجات للطباعة.");
+    window.AppUI?.alert({
+      title: "تعذر الطباعة",
+      message: "لا توجد درجات للطباعة.",
+      type: "warning",
+    });
     return;
   }
 

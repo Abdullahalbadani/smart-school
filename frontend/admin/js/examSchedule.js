@@ -200,7 +200,8 @@ async function exConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
 
 async function exPrompt(options = {}) {
@@ -208,7 +209,8 @@ async function exPrompt(options = {}) {
     return await window.AppUI.prompt(options);
   }
 
-  return prompt(options.message || "اكتب البيانات", options.defaultValue || "");
+  console.warn("AppUI.prompt غير متاح");
+  return null;
 }
   function setStatusChip(status) {
     const chip = document.querySelector("#exStatusChip");

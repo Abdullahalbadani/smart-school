@@ -118,6 +118,115 @@ async function getUserRoleIds(client, userId) {
   return r.rows.map((x) => Number(x.role_id));
 }
 
+function normalizeRoleIds(roleIds) {
+  return [...new Set((Array.isArray(roleIds) ? roleIds : [])
+    .map(Number)
+    .filter(Number.isFinite))];
+}
+
+/*
+ * دور المعلم لا يختاره المستخدم من شاشة تسجيل الموظفين.
+ * نبحث عنه داخل جدول roles بالاسم أو بالكود إن كان العمود موجودًا.
+ */
+async function getTeacherRoleIdTx(client) {
+  const rcols = await detectCols(client, "roles");
+  const textParts = [];
+
+  if (rcols.has("name")) textParts.push(`LOWER(TRIM(COALESCE(name, '')))`);
+  if (rcols.has("code")) textParts.push(`LOWER(TRIM(COALESCE(code, '')))`);
+  if (rcols.has("key")) textParts.push(`LOWER(TRIM(COALESCE(key, '')))`);
+  if (rcols.has("slug")) textParts.push(`LOWER(TRIM(COALESCE(slug, '')))`);
+
+  if (!textParts.length) {
+    throw new Error("جدول roles لا يحتوي اسمًا أو كودًا يمكن استخدامه لتحديد دور المعلم");
+  }
+
+  const exactValues = ["teacher", "teachers", "معلم", "مدرس"];
+  const where = textParts
+    .map((expr) => `${expr} = ANY($1::text[])`)
+    .join(" OR ");
+
+  const r = await client.query(
+    `SELECT id FROM roles WHERE ${where} ORDER BY id ASC LIMIT 1`,
+    [exactValues]
+  );
+
+  const id = r.rows[0]?.id ? Number(r.rows[0].id) : null;
+  if (!id) {
+    throw new Error('لم يتم العثور على دور المعلم داخل جدول roles. يجب أن يوجد دور اسمه أو كوده "teacher"');
+  }
+
+  return id;
+}
+
+async function userHasTeacherRoleTx(client, userId) {
+  if (!userId) return false;
+  const teacherRoleId = await getTeacherRoleIdTx(client);
+  const r = await client.query(
+    `SELECT 1 FROM user_roles WHERE user_id=$1 AND role_id=$2 LIMIT 1`,
+    [userId, teacherRoleId]
+  );
+  return !!r.rows[0];
+}
+
+/*
+ * منع ربط الحساب نفسه بأكثر من سجل، والتحقق من نوع الحساب عند الربط.
+ * allowedEmployeeId وallowedTeacherId يستخدمان عند تعديل السجل الحالي فقط.
+ */
+async function assertLinkableUserTx(client, {
+  userId,
+  schoolId,
+  isTeacher,
+  allowedEmployeeId = null,
+  allowedTeacherId = null,
+}) {
+  const userChk = await client.query(
+    `SELECT id FROM users WHERE id=$1 AND school_id=$2 LIMIT 1`,
+    [userId, schoolId]
+  );
+  if (userChk.rowCount === 0) {
+    throw new Error("الحساب غير موجود داخل هذه المدرسة");
+  }
+
+  const empParams = [userId, schoolId];
+  let empExtra = "";
+  if (allowedEmployeeId) {
+    empParams.push(allowedEmployeeId);
+    empExtra = ` AND id <> $3`;
+  }
+
+  const linkedEmployee = await client.query(
+    `SELECT id FROM employees WHERE user_id=$1 AND school_id=$2${empExtra} LIMIT 1`,
+    empParams
+  );
+  if (linkedEmployee.rows[0]) {
+    throw new Error("هذا الحساب مربوط مسبقًا بموظف أو معلم آخر");
+  }
+
+  const teacherParams = [userId, schoolId];
+  let teacherExtra = "";
+  if (allowedTeacherId) {
+    teacherParams.push(allowedTeacherId);
+    teacherExtra = ` AND id <> $3`;
+  }
+
+  const linkedTeacher = await client.query(
+    `SELECT id FROM teachers WHERE user_id=$1 AND school_id=$2${teacherExtra} LIMIT 1`,
+    teacherParams
+  );
+  if (linkedTeacher.rows[0]) {
+    throw new Error("هذا الحساب مربوط مسبقًا بمعلم آخر");
+  }
+
+  const hasTeacherRole = await userHasTeacherRoleTx(client, userId);
+  if (isTeacher && !hasTeacherRole) {
+    throw new Error("لا يمكن ربط المعلم إلا بحساب يحمل دور teacher");
+  }
+  if (!isTeacher && hasTeacherRole) {
+    throw new Error("لا يمكن ربط الموظف بحساب مخصص للمعلمين");
+  }
+}
+
 /* =========================
    Create User
 ========================= */
@@ -333,8 +442,22 @@ export const employeesMeta = async (req, res) => {
       return res.status(401).json({ error: "غير مصرح" });
     }
 
+    const rcols = await detectCols(client, "roles");
+    const roleDescriptionExpr = userExpr(rcols, "description", "r", "text", "''");
+    const roleCodeExpr = userExpr(rcols, "code", "r", "text");
+    const roleKeyExpr = userExpr(rcols, "key", "r", "text");
+    const roleSlugExpr = userExpr(rcols, "slug", "r", "text");
+
     const rolesR = await client.query(
-      `SELECT id, name, COALESCE(description,'') AS description FROM roles ORDER BY id ASC`
+      `SELECT
+         r.id,
+         r.name,
+         ${roleDescriptionExpr} AS description,
+         ${roleCodeExpr} AS code,
+         ${roleKeyExpr} AS key,
+         ${roleSlugExpr} AS slug
+       FROM roles r
+       ORDER BY r.id ASC`
     );
 
     const ucols = await usersCols(client);
@@ -347,6 +470,8 @@ export const employeesMeta = async (req, res) => {
       )
       SELECT
         ub.*,
+        le.linked_employee_id,
+        lt.linked_teacher_id,
         COALESCE(
           array_agg(DISTINCT ur.role_id) FILTER (WHERE ur.role_id IS NOT NULL),
           '{}'::int[]
@@ -356,15 +481,35 @@ export const employeesMeta = async (req, res) => {
             DISTINCT jsonb_build_object(
               'id', r.id,
               'name', r.name,
-              'description', COALESCE(r.description,'')
+              'description', ${roleDescriptionExpr},
+              'code', ${roleCodeExpr},
+              'key', ${roleKeyExpr},
+              'slug', ${roleSlugExpr}
             )
           ) FILTER (WHERE r.id IS NOT NULL),
           '[]'::jsonb
         ) AS roles
       FROM ub
+      LEFT JOIN LATERAL (
+        SELECT e.id AS linked_employee_id
+        FROM employees e
+        WHERE e.user_id::bigint = ub.id::bigint
+          AND e.school_id = ub.school_id
+        ORDER BY e.id ASC
+        LIMIT 1
+      ) le ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT t.id AS linked_teacher_id
+        FROM teachers t
+        WHERE t.user_id::bigint = ub.id::bigint
+          AND t.school_id = ub.school_id
+        ORDER BY t.id ASC
+        LIMIT 1
+      ) lt ON TRUE
       LEFT JOIN user_roles ur ON ur.user_id = ub.id
       LEFT JOIN roles r ON r.id = ur.role_id
-      GROUP BY ub.id, ub.school_id, ub.username, ub.full_name, ub.phone, ub.email, ub.is_active
+      GROUP BY ub.id, ub.school_id, ub.username, ub.full_name, ub.phone, ub.email, ub.is_active,
+               le.linked_employee_id, lt.linked_teacher_id
       ORDER BY ub.id DESC
     `;
 
@@ -505,7 +650,7 @@ export const employeeCreate = async (req, res) => {
     if (!full_name) return res.status(400).json({ error: "الاسم مطلوب" });
     if (!phone) return res.status(400).json({ error: "الجوال مطلوب" });
 
-    const role_ids = Array.isArray(body.role_ids) ? body.role_ids.map(Number) : [];
+    const role_ids = normalizeRoleIds(body.role_ids);
     const acc = normAccount(body);
 
     await client.query("BEGIN");
@@ -515,29 +660,11 @@ export const employeeCreate = async (req, res) => {
     if (acc.mode === "link") {
       if (!acc.user_id) throw new Error("اختر حسابًا للربط");
 
-      const userChk = await client.query(
-        `
-        SELECT id
-        FROM users
-        WHERE id = $1
-          AND school_id = $2
-        LIMIT 1
-        `,
-        [acc.user_id, schoolId]
-      );
-      if (userChk.rowCount === 0) throw new Error("الحساب غير موجود داخل هذه المدرسة");
-
-      const chk = await client.query(
-        `
-        SELECT id
-        FROM employees
-        WHERE user_id = $1
-          AND school_id = $2
-        LIMIT 1
-        `,
-        [acc.user_id, schoolId]
-      );
-      if (chk.rows[0]) throw new Error("هذا الحساب مربوط مسبقًا بموظف آخر");
+      await assertLinkableUserTx(client, {
+        userId: acc.user_id,
+        schoolId,
+        isTeacher: is_teacher,
+      });
 
       userId = acc.user_id;
     } else if (acc.mode === "create") {
@@ -566,7 +693,21 @@ export const employeeCreate = async (req, res) => {
     let employee = ins.rows[0];
 
     if (userId) {
-      await setUserRolesTx(client, userId, role_ids, schoolId);
+      if (is_teacher) {
+        // عند ربط حساب معلم موجود نحافظ على أدواره كما هي.
+        // عند إنشاء حساب جديد نضيف دور teacher تلقائيًا.
+        if (acc.mode === "create") {
+          const teacherRoleId = await getTeacherRoleIdTx(client);
+          await setUserRolesTx(client, userId, [teacherRoleId], schoolId);
+        }
+      } else if (acc.mode === "create") {
+        // عند إنشاء حساب جديد لموظف نطبّق الأدوار المختارة من النموذج.
+        // عند ربط حساب موجود نحافظ على أدواره السابقة كما هي.
+        if (!role_ids.length) {
+          throw new Error("اختر دورًا واحدًا على الأقل للموظف");
+        }
+        await setUserRolesTx(client, userId, role_ids, schoolId);
+      }
     }
 
     if (is_teacher) {
@@ -626,7 +767,7 @@ export const employeeUpdate = async (req, res) => {
     if (!full_name) return res.status(400).json({ error: "الاسم مطلوب" });
     if (!phone) return res.status(400).json({ error: "الجوال مطلوب" });
 
-    const role_ids = Array.isArray(body.role_ids) ? body.role_ids.map(Number) : [];
+    const role_ids = normalizeRoleIds(body.role_ids);
     const acc = normAccount(body);
 
     await client.query("BEGIN");
@@ -650,30 +791,14 @@ export const employeeUpdate = async (req, res) => {
     if (acc.mode === "link") {
       if (!acc.user_id) throw new Error("اختر حسابًا للربط");
 
-      const userChk = await client.query(
-        `
-        SELECT id
-        FROM users
-        WHERE id = $1
-          AND school_id = $2
-        LIMIT 1
-        `,
-        [acc.user_id, schoolId]
-      );
-      if (userChk.rowCount === 0) throw new Error("الحساب غير موجود داخل هذه المدرسة");
+      await assertLinkableUserTx(client, {
+        userId: acc.user_id,
+        schoolId,
+        isTeacher: is_teacher,
+        allowedEmployeeId: id,
+        allowedTeacherId: cur.teacher_id ? Number(cur.teacher_id) : null,
+      });
 
-      const other = await client.query(
-        `
-        SELECT id
-        FROM employees
-        WHERE user_id = $1
-          AND school_id = $2
-          AND id <> $3
-        LIMIT 1
-        `,
-        [acc.user_id, schoolId, id]
-      );
-      if (other.rows[0]) throw new Error("هذا الحساب مربوط مسبقًا بموظف آخر");
       userId = acc.user_id;
     } else if (acc.mode === "create") {
       userId = await createUserTx(client, {
@@ -704,7 +829,21 @@ export const employeeUpdate = async (req, res) => {
     let employee = up.rows[0];
 
     if (userId) {
-      await setUserRolesTx(client, userId, role_ids, schoolId);
+      if (is_teacher) {
+        // لا نغيّر أدوار الحساب عند ربط حساب معلم موجود.
+        // نعيّن teacher تلقائيًا فقط للحساب المنشأ من هذه الشاشة.
+        if (acc.mode === "create") {
+          const teacherRoleId = await getTeacherRoleIdTx(client);
+          await setUserRolesTx(client, userId, [teacherRoleId], schoolId);
+        }
+      } else if (acc.mode === "create") {
+        // عند إنشاء حساب جديد لموظف نطبّق الأدوار المختارة من النموذج.
+        // عند ربط حساب موجود نحافظ على أدواره السابقة كما هي.
+        if (!role_ids.length) {
+          throw new Error("اختر دورًا واحدًا على الأقل للموظف");
+        }
+        await setUserRolesTx(client, userId, role_ids, schoolId);
+      }
     }
 
     if (is_teacher) {

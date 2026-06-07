@@ -13,7 +13,7 @@
   const toast = (msg, type) => {
     if (typeof window.showToast === "function") return window.showToast(msg, type);
     if (typeof window.toast === "function") return window.toast(msg, type);
-    alert(msg);
+    console.warn(msg);
   };
 
   /* =========================

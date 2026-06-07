@@ -1,0 +1,161 @@
+/* نظام إعداد الكشوف المدرسية الموحد */
+.school-report-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000002;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(7, 13, 31, 0.84);
+  backdrop-filter: blur(16px);
+  direction: rtl;
+}
+
+.school-report-dialog {
+  width: min(820px, 100%);
+  max-height: min(92vh, 860px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: #f8fafc;
+  background: linear-gradient(180deg, rgba(16, 28, 55, 0.99), rgba(10, 18, 36, 0.99));
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 26px;
+  box-shadow: 0 34px 100px rgba(0, 0, 0, 0.48);
+}
+
+.school-report-head,
+.school-report-actions {
+  flex: 0 0 auto;
+  padding: 17px 20px;
+}
+
+.school-report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.school-report-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.school-report-icon {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  color: #bfdbfe;
+  background: rgba(37, 99, 235, 0.16);
+  border: 1px solid rgba(37, 99, 235, 0.34);
+  font-size: 21px;
+}
+
+.school-report-title { margin: 0; font-size: 18px; font-weight: 900; }
+.school-report-subtitle { margin-top: 4px; color: #9ca3af; font-size: 12px; font-weight: 700; line-height: 1.7; }
+
+.school-report-close {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 11px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.school-report-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 18px 20px;
+}
+
+.school-report-preview {
+  display: grid;
+  gap: 6px;
+  padding: 13px 14px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  color: #dbeafe;
+  background: rgba(37, 99, 235, 0.12);
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+.school-report-preview strong { color: #f8fafc; font-size: 15px; }
+.school-report-preview span { color: #bfdbfe; font-size: 12px; font-weight: 700; }
+
+.school-report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.school-report-section {
+  padding: 13px;
+  border-radius: 17px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.58);
+}
+.school-report-section--full { grid-column: 1 / -1; }
+.school-report-section h4 { margin: 0 0 10px; color: #f8fafc; font-size: 14px; }
+.school-report-note { margin: 8px 0 0; color: #9ca3af; font-size: 11px; line-height: 1.8; }
+
+.school-report-options { display: grid; gap: 8px; }
+.school-report-options--columns { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.school-report-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  color: #cbd5e1;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+}
+.school-report-option input { accent-color: #2563eb; }
+.school-report-option:has(input:checked) {
+  color: #eff6ff;
+  border-color: rgba(37, 99, 235, 0.55);
+  background: rgba(37, 99, 235, 0.14);
+}
+
+.school-report-actions {
+  display: flex;
+  gap: 9px;
+  justify-content: flex-start;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.school-report-btn {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+}
+.school-report-btn:disabled { opacity: 0.62; cursor: wait; }
+.school-report-btn--primary { color: #fff; background: linear-gradient(135deg, #2563eb, #1d4ed8); }
+.school-report-btn--ghost { color: #cbd5e1; background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(148, 163, 184, 0.18); }
+
+@media (max-width: 700px) {
+  .school-report-overlay { padding: 0; align-items: end; }
+  .school-report-dialog { width: 100%; max-height: 94dvh; border-radius: 22px 22px 0 0; }
+  .school-report-grid { grid-template-columns: 1fr; }
+  .school-report-section--full { grid-column: auto; }
+  .school-report-options--columns { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .school-report-actions { flex-direction: column; }
+  .school-report-btn { width: 100%; }
+}

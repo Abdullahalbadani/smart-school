@@ -1589,6 +1589,7 @@ return card;
       if (validationErrors.length) {
         renderWarnings(validationErrors);
         setStatus("تعذر تنفيذ المعاينة بسبب أخطاء في النموذج.", "error");
+        window.AppUI?.toast("يرجى مراجعة بيانات النموذج قبل تنفيذ المعاينة.", "warning");
         return;
       }
 
@@ -1607,10 +1608,12 @@ return card;
       state.lastPreview = res;
       renderPreview(res);
       setStatus(res.message || "تمت المعاينة بنجاح.", "success");
+      window.AppUI?.toast(res.message || "تمت معاينة المستلمين بنجاح ✅", "success");
     } catch (err) {
       console.error("preview recipients error:", err);
       renderWarnings([err.message || "فشل معاينة المستلمين"]);
       setStatus(err.message || "فشل معاينة المستلمين", "error");
+      window.AppUI?.toast(err.message || "فشل معاينة المستلمين", "error");
     }
   }
 
@@ -1624,6 +1627,7 @@ return card;
       if (validationErrors.length) {
         renderWarnings(validationErrors);
         setStatus("تعذر الإرسال بسبب أخطاء في النموذج.", "error");
+        window.AppUI?.toast("يرجى مراجعة بيانات النموذج قبل إرسال الإشعار.", "warning");
         return;
       }
 
@@ -1654,10 +1658,12 @@ return card;
 
       if (res?.data?.skipped) {
         setStatus(res.message || "لم يتم الإرسال (تم التخطي).", "warning");
+        window.AppUI?.toast(res.message || "لم يتم إرسال الإشعار.", "warning");
         return;
       }
 
       setStatus(res.message || "تم إرسال الإشعار بنجاح.", "success");
+      window.AppUI?.toast(res.message || "تم إرسال الإشعار بنجاح ✅", "success");
 
       // تفريغ جزئي بعد الإرسال (نحافظ على شروط الاستهداف غالبًا)
       setValue("#notifTitle", "");
@@ -1666,6 +1672,7 @@ return card;
       console.error("send notification error:", err);
       renderWarnings([err.message || "فشل إرسال الإشعار"]);
       setStatus(err.message || "فشل إرسال الإشعار", "error");
+      window.AppUI?.toast(err.message || "فشل إرسال الإشعار", "error");
     }
   }
 

@@ -64,6 +64,10 @@ logsSearchTimer: null,
 };
 
 function showToast(message, type = "normal") {
+  if (window.AppUI?.toast) {
+    return window.AppUI.toast(message, type === "normal" ? "info" : type);
+  }
+
   els.toast.textContent = message;
   els.toast.classList.remove("hidden");
 
@@ -457,7 +461,13 @@ function updatePagination() {
 }
 
 async function activateTrial(schoolId) {
-  const daysText = prompt("كم مدة التجربة بالأيام؟", "3");
+  const daysText = await window.AppUI.prompt({
+    title: "تفعيل الفترة التجريبية",
+    message: "أدخل مدة التجربة بالأيام.",
+    defaultValue: "3",
+    confirmText: "تفعيل التجربة",
+    cancelText: "إلغاء",
+  });
 
   if (!daysText) return;
 
@@ -488,7 +498,13 @@ async function activateSubscription(schoolId, plan) {
     lifetime: "دائم",
   }[plan];
 
-  const ok = confirm(`هل تريد تفعيل اشتراك ${text} لهذه المدرسة؟`);
+  const ok = await window.AppUI.confirm({
+    title: "تفعيل اشتراك المدرسة",
+    message: `هل تريد تفعيل اشتراك ${text} لهذه المدرسة؟`,
+    confirmText: "تفعيل الاشتراك",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
 
   if (!ok) return;
 
@@ -506,7 +522,13 @@ async function activateSubscription(schoolId, plan) {
 }
 
 async function activateCustom(schoolId) {
-  const daysText = prompt("كم عدد أيام الاشتراك المخصص؟", "10");
+  const daysText = await window.AppUI.prompt({
+    title: "اشتراك مخصص",
+    message: "أدخل عدد أيام الاشتراك المخصص.",
+    defaultValue: "10",
+    confirmText: "تفعيل الاشتراك",
+    cancelText: "إلغاء",
+  });
 
   if (!daysText) return;
 
@@ -531,11 +553,23 @@ async function activateCustom(schoolId) {
 }
 
 async function suspendSchool(schoolId) {
-  const reason = prompt("سبب إيقاف المدرسة:", "لم يتم تجديد الاشتراك");
+  const reason = await window.AppUI.prompt({
+    title: "سبب إيقاف المدرسة",
+    message: "أدخل سبب إيقاف المدرسة.",
+    defaultValue: "لم يتم تجديد الاشتراك",
+    confirmText: "متابعة",
+    cancelText: "إلغاء",
+  });
 
   if (reason === null) return;
 
-  const ok = confirm("هل أنت متأكد من إيقاف هذه المدرسة؟");
+  const ok = await window.AppUI.confirm({
+    title: "إيقاف المدرسة",
+    message: "هل أنت متأكد من إيقاف هذه المدرسة؟",
+    confirmText: "إيقاف المدرسة",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
 
   if (!ok) return;
 
@@ -553,7 +587,13 @@ async function suspendSchool(schoolId) {
 }
 
 async function reactivateSchool(schoolId) {
-  const ok = confirm("هل تريد إعادة فتح هذه المدرسة؟");
+  const ok = await window.AppUI.confirm({
+    title: "إعادة فتح المدرسة",
+    message: "هل تريد إعادة فتح هذه المدرسة؟",
+    confirmText: "إعادة الفتح",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
 
   if (!ok) return;
 
@@ -637,9 +677,13 @@ els.nextPageBtn.addEventListener("click", () => {
   }
 });
 async function enterAsSchoolAdmin(schoolId) {
-  const ok = confirm(
-    "سيتم الدخول إلى لوحة هذه المدرسة كمدير مؤقت لمدة ساعة. هل تريد المتابعة؟"
-  );
+  const ok = await window.AppUI.confirm({
+    title: "الدخول كمدير مدرسة",
+    message: "سيتم الدخول إلى لوحة هذه المدرسة كمدير مؤقت لمدة ساعة. هل تريد المتابعة؟",
+    confirmText: "متابعة الدخول",
+    cancelText: "إلغاء",
+    type: "warning",
+  });
 
   if (!ok) return;
 

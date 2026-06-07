@@ -520,6 +520,7 @@ const elImageFile = $("ta-image-file");
         }
 
         setLastResult(`✅ تم تسجيل ${newStatus === "present" ? "حاضر" : "غائب"} (يدويًا)`, "ok");
+        toast(`تم تسجيل ${newStatus === "present" ? "حاضر" : "غائب"} بنجاح ✅`, "success");
         await loadDay(state.date);
       } catch (e) {
         setLastResult(`❌ فشل التسجيل: ${e?.message || "خطأ"}`, "bad");
@@ -570,6 +571,7 @@ async function submitScanWithCode(rawCode) {
     const st = data?.status || data?.entry?.status || "present";
 
     setLastResult(`✅ تم تسجيل ${esc(name)} — ${st === "absent" ? "غائب" : "حاضر"} (Scan)`, "ok");
+    toast(`تم تسجيل ${name} بنجاح ✅`, "success");
     elScanInput.value = "";
     await loadDay(state.date);
   } catch (e) {

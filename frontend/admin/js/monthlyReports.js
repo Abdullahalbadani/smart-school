@@ -202,7 +202,8 @@ async function mrConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
 
 async function mrPrompt(options = {}) {
@@ -210,7 +211,8 @@ async function mrPrompt(options = {}) {
     return await window.AppUI.prompt(options);
   }
 
-  return prompt(options.message || "اكتب السبب", options.defaultValue || "");
+  console.warn("AppUI.prompt غير متاح");
+  return null;
 }
 
 function mrToast(message, type = "info") {
@@ -477,6 +479,7 @@ function renderData(data) {
 
     if (error) {
       setMessage(error, "error");
+      mrToast(error, "warning");
       return;
     }
 
@@ -487,11 +490,13 @@ function renderData(data) {
       setMessage("جاري تحميل كشف الأعمال الفصلية...");
       const data = await apiGet(`/admin/control/term-works?${qs.toString()}`);
       renderData(data);
+      mrToast("تم عرض الأعمال الفصلية بنجاح", "success");
     } catch (e) {
       state.lastData = null;
       const printBtn = $("#mrPrintBtn", rootEl);
       if (printBtn) printBtn.disabled = true;
       setMessage(e.message || "فشل تحميل البيانات.", "error");
+      mrToast(e.message || "فشل تحميل البيانات.", "error");
     } finally {
       setLoading(false);
     }
@@ -750,6 +755,7 @@ $("#mrPrintBtn", rootEl)?.addEventListener("click", () => {
       setMessage("اختر البيانات المطلوبة ثم اضغط عرض الأعمال.");
     } catch (e) {
       setMessage(e.message || "تعذر تحميل بيانات الصفحة.", "error");
+      mrToast(e.message || "تعذر تحميل بيانات الصفحة.", "error");
     }
   };
 })();

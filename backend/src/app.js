@@ -49,6 +49,7 @@ import timetablesRoutes from "./routes/timetablesRoutes.js";
 import teacherTimetablesRoutes from "./routes/teacherTimetablesRoutes.js";
 import examTimetablesRoutes from "./routes/examTimetablesRoutes.js";
 import studentReportsRoutes from "./routes/studentReportsRoutes.js";
+import adminStudentSchoolReportsRoutes from "./routes/adminStudentSchoolReportsRoutes.js";
 // Student Portal Routes
 import studentPortalRoutes from "./routes/studentPortalRoutes.js";
 import studentAttendanceRoutes from "./routes/studentAttendanceRoutes.js";
@@ -320,6 +321,7 @@ mountRoutes([
   { path: "/api/student/notifications", middlewares: protectedMiddlewares, router: studentNotificationsRoutes },
   { path: "/api/student", middlewares: protectedMiddlewares, router: studentPortalRoutes },
 { path: "/api/admin/reports/students", middlewares: protectedMiddlewares, router: studentReportsRoutes },
+  { path: "/api/admin/school-reports/students", middlewares: protectedMiddlewares, router: adminStudentSchoolReportsRoutes },
   // Parent Portal
   { path: "/api/parent/attendance", middlewares: protectedMiddlewares, router: parentAttendanceRoutes },
   { path: "/api/parent/notifications", middlewares: protectedMiddlewares, router: parentNotificationsRoutes },
@@ -350,7 +352,7 @@ mountRoutes([
   { path: "/api", middlewares: protectedMiddlewares, router: studentFeesPortalRoutes },
   { path: "/api", middlewares: protectedMiddlewares, router: parentFeesPortalRoutes },
   { path: "/api", middlewares: protectedMiddlewares, router: metaRoutes },
-  { path: "/api", middlewares: protectedMiddlewares, router: parentsRoutes },
+{ path: "/api/parents", middlewares: protectedMiddlewares, router: parentsRoutes },
   { path: "/api", middlewares: protectedMiddlewares, router: continuingRoutes },
 
   // Notifications

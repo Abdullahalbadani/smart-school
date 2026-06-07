@@ -17,11 +17,14 @@ function isLoginPage() {
   return p.includes("/frontend/login/");
 }
 
-function logoutToLogin(reason) {
+function logoutToLogin(reason, message = "انتهت الجلسة. يرجى تسجيل الدخول مرة أخرى.") {
   console.warn("logoutToLogin:", reason || "");
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  window.location.replace("/frontend/login/login.html");
+  window.AppUI?.toast(message, "warning", { timeout: 1400 });
+  setTimeout(() => {
+    window.location.replace("/frontend/login/login.html");
+  }, 650);
 }
 
 // ==============================
@@ -74,8 +77,10 @@ const probe = await fetch(apiUrl("/users/me"), {
         return;
       }
 
-      alert("انتهت الجلسة أو التوكن غير صالح. سجل الدخول مرة أخرى.");
-      logoutToLogin("401 token invalid");
+      logoutToLogin(
+        "401 token invalid",
+        "انتهت الجلسة أو التوكن غير صالح. سجل الدخول مرة أخرى."
+      );
       return;
     }
 

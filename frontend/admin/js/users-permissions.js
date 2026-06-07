@@ -86,7 +86,7 @@ function adminToast(message, type = "info") {
     return;
   }
 
-  alert(message);
+  console.warn(message);
 }
 
 async function adminConfirm(options = {}) {
@@ -94,7 +94,8 @@ async function adminConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
 // تعبئة فورم من كائن قيم
 function rbacFillForm(formElement, values) {
@@ -221,6 +222,7 @@ if (!name || !code) {
 
       await this.loadModules();
       rbacResetForm(form);
+      adminToast(id ? "تم تعديل الوحدة بنجاح" : "تمت إضافة الوحدة بنجاح", "success");
     };
   },
 
@@ -373,6 +375,7 @@ const body = JSON.stringify({
 
       await this.loadPermissions();
       rbacResetForm(form);
+      adminToast(id ? "تم تعديل الصلاحية بنجاح" : "تمت إضافة الصلاحية بنجاح", "success");
 
       // تحديث قائمة الربط الجماعي حسب فلتر البحث الحالي
       this.renderBulkPermissionsList(
@@ -604,6 +607,7 @@ const body = JSON.stringify({
 
       await this.loadRoles();
       rbacResetForm(roleForm);
+      adminToast(id ? "تم تعديل الدور بنجاح" : "تمت إضافة الدور بنجاح", "success");
     };
 
     roleSelect.onchange = async () => {
@@ -838,6 +842,7 @@ if (!full_name || !username || !email || !role_id) {
 
       await this.loadUsers();
       rbacResetForm(form);
+      adminToast(id ? "تم تعديل المستخدم بنجاح" : "تمت إضافة المستخدم بنجاح", "success");
     };
   },
 

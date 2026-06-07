@@ -57,6 +57,10 @@
     el.textContent = msg || "";
   }
 
+  function permissionToast(message, type = "info") {
+    if (window.AppUI?.toast) window.AppUI.toast(message, type);
+  }
+
   function typeLabel(t) {
     t = String(t || "").toUpperCase();
     if (t === "ABSENCE") return "غياب";
@@ -182,6 +186,7 @@
     } catch (e) {
       renderPermissionCard(null);
       showMsg(e.message || "تعذر جلب الحالة", false);
+      permissionToast(e.message || "تعذر جلب الحالة", "error");
     }
   }
 
@@ -198,10 +203,22 @@
     const reasonText = $("pp-reason")?.value || "";
     const attachmentUrl = $("pp-attachment")?.value || "";
 
-    if (!studentId) return showMsg("اختر الطالب أولاً", false);
-    if (!date) return showMsg("اختر التاريخ أولاً", false);
-    if (type === "LATE" && !timeFrom) return showMsg("اختر وقت الوصول المتوقع للتأخر", false);
-    if (type === "EARLY_LEAVE" && !timeTo) return showMsg("اختر وقت الانصراف المتوقع", false);
+    if (!studentId) {
+      permissionToast("اختر الطالب أولاً", "warning");
+      return showMsg("اختر الطالب أولاً", false);
+    }
+    if (!date) {
+      permissionToast("اختر التاريخ أولاً", "warning");
+      return showMsg("اختر التاريخ أولاً", false);
+    }
+    if (type === "LATE" && !timeFrom) {
+      permissionToast("اختر وقت الوصول المتوقع للتأخر", "warning");
+      return showMsg("اختر وقت الوصول المتوقع للتأخر", false);
+    }
+    if (type === "EARLY_LEAVE" && !timeTo) {
+      permissionToast("اختر وقت الانصراف المتوقع", "warning");
+      return showMsg("اختر وقت الانصراف المتوقع", false);
+    }
 
     try {
       const payload = {
@@ -220,14 +237,17 @@
       });
 
       showMsg("تم إرسال الإذن بنجاح. بانتظار قرار الإدارة.", true);
+      permissionToast("تم إرسال الإذن بنجاح. بانتظار قرار الإدارة.", "success");
       renderPermissionCard(r?.data || null);
     } catch (e) {
       if (e.status === 409) {
         showMsg("يوجد إذن مسجل لهذا اليوم بالفعل. تم عرض حالته.", false);
+        permissionToast("يوجد إذن مسجل لهذا اليوم بالفعل. تم عرض حالته.", "warning");
         await refreshStatus();
         return;
       }
       showMsg(e.message || "فشل إرسال الإذن", false);
+      permissionToast(e.message || "فشل إرسال الإذن", "error");
     }
   }
 

@@ -84,7 +84,7 @@ function fsToast(message, type = "info") {
     return;
   }
 
-  alert(message);
+  console.warn(message);
 }
 
 async function fsConfirm(options = {}) {
@@ -92,7 +92,8 @@ async function fsConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
   function scopeLabel(s) {
     const map = {
@@ -280,17 +281,22 @@ async function fsConfirm(options = {}) {
       is_active: $("#fsIsActive", root).checked,
     };
 
-    if (!scope) return msg(msgBox, "اختر نوع القاعدة.", false);
+    if (!scope) {
+      fsToast("اختر نوع القاعدة.", "warning");
+      return msg(msgBox, "اختر نوع القاعدة.", false);
+    }
 
     try {
       if (id) await apiSend("PUT", `/api/admin/fee-rules/${id}`, payload);
       else await apiSend("POST", `/api/admin/fee-rules`, payload);
 
       msg(msgBox, "تم الحفظ ✅", true);
+      fsToast(id ? "تم تحديث قاعدة الرسوم بنجاح ✅" : "تم إنشاء قاعدة الرسوم بنجاح ✅", "success");
       clearForm(root);
       await refreshRules(root);
     } catch (e) {
       msg(msgBox, e.message || "فشل الحفظ", false);
+      fsToast(e.message || "فشل حفظ قاعدة الرسوم", "error");
     }
   }
 

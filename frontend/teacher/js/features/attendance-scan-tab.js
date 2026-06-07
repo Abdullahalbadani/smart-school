@@ -33,7 +33,7 @@
         };
 
   const toast = (msg) =>
-    typeof window.showToast === "function" ? window.showToast(msg) : alert(msg);
+    typeof window.showToast === "function" ? window.showToast(msg) : console.warn(msg);
 
   const toInt = (v) => {
     const n = parseInt(String(v ?? "").trim(), 10);
@@ -523,8 +523,15 @@
     });
 
     // Clear log (مسح الملف الخاص)
-    clearBtn?.addEventListener("click", () => {
-      if (!window.confirm("هل تريد مسح سجل المسح بالكامل؟")) return;
+    clearBtn?.addEventListener("click", async () => {
+      const confirmed = await window.AppUI.confirm({
+        title: "مسح سجل المسح",
+        message: "هل تريد مسح سجل المسح بالكامل؟",
+        confirmText: "مسح السجل",
+        cancelText: "إلغاء",
+        type: "warning",
+      });
+      if (!confirmed) return;
       clearScanLog();
       renderLog([], logListEl, logSummaryEl);
       toast("تم مسح سجل المسح ✅");

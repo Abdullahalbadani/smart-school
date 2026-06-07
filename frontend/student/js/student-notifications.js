@@ -53,8 +53,9 @@
     return res.json();
   }
 
-  function showToast(msg) {
-    if (window.toast) return window.toast(msg);
+  function showToast(msg, type = "info") {
+    if (window.AppUI?.toast) return window.AppUI.toast(msg, type);
+    if (window.toast) return window.toast(msg, type);
     const t = $("toast");
     if (!t) return console.log(msg);
     t.textContent = msg;
@@ -285,6 +286,7 @@
     box.style.display = msg ? "" : "none";
     box.style.border = isError ? "1px solid rgba(239,68,68,.35)" : "";
     box.textContent = msg || "";
+    if (msg && isError && window.AppUI?.toast) window.AppUI.toast(msg, "warning");
   }
 
   function getComposeMsg() {

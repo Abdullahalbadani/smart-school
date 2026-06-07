@@ -612,7 +612,8 @@ async confirmDialog(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
 
     setBadge(text, kind = "muted") {

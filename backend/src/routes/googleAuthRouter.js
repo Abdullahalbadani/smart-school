@@ -23,16 +23,35 @@ router.get('/google', async (req, res) => {
     // فك تشفير التوكن لمعرفة من هي المدرسة التي تطلب الربط الآن
     // (استبدل JWT_SECRET بمتغير البيئة الخاص بك في مشروعك)
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'secret');
-    const schoolId = decoded.school_id; 
+const schoolId = Number(
+  decoded.school_id ??
+  decoded.schoolId
+);
 
+if (!Number.isSafeInteger(schoolId) || schoolId <= 0) {
+  return res.status(401).send('غير مصرح: رقم المدرسة غير صالح');
+}
+
+const oauthState = jwt.sign(
+  {
+    schoolId,
+    userId: decoded.id || decoded.user_id || null
+  },
+  process.env.GOOGLE_OAUTH_STATE_SECRET,
+  {
+    expiresIn: '10m',
+    issuer: 'smart-school',
+    audience: 'google-drive-link'
+  }
+);
     const oauth2Client = getOAuth2Client();
 
     // توليد رابط التحقق مع طلب صلاحية الوصول للملفات وطلب التوكن الدائم (offline)
     const authUrl = oauth2Client.generateAuthUrl({
       access_type: 'offline', // إلزامي للحصول على الـ Refresh Token الثابت للرفع التلقائي
-      prompt: 'consent',     // إجبار قوقل على إظهار شاشة الموافقة لتوليد التوكن
+      prompt: 'consent select_account',    // إجبار قوقل على إظهار شاشة الموافقة لتوليد التوكن
       scope: ['https://www.googleapis.com/auth/drive.file'], // الوصول فقط للملفات التي ينشئها سيستمك لحماية خصوصيتهم
-      state: String(schoolId) // تمرير رقم المدرسة كمعامل أمان لَقط الحالة عند العودة
+state: oauthState
     });
 
     return res.redirect(authUrl);
@@ -44,12 +63,40 @@ router.get('/google', async (req, res) => {
 
 // 🟢 2. مسار الاستقبال (Callback URL) الذي يعود إليه المتصفح بعد موافقة العميل
 router.get('/google/callback', async (req, res) => {
-  const { code, state } = req.query; // code = شفرة جوجل، state = رقم المدرسة الممرر سابقاً
-  const schoolId = parseInt(state, 10);
+ const { code, state, error } = req.query;
 
-  if (!code || !schoolId) {
-    return res.status(400).send('بيانات التحقق من جوجل غير مكتملة');
+if (error) {
+  return res.redirect(
+    `/frontend/admin/index.html?tab=backups&status=error&msg=${encodeURIComponent(String(error))}`
+  );
+}
+
+if (!code || !state) {
+  return res.status(400).send('بيانات التحقق من جوجل غير مكتملة');
+}
+
+let schoolId;
+
+try {
+  const decodedState = jwt.verify(
+    String(state),
+    process.env.GOOGLE_OAUTH_STATE_SECRET,
+    {
+      issuer: 'smart-school',
+      audience: 'google-drive-link'
+    }
+  );
+
+  schoolId = Number(decodedState.schoolId);
+
+  if (!Number.isSafeInteger(schoolId) || schoolId <= 0) {
+    throw new Error('رقم المدرسة غير صالح');
   }
+} catch {
+  return res.status(400).send(
+    'انتهت صلاحية طلب الربط أو أن بياناته غير صالحة. أعد المحاولة من داخل النظام.'
+  );
+}
 
   try {
     const oauth2Client = getOAuth2Client();
@@ -95,12 +142,12 @@ router.get('/google/callback', async (req, res) => {
 
     // 🎯 إعادة توجيه المستخدم لصفحة الإعدادات لوحة التحكم في الفرونت إند بنجاح
     // (قم بتحديث المسار النصي ليتطابق مع مجلدات العرض لديك)
-    return res.redirect('/frontend/settings/settings.html?tab=backups&status=success');
-
+return res.redirect('/frontend/admin/index.html?tab=backups&status=success');
   } catch (err) {
     console.error('Google OAuth Callback Error:', err.message);
-    return res.redirect(`/frontend/settings/settings.html?tab=backups&status=error&msg=${encodeURIComponent(err.message)}`);
-  }
+return res.redirect(
+  `/frontend/admin/index.html?tab=backups&status=error&msg=${encodeURIComponent(err.message)}`
+);  }
 });
 
 export default router;

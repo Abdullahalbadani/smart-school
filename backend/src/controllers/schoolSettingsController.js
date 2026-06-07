@@ -27,7 +27,52 @@ function mustId(v) {
   const n = toInt(v);
   return n && n > 0 ? n : null;
 }
+/**
+ * تحويل التاريخ إلى رقم يمثل اليوم فقط دون التأثر بالمنطقة الزمنية.
+ * تقبل الدالة:
+ * 2026-06-06
+ * أو:
+ * 2026-06-06T00:00:00.000Z
+ */
+function toDateOnlyTimestamp(value) {
+  const text = reqStr(value);
 
+  const match = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  const timestamp = Date.UTC(year, month - 1, day);
+  const date = new Date(timestamp);
+
+  // التأكد من أن التاريخ حقيقي، وليس مثل 2026-02-31
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return timestamp;
+}
+
+function validateYearDates(startDate, endDate) {
+  const startTimestamp = toDateOnlyTimestamp(startDate);
+  const endTimestamp = toDateOnlyTimestamp(endDate);
+
+  if (startTimestamp === null || endTimestamp === null) {
+    return "صيغة تاريخ بداية السنة أو نهايتها غير صحيحة";
+  }
+
+  if (endTimestamp <= startTimestamp) {
+    return "تاريخ نهاية السنة الدراسية يجب أن يكون بعد تاريخ البداية";
+  }
+
+  return null;
+}
 /* =========================
     FINANCE & SYSTEM SETTINGS
 ========================= */
@@ -147,43 +192,85 @@ export async function meta(req, res) {
 export async function yearsCreate(req, res) {
   try {
     const schoolId = req.user?.school_id;
-    if (!schoolId) return res.status(401).json({ error: "غير مصرح" });
+    if (!schoolId) {
+      return res.status(401).json({ error: "غير مصرح" });
+    }
 
     const name = reqStr(req.body.name);
     const start_date = reqStr(req.body.start_date);
     const end_date = reqStr(req.body.end_date);
 
-    if (!name || !start_date || !end_date)
+    if (!name || !start_date || !end_date) {
       return res.status(400).json({ error: "جميع الحقول مطلوبة" });
+    }
 
-    const row = await createYear(schoolId, { name, start_date, end_date });
-    return res.json({ data: row });
+    const dateError = validateYearDates(start_date, end_date);
+
+    if (dateError) {
+      return res.status(400).json({ error: dateError });
+    }
+
+    const row = await createYear(schoolId, {
+      name,
+      start_date,
+      end_date
+    });
+
+    return res.status(201).json({
+      message: "تمت إضافة السنة الدراسية بنجاح ✅",
+      data: row
+    });
   } catch (e) {
     console.error("yearsCreate error:", e);
-    return res.status(400).json({ error: e.message || "فشل" });
+
+    return res.status(400).json({
+      error: e.message || "فشل إنشاء السنة الدراسية"
+    });
   }
 }
 
 export async function yearsUpdate(req, res) {
   try {
     const schoolId = req.user?.school_id;
-    if (!schoolId) return res.status(401).json({ error: "غير مصرح" });
+    if (!schoolId) {
+      return res.status(401).json({ error: "غير مصرح" });
+    }
 
     const id = mustId(req.params.id);
     const name = reqStr(req.body.name);
     const start_date = reqStr(req.body.start_date);
     const end_date = reqStr(req.body.end_date);
 
-    if (!id || !name || !start_date || !end_date)
+    if (!id || !name || !start_date || !end_date) {
       return res.status(400).json({ error: "جميع الحقول مطلوبة" });
+    }
 
-    const row = await updateYear(schoolId, id, { name, start_date, end_date });
-    if (!row) return res.status(404).json({ error: "غير موجود" });
+    const dateError = validateYearDates(start_date, end_date);
 
-    return res.json({ data: row });
+    if (dateError) {
+      return res.status(400).json({ error: dateError });
+    }
+
+    const row = await updateYear(schoolId, id, {
+      name,
+      start_date,
+      end_date
+    });
+
+    if (!row) {
+      return res.status(404).json({ error: "السنة الدراسية غير موجودة" });
+    }
+
+    return res.json({
+      message: "تم تعديل السنة الدراسية بنجاح ✅",
+      data: row
+    });
   } catch (e) {
     console.error("yearsUpdate error:", e);
-    return res.status(400).json({ error: e.message || "فشل" });
+
+    return res.status(400).json({
+      error: e.message || "فشل تعديل السنة الدراسية"
+    });
   }
 }
 

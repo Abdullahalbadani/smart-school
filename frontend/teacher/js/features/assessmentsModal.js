@@ -9,7 +9,7 @@
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const toast = (msg, type = "info") => {
-    const fn = window.showToast || window.toast || window.Toast || null;
+    const fn = window.showToast || window.Toast?.show || window.toast || null;
 
     if (typeof fn === "function") {
       fn(msg, type);

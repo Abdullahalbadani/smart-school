@@ -26,15 +26,15 @@
         class="stu-btn stu-btn--soft"
         type="button"
         id="stuExportBtn"
-        title="تصدير CSV"
+        title="تصدير كشف الطلاب بصيغة PDF"
       >
-        <i class="ri-download-2-line"></i><span>تصدير</span>
+        <i class="ri-file-pdf-2-line"></i><span>تصدير PDF</span>
       </button>
       <button
         class="stu-btn stu-btn--soft"
         type="button"
         id="stuPrintBtn"
-        title="طباعة بطاقات"
+        title="طباعة كشف الطلاب"
       >
         <i class="ri-printer-line"></i><span>طباعة</span>
       </button>
@@ -202,6 +202,32 @@
 
   <!-- Cards (Mobile) -->
   <div class="stu-cards" id="stuCards" aria-label="عرض بطاقات للهواتف"></div>
+
+  <!-- ترقيم الصفحات -->
+  <nav class="stu-pagination" id="stuPagination" aria-label="التنقل بين صفحات الطلاب">
+    <div class="stu-pagination__summary" id="stuPaginationSummary">جاري تحميل الطلاب...</div>
+
+    <div class="stu-pagination__controls">
+      <button class="stu-page-btn" type="button" id="stuPagePrev" disabled>
+        <i class="ri-arrow-right-s-line"></i><span>السابق</span>
+      </button>
+
+      <div class="stu-pagination__pages" id="stuPaginationPages" aria-label="أرقام الصفحات"></div>
+
+      <button class="stu-page-btn" type="button" id="stuPageNext" disabled>
+        <span>التالي</span><i class="ri-arrow-left-s-line"></i>
+      </button>
+    </div>
+
+    <label class="stu-pagination__limit" for="stuPageLimit">
+      <span>عدد الطلاب في الصفحة</span>
+      <select class="stu-select" id="stuPageLimit">
+        <option value="20" selected>20</option>
+        <option value="50">50</option>
+        <option value="100">100</option>
+      </select>
+    </label>
+  </nav>
 
   <!-- Drawer تفاصيل الطالب -->
   <div class="stu-drawer" id="stuDrawer" aria-hidden="true">

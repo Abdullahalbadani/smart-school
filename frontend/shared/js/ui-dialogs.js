@@ -23,13 +23,71 @@
 
   function normalizeType(type) {
     const t = String(type || "info").toLowerCase();
-    if (["success", "error", "warning", "info", "danger"].includes(t)) return t;
+    const aliases = {
+      ok: "success",
+      warn: "warning",
+      err: "error",
+      normal: "info",
+    };
+    const normalized = aliases[t] || t;
+    if (["success", "error", "warning", "info", "danger"].includes(normalized)) return normalized;
+    return "info";
+  }
+
+  function friendlyMessage(value) {
+    const text = String(value ?? "").trim();
+    if (!text) return "";
+
+    if (/HTTP\s*401|لا يوجد Token|No token|Unauthorized/i.test(text)) {
+      return "انتهت جلسة الدخول أو لم يتم تسجيل الدخول. يرجى تسجيل الدخول مرة أخرى.";
+    }
+
+    if (/HTTP\s*403|Forbidden/i.test(text)) {
+      return "لا تملك صلاحية تنفيذ هذه العملية.";
+    }
+
+    if (/HTTP\s*404/i.test(text)) {
+      return "تعذر العثور على البيانات المطلوبة.";
+    }
+
+    if (/HTTP\s*(?:400|409|422)|API error/i.test(text)) {
+      return "تعذر تنفيذ العملية. يرجى مراجعة البيانات والمحاولة مرة أخرى.";
+    }
+
+    if (
+      /ECONNREFUSED|ERR_CONNECTION_REFUSED|Failed to fetch|NetworkError|fetch failed|Load failed|Unexpected token|SyntaxError: JSON|HTTP\s*5\d\d|الرد ليس JSON|Endpoint|CORS|SQLSTATE|duplicate key|violates .* constraint|relation .* does not exist|column .* does not exist|syntax error at|Cannot read properties|ReferenceError:|TypeError:/i.test(
+        text
+      )
+    ) {
+      return "تعذر الاتصال بالخادم حاليًا. يرجى المحاولة مرة أخرى بعد قليل.";
+    }
+
+    return text;
+  }
+
+  function inferType(message) {
+    const text = String(message || "");
+
+    if (/✅|بنجاح|تمت? (?:الإضافة|الحفظ|التحديث|التسجيل|الإرسال|الحذف|التفعيل|التعطيل|الاعتماد|الفتح|الرفض|القبول)/i.test(text)) {
+      return "success";
+    }
+
+    if (/خطأ|فشل|تعذر|غير مصرح|لا تملك|انتهت الجلسة|غير صالح|❌/i.test(text)) {
+      return "error";
+    }
+
+    if (/تحذير|تنبيه|يرجى|الرجاء|مطلوب|لا يمكن|غير صحيح/i.test(text)) {
+      return "warning";
+    }
+
     return "info";
   }
 
   function toast(message, type = "info", options = {}) {
     const stack = ensureToastStack();
-    const finalType = normalizeType(type);
+    const inferredType = inferType(message);
+    const requestedType = normalizeType(type);
+    const finalType = requestedType === "info" ? inferredType : requestedType;
     const title =
       options.title ||
       (finalType === "success"
@@ -46,7 +104,7 @@
       <div class="ui-toast__icon">${ICONS[finalType] || "i"}</div>
       <div>
         <div class="ui-toast__title">${escapeHtml(title)}</div>
-        <div class="ui-toast__message">${escapeHtml(message || "")}</div>
+        <div class="ui-toast__message">${escapeHtml(friendlyMessage(message))}</div>
       </div>
       <button class="ui-toast__close" type="button" aria-label="إغلاق">×</button>
     `;
@@ -124,7 +182,7 @@
           <div class="ui-dialog-body">
             ${
               options.message
-                ? `<div class="ui-dialog-message">${escapeHtml(options.message)}</div>`
+                ? `<div class="ui-dialog-message">${escapeHtml(friendlyMessage(options.message))}</div>`
                 : ""
             }
             ${inputHtml}
@@ -267,7 +325,14 @@
     confirm: confirmDialog,
     prompt: promptDialog,
     dialog,
+    friendlyMessage,
+    inferType,
   };
+
+  window.uiToast = toast;
+  window.uiAlert = alertDialog;
+  window.uiConfirm = confirmDialog;
+  window.uiPrompt = promptDialog;
 
   window.showToast = function (message, type = "info", options = {}) {
     return toast(message, type, options);
@@ -277,6 +342,35 @@
   window.Toast.show = function (message, type = "info", options = {}) {
     return toast(message, type, options);
   };
+
+  let lastUnhandledMessage = "";
+  let lastUnhandledAt = 0;
+
+  function notifyUnhandled(raw, details) {
+    const message = friendlyMessage(raw) || "حدث خطأ غير متوقع أثناء تنفيذ العملية.";
+    const now = Date.now();
+
+    console.error("Unhandled frontend error:", details);
+
+    if (message === lastUnhandledMessage && now - lastUnhandledAt < 1200) return;
+    lastUnhandledMessage = message;
+    lastUnhandledAt = now;
+
+    toast(message, "error", { title: "تعذر تنفيذ العملية", timeout: 5200 });
+  }
+
+  window.addEventListener("unhandledrejection", (event) => {
+    notifyUnhandled(
+      event?.reason?.message || event?.reason || "حدث خطأ غير متوقع أثناء تنفيذ العملية.",
+      event?.reason
+    );
+  });
+
+  window.addEventListener("error", (event) => {
+    const raw = event?.error?.message || event?.message;
+    if (!raw) return;
+    notifyUnhandled(raw, event?.error || event);
+  });
 })();
 // Global alert beautifier
 (function () {
@@ -286,11 +380,27 @@
   const nativeAlert = window.alert.bind(window);
 
   window.alert = function (message) {
-    if (window.AppUI?.toast) {
-      window.AppUI.toast(String(message || ""), "info");
+    const safeMessage = window.AppUI?.friendlyMessage
+      ? window.AppUI.friendlyMessage(message)
+      : String(message || "");
+
+    if (window.AppUI?.alert) {
+      const type = window.AppUI.inferType?.(safeMessage) || "info";
+      window.AppUI.alert({
+        title:
+          type === "success"
+            ? "تم بنجاح"
+            : type === "error" || type === "danger"
+            ? "تعذر تنفيذ العملية"
+            : type === "warning"
+            ? "تنبيه"
+            : "معلومة",
+        message: safeMessage,
+        type,
+      });
       return;
     }
 
-    nativeAlert(message);
+    nativeAlert(safeMessage);
   };
 })();

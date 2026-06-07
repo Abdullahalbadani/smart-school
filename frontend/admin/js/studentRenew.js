@@ -93,7 +93,8 @@ async function csConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
   function setLoading(btn, loading, text) {
     if (!btn) return;

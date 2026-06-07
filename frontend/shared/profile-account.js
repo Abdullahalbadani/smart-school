@@ -48,6 +48,11 @@ const apiUrl =
   }
 
   function internalToast(message, type) {
+    if (window.AppUI?.toast) {
+      window.AppUI.toast(message, type || "info");
+      return;
+    }
+
     // لو الصفحة عندها showToast خاص (مثل صفحة الطالب) نستعمله
     if (typeof window.showToast === "function") {
       try {

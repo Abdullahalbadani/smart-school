@@ -933,6 +933,7 @@ const DEFAULT_OPTIONS = {
 
     function showError(message) {
       clearMessages();
+      window.AppUI?.toast(message || "حدث خطأ.", "error");
       setStatus(message || "حدث خطأ.");
       if (els.error) {
         els.error.textContent = message || "حدث خطأ.";
@@ -942,6 +943,7 @@ const DEFAULT_OPTIONS = {
 
     function showSuccess(message) {
       clearMessages();
+      window.AppUI?.toast(message || "تمت العملية بنجاح ✅", "success");
       if (els.success) {
         els.success.textContent = message || "";
         els.success.hidden = false;

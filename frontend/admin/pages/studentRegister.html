@@ -64,17 +64,7 @@
             </legend>
 
             <div class="sr-grid">
-              <div class="sr-field">
-                <label for="studentCode">
-                  رقم الطالب / رقم القيد <span class="sr-required">*</span>
-                </label>
-                <input
-                  type="text"
-                  id="studentCode"
-                  placeholder="مثال: ST-2025-001"
-                  required
-                />
-              </div>
+             <input type="hidden" id="studentCode" name="student_code" />
 
               <div class="sr-field">
                 <label for="admissionDate">
@@ -122,15 +112,8 @@
                 />
               </div>
 
-              <div class="sr-field">
-                <label for="studentStatus">حالة الطالب</label>
-                <select id="studentStatus">
-                  <option value="active">نشط</option>
-                  <option value="graduated">متخرج</option>
-                  <option value="withdrawn">منسحب</option>
-                  <option value="suspended">موقوف</option>
-                </select>
-              </div>
+         <!-- حالة الطالب عند التسجيل تكون نشط تلقائيًا -->
+<input type="hidden" id="studentStatus" value="active" />
 
               <div class="sr-field sr-field-full">
                 <label for="studentAddress">🏠 العنوان الحالي</label>
@@ -410,17 +393,16 @@
         <div class="sr-side-icon">💡</div>
         <div>
           <h2 class="sr-side-title">نصائح سريعة للتسجيل</h2>
-          <p class="sr-side-subtitle">
-            تأكد من صحة رقم القيد وربط الطالب بولي الأمر الصحيح لتفادي التعارضات لاحقًا.
-          </p>
+        <p class="sr-side-subtitle">
+  يتم إنشاء رقم القيد تلقائيًا. تأكد من ربط الطالب بولي الأمر الصحيح لتفادي التعارضات لاحقًا.
+</p>
         </div>
       </div>
 
       <ul class="sr-side-list">
         <li>
           <span class="sr-side-dot"></span>
-          <span>رقم الطالب <b>student_code</b> يجب أن يكون فريدًا ولا يتكرر.</span>
-        </li>
+<span>يتم إنشاء رقم الطالب <b>student_code</b> تلقائيًا بصورة فريدة عند التسجيل.</span>        </li>
         <li>
           <span class="sr-side-dot"></span>
           <span>السنة الدراسية والصف والشعبة تعتمد عليها كل وحدات: الحضور، الدرجات، الرسوم.</span>

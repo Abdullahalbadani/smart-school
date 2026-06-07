@@ -100,7 +100,7 @@ function toast(msg, type = "info") {
 
   if (window.showToast) return window.showToast(msg);
 
-  alert(msg);
+  console.warn(msg);
 }
 
 async function ssConfirm(options = {}) {
@@ -108,7 +108,20 @@ async function ssConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
+}
+function dateOnly(value) {
+  return String(value || "").slice(0, 10);
+}
+async function showWarning(message) {
+  await ssConfirm({
+    title: "تنبيه",
+    message: `⚠️ ${message}`,
+    confirmText: "حسنًا",
+    cancelText: "إغلاق",
+    type: "warning",
+  });
 }
   function boot() {
     const root = $("#schoolSettingsPage");
@@ -703,8 +716,7 @@ recalcAcademicTotals(root);
       <tr>
         <td>${y.id}</td>
         <td>${escapeHtml(y.name)}</td>
-        <td>${escapeHtml(y.start_date)} → ${escapeHtml(y.end_date)}</td>
-        <td>${y.is_active ? pill("نشط", "ok") : pill("متوقف", "off")}</td>
+<td>${escapeHtml(dateOnly(y.start_date))} → ${escapeHtml(dateOnly(y.end_date))}</td>        <td>${y.is_active ? pill("نشط", "ok") : pill("متوقف", "off")}</td>
         <td>
           <div class="ss-row-actions">
             <button class="ss-miniBtn ss-miniBtn--accent" data-act="edit-year" data-id="${y.id}">تعديل</button>
@@ -1193,12 +1205,23 @@ recalcAcademicTotals(root);
         <label class="full">اسم السنة
           <input name="name" value="${escapeAttr(item?.name || "")}" placeholder="مثال: 2025/2026" required />
         </label>
-        <label>تاريخ البداية
-          <input name="start_date" type="date" value="${escapeAttr(item?.start_date || "")}" required />
-        </label>
-        <label>تاريخ النهاية
-          <input name="end_date" type="date" value="${escapeAttr(item?.end_date || "")}" required />
-        </label>
+     <label>تاريخ البداية
+  <input
+    name="start_date"
+    type="date"
+    value="${escapeAttr(dateOnly(item?.start_date))}"
+    required
+  />
+</label>
+
+<label>تاريخ النهاية
+  <input
+    name="end_date"
+    type="date"
+    value="${escapeAttr(dateOnly(item?.end_date))}"
+    required
+  />
+</label>
       </form>
       `,
       `
@@ -1208,17 +1231,63 @@ recalcAcademicTotals(root);
     );
 
     $("#mCancel", root).onclick = () => closeModal(root);
-    $("#mSave", root).onclick = async () => {
-      const f = $("#fYear", root);
-      const payload = Object.fromEntries(new FormData(f).entries());
-      await apiFetch("/admin/school-settings/years" + (isEdit ? `/${item.id}` : ""), {
+  $("#mSave", root).onclick = async () => {
+  const f = $("#fYear", root);
+
+  // تشغيل التحقق الافتراضي للحقول المطلوبة
+  if (!f.reportValidity()) return;
+
+  const payload = Object.fromEntries(new FormData(f).entries());
+
+  const name = String(payload.name || "").trim();
+  const startDate = String(payload.start_date || "").trim();
+  const endDate = String(payload.end_date || "").trim();
+
+  // التأكد من تعبئة جميع الحقول
+  if (!name || !startDate || !endDate) {
+    await showWarning("يرجى تعبئة اسم السنة وتاريخ البداية وتاريخ النهاية.");
+    return;
+  }
+
+  // منع الحفظ عندما تكون النهاية قبل البداية أو مساوية لها
+  if (endDate <= startDate) {
+    await showWarning("تاريخ نهاية السنة الدراسية يجب أن يكون بعد تاريخ البداية.");
+    return;
+  }
+
+  const btn = $("#mSave", root);
+  btn.disabled = true;
+  btn.textContent = "جاري الحفظ...";
+
+  try {
+    await apiFetch(
+      "/admin/school-settings/years" + (isEdit ? `/${item.id}` : ""),
+      {
         method: isEdit ? "PATCH" : "POST",
-        body: JSON.stringify(payload),
-      });
-      closeModal(root);
-      await loadMeta(root, { keepActivePanel: true });
-      toast("تم ✅");
-    };
+        body: JSON.stringify({
+          name,
+          start_date: startDate,
+          end_date: endDate,
+        }),
+      }
+    );
+
+    closeModal(root);
+    await loadMeta(root, { keepActivePanel: true });
+
+    toast(
+      isEdit
+        ? "تم تعديل السنة الدراسية بنجاح ✅"
+        : "تمت إضافة السنة الدراسية بنجاح ✅",
+      "success"
+    );
+  } catch (error) {
+    await showWarning(error.message || "تعذر حفظ السنة الدراسية.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = isEdit ? "حفظ" : "إضافة";
+  }
+};
   }
 
   function openStageModal(root, item = null) {
@@ -1544,52 +1613,15 @@ recalcAcademicTotals(root);
       }
     });
 
-    // استعادة النسخة الاحتياطية من ملف محلي
+    // لم نعد نقبل رفع ملف SQL من المتصفح مباشرةً.
+    // تتم الاستعادة من نسخة محفوظة وموثقة ضمن سجل المدرسة فقط.
     const restoreInput = $("#restoreBackupFile", root);
     const triggerBtn = $("#btnTriggerRestoreBackup", root);
-    
-    triggerBtn?.addEventListener("click", () => {
-      restoreInput?.click();
-    });
-    
-    restoreInput?.addEventListener("change", async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      
-      const isConfirmed = await ssConfirm({
-        message: "⚠️ تحذير هام جداً: هل أنت متأكد من استعادة قاعدة البيانات من الملف المختار؟ سيؤدي ذلك إلى استبدال كافة البيانات الحالية بالكامل ولا يمكن التراجع عن هذه العملية!",
-        confirmText: "نعم، استعد قاعدة البيانات",
-        cancelText: "إلغاء"
-      });
-      
-      if (!isConfirmed) {
-        restoreInput.value = "";
-        return;
-      }
-      
-      triggerBtn.disabled = true;
-      triggerBtn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> جاري استعادة قاعدة البيانات...`;
-      
-   try {
-        // 🟢 لقط خيار المدير (هل يريد دمج أم تطهير واستبدال؟)
-        const restoreMode = $("#restoreMode", root)?.value || "merge";
+    const restoreMode = $("#restoreMode", root);
 
-        const formData = new FormData();
-        formData.append("backupFile", file);
-        formData.append("restoreMode", restoreMode); // 🟢 إرسال الخيار المختار للباك إند
-        await apiFetchFormData("/admin/backups/restore", formData);
-        
-        toast("تم استعادة قاعدة البيانات بنجاح بنسبة 100%! سيتم إعادة تحميل الصفحة الآن ✅");
-        setTimeout(() => {
-          window.location.reload();
-        }, 1500);
-      } catch (err) {
-        toast("فشلت عملية الاستعادة: " + err.message);
-        triggerBtn.disabled = false;
-        triggerBtn.innerHTML = `<i class="ri-upload-cloud-line"></i> رفع واستعادة قاعدة البيانات`;
-        restoreInput.value = "";
-      }
-    });
+    if (restoreInput) restoreInput.style.display = "none";
+    if (triggerBtn) triggerBtn.style.display = "none";
+    if (restoreMode) restoreMode.style.display = "none";
 
     $("#btnPrevBackupPage", root)?.addEventListener("click", async () => {
       if (backupPage > 1) {
@@ -1616,12 +1648,8 @@ recalcAcademicTotals(root);
         closeDirPicker(root);
       }
     });
-// 🟢 ربط حدث زر قوقل درايف (BYOD) المضاف حديثاً
-  $("#btnLinkGoogleDrive", root)?.addEventListener("click", () => {
-      const token = localStorage.getItem("token");
-      window.location.href = apiUrl(`/public/auth/google?token=${token}`);
-    });
-
+    // يتم ضبط سلوك زر Google Drive داخل checkGoogleDriveConnection
+    // حتى لا يعمل الربط والفصل معًا عند الضغط على الزر.
     // 🟢 فحص حالة الربط مع قوقل درايف فوراً عند فتح تبويب النسخ الاحتياطي
     await checkGoogleDriveConnection(root);
     await loadBackupSettings(root);
@@ -1787,110 +1815,343 @@ recalcAcademicTotals(root);
     return p.split(/[\\/]/).pop();
   }
 
+  async function downloadBackupFile(backupId) {
+    const response = await fetch(
+      apiUrl(`/admin/backups/download/${backupId}`),
+      {
+        method: "GET",
+        headers: {
+          ...authHeaders()
+        }
+      }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      let data = null;
+
+      try {
+        data = text ? JSON.parse(text) : null;
+      } catch {
+        data = null;
+      }
+
+      throw new Error(
+        data?.error ||
+        data?.message ||
+        `تعذر تحميل النسخة الاحتياطية (HTTP ${response.status})`
+      );
+    }
+
+    const blob = await response.blob();
+    const disposition =
+      response.headers.get("content-disposition") || "";
+
+    const utf8Match = disposition.match(
+      /filename\*=UTF-8''([^;]+)/i
+    );
+
+    const plainMatch = disposition.match(
+      /filename="?([^";]+)"?/i
+    );
+
+    const fileName = decodeURIComponent(
+      utf8Match?.[1] ||
+      plainMatch?.[1] ||
+      `school-backup-${backupId}.sql`
+    );
+
+    const objectUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    URL.revokeObjectURL(objectUrl);
+  }
+
+  async function restoreSavedBackup(root, backupId) {
+    const confirmed = await ssConfirm({
+      title: "استعادة نسخة احتياطية",
+      message:
+        "سيتم إنشاء نسخة أمان تلقائيًا للحالة الحالية، ثم استعادة النسخة المختارة لهذه المدرسة فقط. هل تريد المتابعة؟",
+      confirmText: "نعم، استعد النسخة",
+      cancelText: "إلغاء",
+      type: "warning"
+    });
+
+    if (!confirmed) return;
+
+    try {
+      const result = await apiFetch(
+        `/admin/backups/${backupId}/restore`,
+        {
+          method: "POST",
+          body: JSON.stringify({})
+        }
+      );
+
+      toast(
+        result?.message ||
+        "تمت استعادة نسخة المدرسة بنجاح ✅"
+      );
+
+      await loadBackupSettings(root);
+      await loadBackupLogs(root, 1);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1200);
+    } catch (error) {
+      toast(
+        "فشلت عملية الاستعادة: " + error.message
+      );
+    }
+  }
+
+  function getBackupTypeMeta(type) {
+    if (type === "manual") {
+      return {
+        label: "يدوي",
+        cssClass: "ss-pill--ok"
+      };
+    }
+
+    if (type === "auto") {
+      return {
+        label: "تلقائي",
+        cssClass: "ss-pill--off"
+      };
+    }
+
+    if (type === "restore") {
+      return {
+        label: "استعادة",
+        cssClass: ""
+      };
+    }
+
+    return {
+      label: escapeHtml(type || "غير معروف"),
+      cssClass: ""
+    };
+  }
+
   async function loadBackupLogs(root, page) {
     try {
-      const res = await apiFetch(`/admin/backups/logs?page=${page}&limit=${backupLimit}`);
+      const res = await apiFetch(
+        `/admin/backups/logs?page=${page}&limit=${backupLimit}`
+      );
+
       const tb = $("#tbBackupLogs", root);
+
       if (!tb) return;
-      
+
       const rows = pickRows(res);
-      const pag = res.pagination || { page: 1, limit: backupLimit, total: 0, totalPages: 1 };
+
+      const pag =
+        res.pagination ||
+        {
+          page: 1,
+          limit: backupLimit,
+          total: 0,
+          totalPages: 1
+        };
+
       backupPage = pag.page;
-      
+
       if (rows.length === 0) {
-        tb.innerHTML = `<tr><td colspan="6" class="ss-empty">لا توجد سجلات نسخ احتياطي</td></tr>`;
+        tb.innerHTML =
+          `<tr><td colspan="6" class="ss-empty">لا توجد سجلات نسخ احتياطي</td></tr>`;
       } else {
-        tb.innerHTML = rows.map(log => {
-          const typeLabel = log.backup_type === "manual" ? "يدوي" : "تلقائي";
-          const typeClass = log.backup_type === "manual" ? "ss-pill--ok" : "ss-pill--off";
-          
-          const timeStr = new Date(log.started_at).toLocaleString('ar-YE');
-          const sizeStr = log.file_size ? formatBytes(log.file_size) : "—";
-          
-          let statusPill = "";
-          if (log.status === "success") {
-            statusPill = `<span class="ss-pill ss-pill--ok">نجاح ✅</span>`;
-          } else if (log.status === "failed") {
-            statusPill = `<span class="ss-pill ss-pill--off" style="cursor: pointer;" title="${escapeHtml(log.error_message)}">فشل ❌</span>`;
-          } else {
-            statusPill = `<span class="ss-pill" style="background: var(--accent); color: #fff;">جاري التشغيل...</span>`;
-          }
-          
-          let actions = "";
-          if (log.status === "success") {
-            actions = `
-              <button class="ss-miniBtn ss-miniBtn--accent" data-act="download-backup" data-id="${log.id}">تحميل</button>
-              <button class="ss-miniBtn ss-miniBtn--danger" data-act="delete-backup" data-id="${log.id}">حذف</button>
-            `;
-          } else if (log.status === "failed") {
-            actions = `
-              <button class="ss-miniBtn" data-act="show-error" data-error="${escapeAttr(log.error_message || '')}">التفاصيل</button>
-              <button class="ss-miniBtn ss-miniBtn--danger" data-act="delete-backup" data-id="${log.id}">حذف</button>
-            `;
-          } else {
-            actions = `—`;
-          }
-          
-          return `
-            <tr>
-              <td><span class="ss-pill ${typeClass}">${typeLabel}</span></td>
-              <td>${timeStr}</td>
-              <td>${sizeStr}</td>
-              <td>${statusPill}</td>
-              <td>${escapeHtml(log.created_by_name || 'النظام')}</td>
-              <td>
-                <div class="ss-row-actions">
-                  ${actions}
-                </div>
-              </td>
-            </tr>
-          `;
-        }).join("");
-        
-        tb.querySelectorAll("[data-act]").forEach(btn => {
-          btn.addEventListener("click", async () => {
-            const id = btn.dataset.id;
-            if (btn.dataset.act === "download-backup") {
-              window.open(apiUrl(`/admin/backups/download/${id}?token=${localStorage.getItem("token")}`), '_blank');
+        tb.innerHTML = rows
+          .map((log) => {
+            const typeMeta =
+              getBackupTypeMeta(log.backup_type);
+
+            const isRestorableBackup =
+              log.status === "success" &&
+              (
+                log.backup_type === "manual" ||
+                log.backup_type === "auto"
+              );
+
+            const timeStr = new Date(
+              log.started_at
+            ).toLocaleString("ar-YE");
+
+            const sizeStr = log.file_size
+              ? formatBytes(log.file_size)
+              : "—";
+
+            let statusPill = "";
+
+            if (log.status === "success") {
+              statusPill =
+                `<span class="ss-pill ss-pill--ok">نجاح ✅</span>`;
+            } else if (log.status === "failed") {
+              statusPill =
+                `<span class="ss-pill ss-pill--off" style="cursor:pointer;" title="${escapeAttr(log.error_message || "")}">فشل ❌</span>`;
+            } else {
+              statusPill =
+                `<span class="ss-pill" style="background:var(--accent);color:#fff;">جاري التشغيل...</span>`;
             }
-            if (btn.dataset.act === "delete-backup") {
-              const ok = await ssConfirm({
-                title: "حذف النسخة الاحتياطية",
-                message: "هل أنت متأكد من رغبتك في حذف ملف وسجل هذه النسخة الاحتياطية نهائياً من الخادم؟",
-                confirmText: "حذف نهائي",
-                cancelText: "إلغاء",
-                type: "danger"
-              });
-              if (ok) {
+
+            let actions = "—";
+
+            if (isRestorableBackup) {
+              actions = `
+                <button class="ss-miniBtn ss-miniBtn--accent" data-act="download-backup" data-id="${log.id}">تحميل</button>
+                <button class="ss-miniBtn" data-act="restore-backup" data-id="${log.id}">استعادة</button>
+                <button class="ss-miniBtn ss-miniBtn--danger" data-act="delete-backup" data-id="${log.id}">حذف</button>
+              `;
+            } else if (log.status === "failed") {
+              actions = `
+                <button class="ss-miniBtn" data-act="show-error" data-error="${escapeAttr(log.error_message || "")}">التفاصيل</button>
+                <button class="ss-miniBtn ss-miniBtn--danger" data-act="delete-backup" data-id="${log.id}">حذف</button>
+              `;
+            } else if (log.backup_type === "restore") {
+              actions = `
+                <button class="ss-miniBtn ss-miniBtn--danger" data-act="delete-backup" data-id="${log.id}">حذف السجل</button>
+              `;
+            }
+
+            return `
+              <tr>
+                <td><span class="ss-pill ${typeMeta.cssClass}">${typeMeta.label}</span></td>
+                <td>${timeStr}</td>
+                <td>${sizeStr}</td>
+                <td>${statusPill}</td>
+                <td>${escapeHtml(log.created_by_name || "النظام")}</td>
+                <td>
+                  <div class="ss-row-actions">
+                    ${actions}
+                  </div>
+                </td>
+              </tr>
+            `;
+          })
+          .join("");
+
+        tb
+          .querySelectorAll("[data-act]")
+          .forEach((btn) => {
+            btn.addEventListener("click", async () => {
+              const id = btn.dataset.id;
+
+              if (
+                btn.dataset.act ===
+                "download-backup"
+              ) {
                 try {
-                  await apiFetch(`/admin/backups/${id}`, { method: "DELETE" });
-                  toast("تم حذف النسخة الاحتياطية بنجاح ✅");
-                  await loadBackupLogs(root, backupPage);
-                  await loadBackupSettings(root);
-                } catch (err) {
-                  toast("فشل الحذف: " + err.message);
+                  await downloadBackupFile(id);
+                } catch (error) {
+                  toast(
+                    "فشل التحميل: " +
+                    error.message
+                  );
                 }
               }
-            }
-            if (btn.dataset.act === "show-error") {
-              alert(btn.dataset.error || "لا توجد تفاصيل خطأ");
-            }
+
+              if (
+                btn.dataset.act ===
+                "restore-backup"
+              ) {
+                await restoreSavedBackup(
+                  root,
+                  id
+                );
+              }
+
+              if (
+                btn.dataset.act ===
+                "delete-backup"
+              ) {
+                const confirmed =
+                  await ssConfirm({
+                    title:
+                      "حذف النسخة الاحتياطية",
+                    message:
+                      "هل أنت متأكد من حذف ملف وسجل هذه النسخة نهائيًا؟",
+                    confirmText:
+                      "حذف نهائي",
+                    cancelText: "إلغاء",
+                    type: "danger"
+                  });
+
+                if (confirmed) {
+                  try {
+                    await apiFetch(
+                      `/admin/backups/${id}`,
+                      {
+                        method: "DELETE"
+                      }
+                    );
+
+                    toast(
+                      "تم حذف النسخة الاحتياطية بنجاح ✅"
+                    );
+
+                    await loadBackupLogs(
+                      root,
+                      backupPage
+                    );
+
+                    await loadBackupSettings(
+                      root
+                    );
+                  } catch (error) {
+                    toast(
+                      "فشل الحذف: " +
+                      error.message
+                    );
+                  }
+                }
+              }
+
+              if (
+                btn.dataset.act ===
+                "show-error"
+              ) {
+                window.AppUI?.alert({
+                  title: "تفاصيل الخطأ",
+                  message:
+                    btn.dataset.error ||
+                    "لا توجد تفاصيل خطأ",
+                  type: "error",
+                });
+              }
+            });
           });
-        });
       }
 
       if ($("#backupPaginationText", root)) {
-        $("#backupPaginationText", root).textContent = `عرض الصفحة ${pag.page} من ${pag.totalPages} (إجمالي ${pag.total} سجل)`;
+        $("#backupPaginationText", root).textContent =
+          `عرض الصفحة ${pag.page} من ${pag.totalPages} (إجمالي ${pag.total} سجل)`;
       }
-      
-      const btnPrev = $("#btnPrevBackupPage", root);
-      const btnNext = $("#btnNextBackupPage", root);
-      
-      if (btnPrev) btnPrev.disabled = pag.page <= 1;
-      if (btnNext) btnNext.disabled = pag.page >= pag.totalPages;
-      
-    } catch (e) {
-      console.warn("Could not load backup logs", e.message);
+
+      const btnPrev =
+        $("#btnPrevBackupPage", root);
+
+      const btnNext =
+        $("#btnNextBackupPage", root);
+
+      if (btnPrev) {
+        btnPrev.disabled = pag.page <= 1;
+      }
+
+      if (btnNext) {
+        btnNext.disabled =
+          pag.page >= pag.totalPages;
+      }
+    } catch (error) {
+      console.warn(
+        "Could not load backup logs",
+        error.message
+      );
     }
   }
 
@@ -1902,26 +2163,78 @@ recalcAcademicTotals(root);
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
   }
-// 🟢 دالة فحص حالة الربط مع قوقل درايف وتحديث المؤشر مرئياً في الواجهة
+  function connectGoogleDrive() {
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      toast("انتهت جلسة الدخول. سجّل الدخول مجددًا.");
+      return;
+    }
+
+    // متوافق مع مسار OAuth الحالي في المشروع.
+    // يفضّل لاحقًا استبدال token بحالة OAuth قصيرة العمر.
+    window.location.href = apiUrl(
+      `/public/auth/google?token=${encodeURIComponent(token)}`
+    );
+  }
+
+  // فحص حالة الربط مع Google Drive وتحديث المؤشر مرئيًا
   async function checkGoogleDriveConnection(root) {
     try {
-      const res = await apiFetch("/admin/backups/google-drive-status");
-      const statusSpan = $("#gDriveStatus", root);
-      const linkBtn = $("#btnLinkGoogleDrive", root);
-      
-      if (res && res.connected) {
+      const res = await apiFetch(
+        "/admin/backups/google-drive-status"
+      );
+
+      const statusSpan =
+        $("#gDriveStatus", root);
+
+      const linkBtn =
+        $("#btnLinkGoogleDrive", root);
+
+      if (res?.connected) {
         if (statusSpan) {
-          statusSpan.innerHTML = `متصل 🟢 (${res.email})`;
-          statusSpan.style.color = "#22c55e";
+          statusSpan.textContent =
+            `متصل 🟢 (${res.email})`;
+
+          statusSpan.style.color =
+            "#22c55e";
         }
+
         if (linkBtn) {
-          linkBtn.innerHTML = '<i class="ri-link-unlink"></i> إلغاء ربط الحساب';
-          linkBtn.style.background = "#ef4444";
-          linkBtn.onclick = () => disconnectGoogleDrive(root);
+          linkBtn.innerHTML =
+            '<i class="ri-link-unlink"></i> إلغاء ربط الحساب';
+
+          linkBtn.style.background =
+            "#ef4444";
+
+          linkBtn.onclick = () =>
+            disconnectGoogleDrive(root);
         }
+
+        return;
       }
-    } catch (err) {
-      console.warn("تعذر جلب حالة Google Drive السحابية:", err.message);
+
+      if (statusSpan) {
+        statusSpan.textContent =
+          "غير متصل";
+
+        statusSpan.style.color = "";
+      }
+
+      if (linkBtn) {
+        linkBtn.innerHTML =
+          '<i class="ri-google-line"></i> ربط Google Drive';
+
+        linkBtn.style.background = "";
+
+        linkBtn.onclick =
+          connectGoogleDrive;
+      }
+    } catch (error) {
+      console.warn(
+        "تعذر جلب حالة Google Drive السحابية:",
+        error.message
+      );
     }
   }
 

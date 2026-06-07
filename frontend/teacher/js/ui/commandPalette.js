@@ -10,7 +10,7 @@
   const toast =
     typeof window.showToast === "function"
       ? window.showToast
-      : (m) => alert(m);
+      : (m) => window.AppUI?.toast(m, "info");
 
   const esc = (s) =>
     String(s ?? "")

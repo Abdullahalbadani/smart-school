@@ -7,10 +7,11 @@
     return document.getElementById(id);
   }
 
-  function showToast(message) {
+  function showToast(message, type = "info") {
+    if (window.AppUI?.toast) return window.AppUI.toast(message, type);
     const toast = $("toast");
     if (!toast) {
-      alert(message);
+      console.warn(message);
       return;
     }
     toast.textContent = message;

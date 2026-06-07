@@ -150,7 +150,8 @@ async function wsConfirm(options = {}) {
     return await window.AppUI.confirm(options);
   }
 
-  return confirm(options.message || "هل تريد المتابعة؟");
+  console.warn("AppUI.confirm غير متاح");
+  return false;
 }
 
 async function wsPrompt(options = {}) {
@@ -158,7 +159,8 @@ async function wsPrompt(options = {}) {
     return await window.AppUI.prompt(options);
   }
 
-  return prompt(options.message || "اكتب البيانات", options.defaultValue || "");
+  console.warn("AppUI.prompt غير متاح");
+  return null;
 }
 
   function setStatusChip(status) {

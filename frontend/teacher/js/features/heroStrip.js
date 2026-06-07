@@ -213,7 +213,16 @@ safeSet("teacher-name-pill", `أ. ${name}`);
   // دالة إرسال الرد للإدارة
   window.respondToSubstitute = async function(subId, responseType) {
     const isAccepted = responseType === 'accepted';
-    if(!confirm(isAccepted ? 'هل أنت متأكد من قبول هذه الحصة؟' : 'هل أنت متأكد من الاعتذار عن هذه الحصة؟')) return;
+    const confirmed = await window.AppUI.confirm({
+      title: isAccepted ? "تأكيد قبول الحصة" : "تأكيد الاعتذار عن الحصة",
+      message: isAccepted
+        ? "هل أنت متأكد من قبول هذه الحصة؟"
+        : "هل أنت متأكد من الاعتذار عن هذه الحصة؟",
+      confirmText: isAccepted ? "قبول الحصة" : "إرسال الاعتذار",
+      cancelText: "إلغاء",
+      type: isAccepted ? "success" : "warning",
+    });
+    if (!confirmed) return;
     
     try {
       // 🟢 المسار الصحيح مع كلمة permits
@@ -231,10 +240,17 @@ safeSet("teacher-name-pill", `أ. ${name}`);
 
       if (!res.ok) throw new Error("فشل إرسال الرد");
 
-      alert(isAccepted ? "تم قبول الحصة بنجاح ✅" : "تم إرسال اعتذارك للإدارة ❌");
+      window.AppUI.toast(
+        isAccepted ? "تم قبول الحصة بنجاح ✅" : "تم إرسال اعتذارك للإدارة.",
+        isAccepted ? "success" : "warning"
+      );
       loadSubstituteAlerts(); // تحديث البطاقة لإخفائها بعد الرد
     } catch (e) {
-      alert("حدث خطأ أثناء إرسال الرد: " + e.message);
+      await window.AppUI.alert({
+        title: "تعذر إرسال الرد",
+        message: e.message || "حدث خطأ أثناء إرسال الرد.",
+        type: "danger",
+      });
     }
   };
 

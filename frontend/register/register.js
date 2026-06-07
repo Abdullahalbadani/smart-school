@@ -35,35 +35,77 @@ document.getElementById('schoolRegisterForm').addEventListener('submit', async (
         formData.append('logo', logoFile);
     }
 
-    try {
-        const response = await fetch('/api/public/register-school', {
-            method: 'POST',
-            // ⚠️ ملاحظة: عند استخدام FormData لا نكتب Content-Type، المتصفح يضعها تلقائياً
-            body: formData
-        });
+  try {
+    const response = await fetch('/api/public/register-school', {
+        method: 'POST',
+        body: formData
+    });
 
-        const result = await response.json();
+    const result = await response.json();
 
-        if (response.ok) {
-            alert('تم تسجيل مدرستك بنجاح!');
+    if (response.ok) {
+        const school = result.school || result.data?.school;
 
-            const slug = document.getElementById('slug').value.trim().toLowerCase();
-            localStorage.setItem("school_slug", slug);
-            const loginUrl = `/frontend/login/login.html?school=${encodeURIComponent(slug)}`;
+        const slug = String(
+            school?.slug ||
+            document.getElementById('slug').value
+        )
+            .trim()
+            .toLowerCase();
 
-            window.location.replace(loginUrl);
-        } else {
-            if (result.details && Array.isArray(result.details)) {
-                alert("فشل التحقق من البيانات:\n- " + result.details.join("\n- "));
-            } else {
-                alert(result.message || 'حدث خطأ غير معروف');
-            }
+        if (!slug) {
+            throw new Error(
+                'تم إنشاء المدرسة، لكن لم يتم العثور على رابط المدرسة'
+            );
         }
-    } catch (error) {
-        console.error('Error:', error);
-        alert('فشل الاتصال بالسيرفر');
-    } finally {
-        btn.disabled = false;
-        btn.innerText = 'تسجيل المدرسة والبدء';
+
+        const schoolName = String(
+    school?.name_ar ||
+    document.getElementById('schoolNameAr').value ||
+    ''
+).trim();
+
+localStorage.setItem('school_slug', slug);
+localStorage.setItem('school_name', schoolName);
+
+
+        const schoolLoginUrl =
+            `${window.location.origin}` +
+            `/frontend/login/login.html?school=${encodeURIComponent(slug)}`;
+
+        window.AppUI.toast(
+            `تم تسجيل مدرستك بنجاح ✅ رابط الدخول: ${schoolLoginUrl}`,
+            "success",
+            { timeout: 2200 }
+        );
+
+        setTimeout(() => {
+            window.location.replace(schoolLoginUrl);
+        }, 900);
+    } else {
+        if (result.details && Array.isArray(result.details)) {
+            await window.AppUI.alert({
+                title: "تعذر إنشاء المدرسة",
+                message: 'فشل التحقق من البيانات:\n- ' + result.details.join('\n- '),
+                type: "danger",
+            });
+        } else {
+            await window.AppUI.alert({
+                title: "تعذر إنشاء المدرسة",
+                message: result.message || "حدث خطأ غير معروف.",
+                type: "danger",
+            });
+        }
     }
+} catch (error) {
+    console.error('Error:', error);
+    await window.AppUI.alert({
+        title: "تعذر الاتصال بالخادم",
+        message: error.message || "فشل الاتصال بالخادم.",
+        type: "danger",
+    });
+} finally {
+    btn.disabled = false;
+    btn.innerText = 'تسجيل المدرسة والبدء';
+}
 });

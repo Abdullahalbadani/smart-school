@@ -7,7 +7,7 @@ const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
  const $ = (id) => document.getElementById(id);
 
   const toast = (msg) =>
-    typeof window.showToast === "function" ? window.showToast(msg) : alert(msg);
+    typeof window.showToast === "function" ? window.showToast(msg) : console.warn(msg);
 
   function authHeaders() {
     const token = localStorage.getItem("token");
@@ -164,7 +164,13 @@ const url = path.startsWith("http") ? path : `${API_BASE}/${cleanPath}`;
 
   async function decide(id, action) {
     const note =
-      prompt(action === "APPROVE" ? "ملاحظة القبول (اختياري):" : "سبب الرفض (اختياري):") || null;
+      (await window.AppUI.prompt({
+        title: action === "APPROVE" ? "قبول الإذن" : "رفض الإذن",
+        message: action === "APPROVE" ? "أضف ملاحظة القبول إذا رغبت." : "أضف سبب الرفض إذا رغبت.",
+        defaultValue: "",
+        confirmText: action === "APPROVE" ? "قبول الإذن" : "رفض الإذن",
+        cancelText: "إلغاء",
+      })) || null;
 
     await apiFetch(`/admin/permissions/${id}/decide`, {
       method: "POST",
@@ -176,7 +182,14 @@ const url = path.startsWith("http") ? path : `${API_BASE}/${cleanPath}`;
   }
 
   async function backToPending(id) {
-    const note = prompt("ملاحظة الإرجاع للانتظار (اختياري):") || null;
+    const note =
+      (await window.AppUI.prompt({
+        title: "إرجاع الإذن للانتظار",
+        message: "أضف ملاحظة الإرجاع إذا رغبت.",
+        defaultValue: "",
+        confirmText: "إرجاع للانتظار",
+        cancelText: "إلغاء",
+      })) || null;
 
     await apiFetch(`/admin/permissions/${id}/override`, {
       method: "POST",

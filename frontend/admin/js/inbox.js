@@ -566,16 +566,9 @@ if (typeof window.refreshNavbarNotificationCount === "function") {
   }
 
   function showToast(message, type = "info") {
-    // إذا عندك نظام toast جاهز في المشروع، اربطه هنا
-    // مثال:
-    // window.showToast?.(message, type);
-
-    // fallback بسيط:
-    if (type === "error") {
-      console.warn("[Inbox]", message);
-    } else {
-      console.log("[Inbox]", message);
-    }
+    if (window.AppUI?.toast) return window.AppUI.toast(message, type);
+    if (type === "error") console.warn("[Inbox]", message);
+    else console.log("[Inbox]", message);
   }
 
   function debounceSearch(callback, delay = 300) {

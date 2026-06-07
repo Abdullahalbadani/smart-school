@@ -34,11 +34,14 @@ function dashboardUrlFor(roleKey) {
   return "/frontend/admin/index.html";
 }
 
-function logoutToLogin(reason) {
+function logoutToLogin(reason, message = "يرجى تسجيل الدخول أولًا.") {
   console.warn("logoutToLogin:", reason || "");
   localStorage.removeItem("token");
   localStorage.removeItem("user");
-  window.location.replace("/frontend/login/login.html");
+  window.AppUI?.toast(message, "warning", { timeout: 1400 });
+  setTimeout(() => {
+    window.location.replace("/frontend/login/login.html");
+  }, 650);
 }
 
 function runAuthGuard() {
@@ -85,16 +88,18 @@ function runAuthGuard() {
 
   // باقي البوابات (teacher/student/parent) نطبق تحقق roleKey
   if (!userRoleKey) {
-    alert("لا تملك صلاحية لفتح هذه الصفحة");
-    logoutToLogin("Unknown roleKey for non-admin page");
+    logoutToLogin(
+      "Unknown roleKey for non-admin page",
+      "لا تملك صلاحية لفتح هذه الصفحة."
+    );
     return;
   }
 
   if (userRoleKey !== requiredRole) {
-    alert("لا تملك صلاحية لفتح هذه الصفحة");
+    window.AppUI?.toast("لا تملك صلاحية لفتح هذه الصفحة.", "warning", { timeout: 1400 });
     const url = dashboardUrlFor(userRoleKey);
     console.log("role mismatch -> redirecting to:", url);
-    window.location.replace(url);
+    setTimeout(() => window.location.replace(url), 650);
     return;
   }
 

@@ -9,7 +9,7 @@
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const toast = (msg, type = "info") => {
-    const fn = window.toast || window.Toast || window.showToast || null;
+    const fn = window.showToast || window.Toast?.show || window.toast || null;
     if (typeof fn === "function") return fn(msg, type);
     if (type === "error") console.error(msg);
     else console.log(msg);
@@ -1409,9 +1409,15 @@ grades.push({
 
     if (grades.length === 0) return toast("لم تقم بإدخال أي درجة!", "error");
 
-    if (!confirm("تأكيد اعتماد المحصلة؟ بعد الاعتماد ستصبح منشورة ولا يمكن تعديلها إلا بعد إعادة فتحها.")) {
-      return;
-    }
+    const confirmed = await window.AppUI.confirm({
+      title: "تأكيد اعتماد المحصلة",
+      message: "بعد الاعتماد ستصبح المحصلة منشورة، ولا يمكن تعديلها إلا بعد إعادة فتحها.",
+      confirmText: "اعتماد المحصلة",
+      cancelText: "إلغاء",
+      type: "warning",
+    });
+
+    if (!confirmed) return;
 
     btnEl.disabled = true;
     const oldText = btnEl.innerHTML;

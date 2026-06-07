@@ -5,7 +5,7 @@
   const qsa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
   const toast = (msg, type = "info") => {
-    const fn = window.toast || window.Toast || window.showToast || null;
+    const fn = window.showToast || window.Toast?.show || window.toast || null;
     if (typeof fn === "function") return fn(msg, type);
     if (type === "error") console.error(msg);
     else console.log(msg);

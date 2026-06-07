@@ -581,7 +581,11 @@ async function fetchMenuPermissions() {
       }
 
       console.log("فتح صفحة:", pageKey);
-      alert("سيتم لاحقًا ربط هذا الخيار بصفحة: " + pageKey);
+      window.AppUI?.alert({
+        title: "هذه الصفحة غير متاحة حاليًا",
+        message: "سيتم لاحقًا ربط هذا الخيار بصفحة: " + pageKey,
+        type: "info",
+      });
     },
 
     backFromPage() {
@@ -859,7 +863,11 @@ async function fetchMenuPermissions() {
         for (const cmd of COMMANDS) {
           if (cmd.keywords.some(k => q.includes(k))) { cmd.run(); return; }
         }
-        alert("لم يتم العثور على أمر يطابق: " + q);
+        window.AppUI?.alert({
+          title: "لم يتم العثور على نتيجة",
+          message: "لم يتم العثور على أمر يطابق: " + q,
+          type: "warning",
+        });
         input.select();
       }
     });

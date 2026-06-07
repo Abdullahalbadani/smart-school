@@ -82,7 +82,8 @@
     return explicitId || localStorage.getItem(ACTIVE_CHILD_KEY) || "";
   }
 
-  function toast(msg) {
+  function toast(msg, type = "info") {
+    if (window.AppUI?.toast) return window.AppUI.toast(msg, type);
     const t = $("#feesToast");
     if (t) {
       t.hidden = false;
@@ -92,7 +93,7 @@
       return;
     }
     if (typeof window.showToast === "function") return window.showToast(msg);
-    alert(msg);
+    console.warn(msg);
   }
 
   function wireTabs(modal) {

@@ -67,5 +67,9 @@ if (messages[code]) {
 }
 
 document.getElementById("contactBtn").addEventListener("click", () => {
-  alert("ضع هنا لاحقًا رقم واتساب أو رابط تواصل مالك النظام.");
+  window.AppUI.alert({
+    title: "التواصل مع مالك النظام",
+    message: "لم تتم إضافة وسيلة التواصل بعد. يرجى التواصل مع إدارة المنصة.",
+    type: "info",
+  });
 });

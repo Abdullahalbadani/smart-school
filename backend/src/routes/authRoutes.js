@@ -1,19 +1,13 @@
 // src/routes/authRoutes.js
 import { Router } from "express";
 import { AuthController } from "../controllers/authController.js";
-import { rateLimiter } from "../middleware/rateLimiter.js";
 import jwt from "jsonwebtoken";
 import { logAudit } from "../utils/auditLogger.js";
 
 const router = Router();
 
-const loginLimiter = rateLimiter({
-  windowMs: 15 * 60 * 1000, // 15 دقيقة
-  max: 10, // الحد الأقصى 10 محاولات
-  message: "لقد قمت بمحاولات تسجيل دخول كثيرة جداً. يرجى المحاولة بعد 15 دقيقة."
-});
 
-router.post("/login", loginLimiter, AuthController.login);
+router.post("/login", AuthController.login);
 
 router.post("/logout", async (req, res) => {
   try {
