@@ -127,6 +127,8 @@ async function empConfirm(options = {}) {
     els.paneView = requireEl("empPaneView");
 
     els.refreshBtn = requireEl("empRefreshBtn");
+    els.reportPdfBtn = requireEl("empReportPdfBtn");
+    els.reportPrintBtn = requireEl("empReportPrintBtn");
     els.search = requireEl("empSearch");
     els.tabTeachers = requireEl("empTabTeachers");
     els.tabEmployees = requireEl("empTabEmployees");
@@ -1135,6 +1137,20 @@ async function empConfirm(options = {}) {
     renderActiveTable();
   }
 
+  /* ================== School Reports ================== */
+
+  function openStaffSchoolReport(action) {
+    if (!window.SchoolReports?.openStaffReport) {
+      toast("تعذر تحميل نظام الكشوف المدرسية. حدّث الصفحة ثم حاول مجددًا.", "error");
+      return;
+    }
+
+    window.SchoolReports.openStaffReport({
+      action,
+      filters: { scope: state.viewTab },
+    });
+  }
+
   /* ================== Events ================== */
 
   function handleTableClick(ev) {
@@ -1185,6 +1201,14 @@ async function empConfirm(options = {}) {
       els.refreshBtn.addEventListener("click", () =>
         loadLists().catch((e) => toast(e.message))
       );
+    }
+
+    if (els.reportPdfBtn) {
+      els.reportPdfBtn.addEventListener("click", () => openStaffSchoolReport("pdf"));
+    }
+
+    if (els.reportPrintBtn) {
+      els.reportPrintBtn.addEventListener("click", () => openStaffSchoolReport("print"));
     }
 
     if (els.hasAccount) {

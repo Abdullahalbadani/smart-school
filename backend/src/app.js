@@ -50,6 +50,7 @@ import teacherTimetablesRoutes from "./routes/teacherTimetablesRoutes.js";
 import examTimetablesRoutes from "./routes/examTimetablesRoutes.js";
 import studentReportsRoutes from "./routes/studentReportsRoutes.js";
 import adminStudentSchoolReportsRoutes from "./routes/adminStudentSchoolReportsRoutes.js";
+import adminStaffSchoolReportsRoutes from "./routes/adminStaffSchoolReportsRoutes.js";
 // Student Portal Routes
 import studentPortalRoutes from "./routes/studentPortalRoutes.js";
 import studentAttendanceRoutes from "./routes/studentAttendanceRoutes.js";
@@ -322,6 +323,7 @@ mountRoutes([
   { path: "/api/student", middlewares: protectedMiddlewares, router: studentPortalRoutes },
 { path: "/api/admin/reports/students", middlewares: protectedMiddlewares, router: studentReportsRoutes },
   { path: "/api/admin/school-reports/students", middlewares: protectedMiddlewares, router: adminStudentSchoolReportsRoutes },
+  { path: "/api/admin/school-reports/staff", middlewares: protectedMiddlewares, router: adminStaffSchoolReportsRoutes },
   // Parent Portal
   { path: "/api/parent/attendance", middlewares: protectedMiddlewares, router: parentAttendanceRoutes },
   { path: "/api/parent/notifications", middlewares: protectedMiddlewares, router: parentNotificationsRoutes },

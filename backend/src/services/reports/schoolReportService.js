@@ -129,6 +129,13 @@ function renderTable(columns, rows) {
   `;
 }
 
+export function getSchoolReportLayout(columns = []) {
+  const columnCount = Math.max(1, Number(columns.length || 0)) + 1; // + الرقم التسلسلي
+  const landscape = columnCount >= 7;
+  const density = columnCount >= 12 ? "dense" : columnCount >= 8 ? "compact" : "normal";
+  return { landscape, density, columnCount };
+}
+
 export function renderSchoolReportHtml({
   school,
   academicYear,
@@ -140,10 +147,18 @@ export function renderSchoolReportHtml({
   statusesLabel = "",
   issuedAt = new Date(),
   autoPrint = false,
+  landscape: landscapeOverride,
+  countLabel = "عدد الطلاب",
+  countUnit = "طالبًا",
 }) {
-  const denseClass = columns.length >= 9 ? "report--dense" : columns.length >= 6 ? "report--compact" : "";
+  const layout = getSchoolReportLayout(columns);
+  const landscape = typeof landscapeOverride === "boolean" ? landscapeOverride : layout.landscape;
+  const densityClass = layout.density === "dense" ? "report--dense" : layout.density === "compact" ? "report--compact" : "report--normal";
+  const orientationClass = landscape ? "report--landscape" : "report--portrait";
+  const pageOrientation = landscape ? "landscape" : "portrait";
   const safeSchoolName = school.nameAr || school.nameEn || "المدرسة";
   const yearName = academicYear?.name || "—";
+  const contactItems = [school.address, school.phone, school.email].filter(Boolean).map(escapeHtml).join(" • ");
 
   return `<!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -156,46 +171,49 @@ export function renderSchoolReportHtml({
     html, body { margin: 0; padding: 0; color: #111827; background: #fff; }
     body { font-family: Tahoma, Arial, sans-serif; direction: rtl; }
     .report-page { width: 100%; padding: 0; }
-    .report-head { display: grid; grid-template-columns: 100px 1fr 100px; align-items: center; gap: 14px; padding-bottom: 14px; border-bottom: 2px solid #1d4ed8; }
-    .report-logo { width: 82px; height: 82px; object-fit: contain; border-radius: 14px; border: 1px solid #dbeafe; padding: 6px; background: #fff; }
+    .report-head { display: grid; grid-template-columns: 96px 1fr 96px; align-items: center; gap: 14px; padding-bottom: 13px; border-bottom: 2px solid #1d4ed8; }
+    .report-logo { width: 80px; height: 80px; object-fit: contain; border-radius: 14px; border: 1px solid #dbeafe; padding: 5px; background: #fff; }
     .report-logo--fallback { display: grid; place-items: center; color: #1d4ed8; background: #eff6ff; font-size: 34px; font-weight: 800; }
     .report-school { text-align: center; }
-    .report-school h1 { margin: 0; font-size: 22px; color: #0f172a; }
-    .report-school .report-school-en { margin-top: 4px; color: #64748b; font-size: 11px; }
+    .report-school h1 { margin: 0; color: #0f172a; font-size: 23px; line-height: 1.4; }
+    .report-school .report-school-en { margin-top: 3px; color: #64748b; font-size: 11px; }
     .report-school .report-contact { margin-top: 6px; color: #475569; font-size: 10px; line-height: 1.7; }
-    .report-stamp-space { width: 82px; height: 82px; }
-    .report-title { text-align: center; padding: 14px 0 4px; }
-    .report-title h2 { margin: 0; font-size: 19px; color: #111827; }
-    .report-title .report-year { margin-top: 7px; font-size: 13px; font-weight: 700; color: #1e3a8a; }
-    .report-title .report-subtitle, .report-title .report-statuses { margin-top: 5px; font-size: 11px; color: #475569; }
-    .report-meta-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin: 11px 0 13px; }
-    .report-pill { display: flex; gap: 5px; align-items: center; border: 1px solid #dbeafe; border-radius: 999px; padding: 5px 9px; background: #f8fbff; color: #475569; font-size: 10px; }
+    .report-stamp-space { width: 80px; height: 80px; }
+    .report-title { padding: 13px 0 3px; text-align: center; }
+    .report-title h2 { margin: 0; color: #111827; font-size: 21px; line-height: 1.45; }
+    .report-title .report-year { margin-top: 6px; color: #1e3a8a; font-size: 13px; font-weight: 800; }
+    .report-title .report-subtitle, .report-title .report-statuses { margin-top: 5px; color: #475569; font-size: 11px; }
+    .report-meta-pills { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; margin: 10px 0 12px; }
+    .report-pill { display: flex; gap: 5px; align-items: center; border: 1px solid #dbeafe; border-radius: 999px; padding: 5px 9px; color: #475569; background: #f8fbff; font-size: 10px; }
     .report-pill b { color: #0f172a; }
     .report-table { width: 100%; border-collapse: collapse; table-layout: auto; }
-    .report-table th, .report-table td { border: 1px solid #cbd5e1; padding: 7px 6px; text-align: right; vertical-align: middle; font-size: 10px; line-height: 1.5; word-break: break-word; }
-    .report-table th { color: #0f172a; background: #eff6ff; font-weight: 800; }
+    .report-table th, .report-table td { border: 1px solid #cbd5e1; padding: 7px 6px; text-align: right; vertical-align: middle; font-size: 11px; line-height: 1.5; word-break: break-word; }
+    .report-table th { color: #0f172a; background: #eaf2ff; font-weight: 800; }
     .report-table tbody tr:nth-child(even) { background: #f8fafc; }
     .report-seq { width: 34px; text-align: center !important; }
-    .report--compact .report-table th, .report--compact .report-table td { padding: 6px 4px; font-size: 9px; }
+    .report--portrait.report--normal .report-table th, .report--portrait.report--normal .report-table td { padding: 8px 7px; font-size: 11.5px; }
+    .report--compact .report-table th, .report--compact .report-table td { padding: 6px 4px; font-size: 9.2px; }
     .report--dense .report-table th, .report--dense .report-table td { padding: 5px 3px; font-size: 8px; }
-    .report-signatures { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; margin-top: 28px; padding: 0 24px; }
-    .report-signature { text-align: center; color: #334155; font-size: 12px; font-weight: 700; }
-    .report-signature-line { display: block; margin-top: 28px; border-top: 1px dashed #64748b; }
-    .report-foot-note { margin-top: 18px; padding-top: 8px; border-top: 1px solid #e2e8f0; color: #64748b; text-align: center; font-size: 9px; }
-    @page { size: A4 landscape; margin: 12mm 10mm 14mm; }
-    @media print { .report-page { break-after: auto; } thead { display: table-header-group; } tr { break-inside: avoid; } }
+    .report-signatures { display: flex; gap: 72px; margin-top: 20px; padding: 0 32px; break-inside: avoid; }
+    .report-signature { flex: 1; color: #334155; text-align: center; font-size: 12px; font-weight: 700; }
+    .report-signature-line { display: block; margin-top: 22px; border-top: 1px dashed #64748b; }
+    .report-foot-note { margin-top: 13px; padding-top: 8px; border-top: 1px solid #e2e8f0; color: #64748b; text-align: center; font-size: 9px; }
+    @page { size: A4 ${pageOrientation}; margin: 12mm 10mm 15mm; }
+    @media print {
+      thead { display: table-header-group; }
+      tr { break-inside: avoid; page-break-inside: avoid; }
+      .report-signatures, .report-foot-note { break-inside: avoid; page-break-inside: avoid; }
+    }
   </style>
 </head>
 <body>
-  <main class="report-page ${denseClass}">
+  <main class="report-page ${orientationClass} ${densityClass}">
     <header class="report-head">
       <div>${renderLogo(school)}</div>
       <div class="report-school">
         <h1>${escapeHtml(safeSchoolName)}</h1>
         ${school.nameEn ? `<div class="report-school-en">${escapeHtml(school.nameEn)}</div>` : ""}
-        <div class="report-contact">
-          ${[school.address, school.phone, school.email].filter(Boolean).map(escapeHtml).join(" • ")}
-        </div>
+        ${contactItems ? `<div class="report-contact">${contactItems}</div>` : ""}
       </div>
       <div class="report-stamp-space"></div>
     </header>
@@ -208,7 +226,7 @@ export function renderSchoolReportHtml({
     </section>
 
     ${renderMetaPills([
-      { label: "عدد الطلاب", value: `${rows.length} طالبًا` },
+      { label: countLabel, value: `${rows.length} ${countUnit}` },
       { label: "تاريخ إصدار الكشف", value: formatDateTime(issuedAt) },
       ...metaItems,
     ])}
@@ -224,7 +242,7 @@ export function renderSchoolReportHtml({
   </main>
   ${
     autoPrint
-      ? `<script>window.addEventListener("load", () => { setTimeout(() => window.print(), 250); });</script>`
+      ? `<script>window.addEventListener("load", () => { setTimeout(() => window.print(), 300); });</script>`
       : ""
   }
 </body>
