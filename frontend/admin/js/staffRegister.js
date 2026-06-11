@@ -149,7 +149,11 @@ async function empConfirm(options = {}) {
 
     els.fullName = requireEl("empFullName");
     els.phone = requireEl("empPhone");
-    els.jobTitle = requireEl("empJobTitle");
+els.jobTitle = requireEl("empJobTitle");
+els.jobTitleField =
+  requireEl("empJobTitleField") ||
+  els.jobTitle?.closest(".emp-field") ||
+  null;
     els.notes = requireEl("empNotes");
     els.isTeacher = requireEl("empIsTeacher");
     els.isActive = requireEl("empIsActive");
@@ -324,6 +328,23 @@ async function empConfirm(options = {}) {
   function currentKind() {
     return els.isTeacher?.value === "1" ? "teacher" : "employee";
   }
+function syncJobTitleVisibility() {
+  const isTeacher = currentKind() === "teacher";
+
+  if (!els.jobTitleField) return;
+
+  if (isTeacher) {
+    els.jobTitleField.hidden = true;
+    els.jobTitleField.style.setProperty("display", "none", "important");
+
+    if (els.jobTitle) {
+      els.jobTitle.value = "";
+    }
+  } else {
+    els.jobTitleField.hidden = false;
+    els.jobTitleField.style.removeProperty("display");
+  }
+}
 
   function visibleRoles() {
     const kind = currentKind();
@@ -892,6 +913,7 @@ async function empConfirm(options = {}) {
     els.jobTitle.value = employee.job_title || "";
     els.notes.value = employee.notes || "";
     els.isTeacher.value = employee.is_teacher ? "1" : "0";
+    syncJobTitleVisibility();
     els.isActive.checked = employee.is_active !== false;
 
     refreshRolesUI(false);
@@ -1033,7 +1055,10 @@ async function empConfirm(options = {}) {
     const payload = {
       full_name: els.fullName.value.trim(),
       phone: els.phone.value.trim(),
-      job_title: els.jobTitle.value.trim() || null,
+    job_title:
+  els.isTeacher.value === "1"
+    ? null
+    : els.jobTitle.value.trim() || null,
       notes: els.notes.value.trim() || null,
       is_teacher: els.isTeacher.value === "1",
       is_active: els.isActive.checked,
@@ -1091,6 +1116,7 @@ async function empConfirm(options = {}) {
 
     els.form.reset();
     els.isActive.checked = true;
+    syncJobTitleVisibility();
 
     if (els.hasAccount) els.hasAccount.checked = true;
     const linkRadio = $("input[name='accMode'][value='link']", els.page);
@@ -1101,7 +1127,7 @@ async function empConfirm(options = {}) {
     refreshRolesUI(false);
     refreshUsersUI(false);
     syncRolesVisibility();
-
+syncJobTitleVisibility();
     if (els.userSelect) els.userSelect.value = "";
     previewUser("");
 
@@ -1229,13 +1255,14 @@ async function empConfirm(options = {}) {
     if (els.roleSearch)
       els.roleSearch.addEventListener("input", applyRoleSearch);
 
-    if (els.isTeacher) {
-      els.isTeacher.addEventListener("change", () => {
-        refreshRolesUI(false);
-        refreshUsersUI(false);
-        syncRolesVisibility();
-      });
-    }
+  if (els.isTeacher) {
+  els.isTeacher.addEventListener("change", () => {
+    refreshRolesUI(false);
+    refreshUsersUI(false);
+    syncRolesVisibility();
+    syncJobTitleVisibility();
+  });
+}
 
     if (els.teachersBody)
       els.teachersBody.addEventListener("click", handleTableClick);

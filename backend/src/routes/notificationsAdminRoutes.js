@@ -1,5 +1,9 @@
 // backend/src/routes/notificationsAdminRoutes.js
 import express from "express";
+import multer from "multer";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
 import {
   previewRecipients,
   sendManual,
@@ -12,84 +16,55 @@ import {
   lookupTeachersHandler,
   lookupGuardiansHandler,
 } from "../controllers/notificationsAdminController.js";
-import authMiddleware from "../middleware/authMiddleware.js"; // ✅ ضروري جداً لاستخراج school_id
-import checkPermission from "../middleware/checkPermission.js"; // ✅ اختياري حسب نظامك
-import multer from "multer";
-import fs from "fs";
-import path from "path";
-import crypto from "crypto";
+import authMiddleware from "../middleware/authMiddleware.js";
+import { requireNotificationsAdminAccess } from "../middleware/notificationsAdminAccess.js";
 
 const router = express.Router();
+const UPLOAD_DIR = path.join(process.cwd(), "storage", "private", "notifications");
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-// --- إعدادات رفع الملفات (المرفقات) ---
-const UPLOAD_DIR = path.join(process.cwd(), "uploads", "notifications");
-if (!fs.existsSync(UPLOAD_DIR)) {
-  fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-}
+const ALLOWED_EXTENSIONS = new Set([
+  ".pdf", ".png", ".jpg", ".jpeg", ".webp", ".gif",
+  ".txt", ".csv", ".docx", ".xlsx", ".pptx",
+]);
 
 const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname || "");
-    // تسمية فريدة لمنع تداخل الملفات
-    cb(null, `${Date.now()}-${crypto.randomBytes(6).toString("hex")}${ext}`);
+  destination: (_req, _file, callback) => callback(null, UPLOAD_DIR),
+  filename: (_req, file, callback) => {
+    const ext = path.extname(file.originalname || "").toLowerCase().slice(0, 12);
+    callback(null, `${Date.now()}-${crypto.randomBytes(8).toString("hex")}${ext}`);
   },
 });
 
 const upload = multer({
   storage,
-  limits: { files: 10, fileSize: 25 * 1024 * 1024 }, // حد أقصى 25 ميجا
+  limits: { files: 10, fileSize: 25 * 1024 * 1024 },
+  fileFilter: (_req, file, callback) => {
+    const ext = path.extname(file.originalname || "").toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      return callback(new Error("نوع المرفق غير مسموح. استخدم PDF أو صورة أو ملف Office حديث أو TXT أو CSV"));
+    }
+    return callback(null, true);
+  },
 });
 
-/**
- * 🔒 حماية جميع المسارات:
- * جميع هذه العمليات تتطلب أن يكون المستخدم مسجل دخول
- * لكي يتمكن النظام من معرفة مدرسة المستخدم (req.user.school_id)
- */
+// The router stays protected even if mounted elsewhere in the future.
+router.use(authMiddleware);
 
-// ===== Lookups للواجهة (البحث المخصص للمدرسة) =====
-router.get("/lookups/stages", authMiddleware, lookupStagesHandler);
-router.get("/lookups/grades", authMiddleware, lookupGradesHandler);
-router.get("/lookups/sections", authMiddleware, lookupSectionsHandler);
-router.get("/lookups/students", authMiddleware, lookupStudentsHandler);
-router.get("/lookups/teachers", authMiddleware, lookupTeachersHandler);
-router.get("/lookups/guardians", authMiddleware, lookupGuardiansHandler);
+const requireSendAccess = requireNotificationsAdminAccess("send");
+const requireSentLogAccess = requireNotificationsAdminAccess("sentLog");
 
-// ===== عمليات الإرسال والمعاينة =====
+router.get("/lookups/stages", requireSendAccess, lookupStagesHandler);
+router.get("/lookups/grades", requireSendAccess, lookupGradesHandler);
+router.get("/lookups/sections", requireSendAccess, lookupSectionsHandler);
+router.get("/lookups/students", requireSendAccess, lookupStudentsHandler);
+router.get("/lookups/teachers", requireSendAccess, lookupTeachersHandler);
+router.get("/lookups/guardians", requireSendAccess, lookupGuardiansHandler);
 
-// معاينة المستلمين (يتطلب صلاحية الإرسال)
-router.post(
-  "/preview-recipients", 
-  authMiddleware, 
-  // checkPermission?.("notifications.send"), // اختياري: تأكد أن الدالة مدعومة عندك
-  previewRecipients
-);
+router.post("/preview-recipients", requireSendAccess, previewRecipients);
+router.post("/send", requireSendAccess, upload.array("files", 10), sendManual);
 
-// إرسال إشعار يدوي مع المرفقات
-router.post(
-  "/send", 
-  authMiddleware, 
-  // checkPermission?.("notifications.send"), 
-  upload.array("files", 10), // استقبال حتى 10 ملفات
-  sendManual
-);
-
-// ===== سجلات الإرسال (Sent Log) =====
-
-// قائمة الإشعارات المرسلة من قبل المدرسة
-router.get(
-  "/sent-log", 
-  authMiddleware, 
-  // checkPermission?.("notifications.sent_log.view"), 
-  listSentLog
-);
-
-// تفاصيل إشعار مرسل محدد مع حالة القراءة
-router.get(
-  "/sent-log/:id", 
-  authMiddleware, 
-  // checkPermission?.("notifications.sent_log.view"), 
-  sentLogDetails
-);
+router.get("/sent-log", requireSentLogAccess, listSentLog);
+router.get("/sent-log/:id", requireSentLogAccess, sentLogDetails);
 
 export default router;

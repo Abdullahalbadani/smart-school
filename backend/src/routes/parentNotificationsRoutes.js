@@ -46,11 +46,12 @@ router.get("/unread-count", getUnreadCount);
 // قائمة الإشعارات المستلمة (مع دعم الفلترة والبحث)
 router.get("/inbox", listInbox);
 
+// تعليم جميع إشعارات مدرسة ولي الأمر كمقروءة
+// يجب تسجيل المسار الثابت قبل /:id/read حتى لا تُفسر كلمة read-all كمعرّف إشعار.
+router.patch("/inbox/read-all", markAllRead);
+
 // تعليم إشعار واحد كمقروء
 router.patch("/inbox/:id/read", markOneRead);
-
-// تعليم جميع إشعارات مدرسة ولي الأمر كمقروءة
-router.patch("/inbox/read-all", markAllRead);
 
 // ==========================================
 // 📤 صندوق الصادر (Outbox)

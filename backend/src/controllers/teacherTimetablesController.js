@@ -76,9 +76,19 @@ export const TeacherTimetablesController = {
       }
 
       // ✅ فلترة حسب المدرسة
-      const [yearsQ, periodsQ] = await Promise.all([
-        pool.query("SELECT id, name FROM academic_years WHERE school_id = $1 ORDER BY id DESC", [schoolId]),
-        pool.query("SELECT id, name, start_time, end_time, sort_order FROM periods WHERE school_id = $1 ORDER BY sort_order", [schoolId]),
+      const [yearsQ, periodsQ, settingsQ] = await Promise.all([
+        pool.query(
+          "SELECT id, name, is_active FROM academic_years WHERE school_id = $1 ORDER BY is_active DESC, id DESC",
+          [schoolId]
+        ),
+        pool.query(
+          "SELECT id, name, start_time, end_time, sort_order FROM periods WHERE school_id = $1 ORDER BY sort_order",
+          [schoolId]
+        ),
+        pool.query(
+          "SELECT working_days FROM school_settings WHERE school_id = $1 LIMIT 1",
+          [schoolId]
+        ),
       ]);
 
       const subjectsQ = await pool.query(
@@ -106,6 +116,7 @@ export const TeacherTimetablesController = {
           terms: [1, 2],
           days,
           periods: periodsQ.rows,
+          working_days: settingsQ.rows[0]?.working_days || [],
           subjects: subjectsQ.rows,
         },
       });

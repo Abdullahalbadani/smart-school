@@ -74,14 +74,15 @@ async function apiGet(path) {
 
   // ===== fallback meta (لو meta فشل) =====
   const fallbackMeta = {
-    days: [
-      { id: 1, name: "السبت" },
-      { id: 2, name: "الأحد" },
-      { id: 3, name: "الاثنين" },
-      { id: 4, name: "الثلاثاء" },
-      { id: 5, name: "الأربعاء" },
-      { id: 6, name: "الخميس" },
-    ],
+ days: [
+  { id: 1, name: "السبت" },
+  { id: 2, name: "الأحد" },
+  { id: 3, name: "الاثنين" },
+  { id: 4, name: "الثلاثاء" },
+  { id: 5, name: "الأربعاء" },
+  { id: 6, name: "الخميس" },
+  { id: 7, name: "الجمعة" },
+],
     periods: [
       { id: 1, name: "1", sort_order: 1, start_time: "08:00", end_time: "08:45" },
       { id: 2, name: "2", sort_order: 2, start_time: "08:50", end_time: "09:35" },
@@ -110,7 +111,7 @@ let defaultMonthlyExamTotal = 20;
   let currentTimetableId = null;
   let currentTimetableStatus = "draft";
   let selectedCell = null;
-
+let manageMode = "manage"; // manage | copy
   // ===== Week mode / Overrides (Exam & Exceptions) =====
   let viewMode = "template"; // "template" | "week"
   let weekStartISO = null; // YYYY-MM-DD
@@ -318,13 +319,23 @@ function fillDefaultExamTotalIfEmpty() {
     totalEl.value = String(getDefaultExamTotal(kindEl?.value || "monthly"));
   }
 }
-  function toggleExamFields() {
-  const t = el("#wsEntryType")?.value || "lesson";
-  const box = el("#wsExamFields");
 
-  if (box) box.style.display = t === "exam" ? "" : "none";
 
-  if (t === "exam") {
+ function toggleExamFields() {
+  const type = el("#wsEntryType")?.value || "lesson";
+
+  const examFields = el("#wsExamFields");
+  const lessonFields = el("#wsLessonFields");
+
+  if (examFields) {
+    examFields.style.display = type === "exam" ? "" : "none";
+  }
+
+  if (lessonFields) {
+    lessonFields.style.display = type === "cancel" ? "none" : "";
+  }
+
+  if (type === "exam") {
     fillDefaultExamTotalIfEmpty();
   }
 }
@@ -337,14 +348,186 @@ function fillDefaultExamTotalIfEmpty() {
     if (box) box.innerHTML = `<div class="ws-empty">لا يوجد تعارضات حاليًا.</div>`;
   }
 
+  function getUnresolvedTeacherEntries() {
+    return Array.from(timetable.entries.values()).filter(
+      (entry) => entry?.subjectId && !entry?.teacherId
+    );
+  }
+
+  function unresolvedReasonText(reason) {
+    const map = {
+      materials_only: "تم نسخ المادة فقط حسب اختيارك.",
+      teacher_conflict: "المعلم الأصلي لديه حصة أخرى في الوقت نفسه.",
+      teacher_not_assigned: "المعلم الأصلي غير معيّن لهذه المادة في الشعبة الهدف.",
+      teacher_required: "يجب اختيار معلم لهذه الحصة.",
+    };
+
+    return map[String(reason || "").trim()] || "اختر معلمًا بديلًا لهذه الحصة.";
+  }
+
+  function renderUnresolvedTeachersUI() {
+    const unresolved = getUnresolvedTeacherEntries();
+    const countEl = el("#wsConflictsCount");
+    const box = el("#wsConflictsBox");
+
+    if (countEl) countEl.textContent = String(unresolved.length);
+
+    if (!box) return;
+
+    if (!unresolved.length) {
+      box.innerHTML = `<div class="ws-empty">لا يوجد تعارضات حاليًا.</div>`;
+      return;
+    }
+
+    box.innerHTML = unresolved
+      .map((entry) => {
+        const day =
+          getDays().find((item) => Number(item.id) === Number(entry.dayId))
+            ?.name || `اليوم رقم ${entry.dayId}`;
+
+        const period =
+          getPeriods().find((item) => Number(item.id) === Number(entry.periodId))
+            ?.name || `الحصة رقم ${entry.periodId}`;
+
+        const subject =
+          entry.subjectName ||
+          getNameById(meta?.subjects, entry.subjectId) ||
+          `المادة رقم ${entry.subjectId}`;
+
+        return `
+          <div
+            class="ws-confItem"
+            style="
+              border-color: rgba(245, 158, 11, 0.55);
+              background: rgba(245, 158, 11, 0.10);
+            "
+          >
+            <b>حصة تحتاج معلمًا بديلًا</b>
+            <div>المادة: ${escapeHtml(subject)}</div>
+            <div>الموعد: ${escapeHtml(day)} — ${escapeHtml(period)}</div>
+            <div>${escapeHtml(unresolvedReasonText(entry.unresolvedReason))}</div>
+          </div>
+        `;
+      })
+      .join("");
+  }
+
   function refreshStatsAndConflicts() {
     const filled = el("#wsFilledCount");
     if (filled) filled.textContent = String(timetable.entries.size);
+
+    renderUnresolvedTeachersUI();
   }
 
-  function getDays() {
-    return meta?.days?.length ? meta.days : fallbackMeta.days;
+const DAY_ORDER = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"];
+
+function normalizeArabicDayName(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/\s+/g, "");
+}
+
+function normalizeDayKey(value) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  const ar = normalizeArabicDayName(value);
+
+  const aliases = {
+    // English
+    sat: "sat",
+    saturday: "sat",
+
+    sun: "sun",
+    sunday: "sun",
+
+    mon: "mon",
+    monday: "mon",
+
+    tue: "tue",
+    tuesday: "tue",
+
+    wed: "wed",
+    wednesday: "wed",
+
+    thu: "thu",
+    thursday: "thu",
+
+    fri: "fri",
+    friday: "fri",
+
+    // Arabic
+    السبت: "sat",
+    الاحد: "sun",
+    الاثنين: "mon",
+    الثلاثاء: "tue",
+    الاربعاء: "wed",
+    الخميس: "thu",
+    الجمعه: "fri",
+  };
+
+  return aliases[raw] || aliases[ar] || "";
+}
+
+function getMetaDayKey(day) {
+  const explicitKey = normalizeDayKey(
+    day?.key ??
+      day?.code ??
+      day?.slug ??
+      day?.short_name ??
+      day?.name
+  );
+
+  if (explicitKey) return explicitKey;
+
+  // fallback إذا كانت الأيام مرقمة من السبت إلى الجمعة: 1..7
+  const index = Number(day?.id) - 1;
+
+  return DAY_ORDER[index] || "";
+}
+
+function getConfiguredWorkingDays() {
+  let raw = academicSettings?.working_days;
+
+  if (typeof raw === "string") {
+    try {
+      raw = JSON.parse(raw);
+    } catch {
+      raw = raw.split(",");
+    }
   }
+
+  if (!Array.isArray(raw) || !raw.length) {
+    return null;
+  }
+
+  const keys = raw
+    .map((day) => normalizeDayKey(day))
+    .filter(Boolean);
+
+  return keys.length ? new Set(keys) : null;
+}
+
+function getDays() {
+  const allDays =
+    meta?.days?.length
+      ? meta.days
+      : fallbackMeta.days;
+
+  const workingDays = getConfiguredWorkingDays();
+
+  const visibleDays = workingDays
+    ? allDays.filter((day) => workingDays.has(getMetaDayKey(day)))
+    : allDays;
+
+  return [...visibleDays].sort((a, b) => {
+    return (
+      DAY_ORDER.indexOf(getMetaDayKey(a)) -
+      DAY_ORDER.indexOf(getMetaDayKey(b))
+    );
+  });
+}
 
   function getPeriods() {
     const p = meta?.periods?.length ? meta.periods : fallbackMeta.periods;
@@ -499,14 +682,27 @@ function fillDefaultExamTotalIfEmpty() {
     corner.textContent = "اليوم \\ الحصة";
     header.appendChild(corner);
 
-    periods.forEach((p) => {
-      const h = document.createElement("div");
-      h.className = "ws-colHead";
-      const timeLine =
-        p.start_time && p.end_time ? ` (${formatTime(p.start_time)} - ${formatTime(p.end_time)})` : "";
-      h.textContent = "حصة " + (p.name ?? p.id) + timeLine;
-      header.appendChild(h);
-    });
+   periods.forEach((p) => {
+  const h = document.createElement("div");
+  h.className = "ws-colHead";
+
+  const periodName = String(p.name ?? p.id);
+  const timeLine =
+    p.start_time && p.end_time
+      ? `${formatTime(p.start_time)} - ${formatTime(p.end_time)}`
+      : "";
+
+  h.innerHTML = `
+    <strong>${escapeHtml(periodName)}</strong>
+    ${
+      timeLine
+        ? `<small class="ws-colTime" dir="ltr">${escapeHtml(timeLine)}</small>`
+        : ""
+    }
+  `;
+
+  header.appendChild(h);
+});
 
     grid.appendChild(header);
 
@@ -532,39 +728,83 @@ function fillDefaultExamTotalIfEmpty() {
 
         let cls = "ws-cell " + (entry ? "" : "ws-empty");
         if (entry?.type === "exam") cls += " ws-exam";
+        if (entry?.subjectId && !entry?.teacherId) cls += " ws-conflict";
         cell.className = cls;
         cell.dataset.dayId = d.id;
         cell.dataset.periodId = p.id;
+if (entry) {
+  const isExam = entry.type === "exam";
+  const needsTeacher = Boolean(entry.subjectId && !entry.teacherId);
 
-        const pillText =
-          viewMode === "week" && dateISO
-            ? `${d.name} • ${dateISO} • ${p.name ?? p.id}`
-            : `${d.name} • ${p.name ?? p.id}`;
+  const subjectName = entry.subjectName || "مادة غير محددة";
+  const teacherName = needsTeacher
+    ? "اختر معلمًا بديلًا"
+    : entry.teacherName || "معلم غير محدد";
+  const examTitle = entry.examTitle || "اختبار شهري";
+  const room = entry.room || "";
 
-        const pillClass = entry?.type === "exam" ? "ws-pill ws-pill-exam" : "ws-pill";
+  cell.innerHTML = `
+    ${
+      isExam
+        ? `<span class="ws-pill ws-pill-exam">
+             <i class="ri-file-list-3-line"></i>
+             اختبار شهري
+           </span>`
+        : ""
+    }
 
-        if (entry) {
-          const title = entry.type === "exam" ? entry.examTitle || "اختبار" : entry.subjectName || "—";
-          const subline =
-            entry.type === "exam"
-              ? entry.subjectName
-                ? `المادة: ${entry.subjectName}`
-                : "—"
-              : entry.teacherName || "—";
+    ${
+      needsTeacher
+        ? `<span
+             class="ws-pill"
+             style="
+               border-color: rgba(245, 158, 11, 0.55);
+               background: rgba(245, 158, 11, 0.14);
+               color: var(--text-main);
+             "
+           >
+             <i class="ri-alert-line"></i>
+             يحتاج معلمًا بديلًا
+           </span>`
+        : ""
+    }
 
-          cell.innerHTML = `
-            <span class="${pillClass}">${escapeHtml(pillText)}</span>
-            <div class="ws-subject">${escapeHtml(title)}</div>
-            <div class="ws-teacher">${escapeHtml(subline)}</div>
-          `;
-        } else {
-          cell.innerHTML = `
-            <span class="${pillClass}">${escapeHtml(pillText)}</span>
-            <div class="ws-subject">+ إضافة</div>
-            <div class="ws-teacher">اضغط للتعيين</div>
-          `;
-        }
+    ${
+      isExam
+        ? `<div class="ws-examTitle">${escapeHtml(examTitle)}</div>`
+        : ""
+    }
 
+    <div class="ws-subject">
+      <i class="ri-book-open-line"></i>
+      <span>${escapeHtml(subjectName)}</span>
+    </div>
+
+    <div
+      class="ws-teacher"
+      ${needsTeacher ? 'style="color:#f59e0b; font-weight:700;"' : ""}
+    >
+      <i class="${needsTeacher ? "ri-alert-line" : "ri-user-3-line"}"></i>
+      <span>${escapeHtml(teacherName)}</span>
+    </div>
+
+    ${
+      room
+        ? `<div class="ws-room">
+             <i class="ri-map-pin-line"></i>
+             <span>${escapeHtml(room)}</span>
+           </div>`
+        : ""
+    }
+  `;
+} else {
+  cell.innerHTML = `
+    <div class="ws-addCell">
+      <i class="ri-add-circle-line"></i>
+      <span>إضافة حصة</span>
+    </div>
+  `;
+}
         cell.addEventListener("click", () => onCellClick(d.id, p.id));
         row.appendChild(cell);
       });
@@ -878,6 +1118,7 @@ await loadAcademicSettings();
         teacherId: e.teacher_id,
         subjectName: e.subject_name,
         teacherName: e.teacher_name,
+        unresolvedReason: e.teacher_id ? null : "teacher_required",
         room: e.room || "",
         notes: e.notes || "",
       });
@@ -1166,9 +1407,18 @@ await loadAcademicSettings();
       setStatusChip("draft");
       showUnpublishBtn();
       refreshStatsAndConflicts();
-      clearConflictsUI();
+      renderUnresolvedTeachersUI();
 
-      if (!silent) toast("تم حفظ المسودة.", "ok");
+      if (!silent) {
+        const unresolvedCount = getUnresolvedTeacherEntries().length;
+
+        toast(
+          unresolvedCount
+            ? `تم حفظ المسودة. توجد ${unresolvedCount} حصة تحتاج إلى اختيار معلم بديل.`
+            : "تم حفظ المسودة.",
+          "ok"
+        );
+      }
       return true;
     } catch (err) {
       console.error(err);
@@ -1185,6 +1435,17 @@ await loadAcademicSettings();
   }
 async function publish() {
   if (!currentTimetableId) return toast("افتح جدول أولاً.", "err");
+
+  const unresolvedCount = getUnresolvedTeacherEntries().length;
+
+  if (unresolvedCount > 0) {
+    renderUnresolvedTeachersUI();
+
+    return toast(
+      `لا يمكن نشر الجدول قبل اختيار معلم بديل لـ ${unresolvedCount} حصة.`,
+      "err"
+    );
+  }
 
   const okConfirm = await wsConfirm({
     title: "نشر الجدول الأسبوعي",
@@ -1312,10 +1573,43 @@ async function publish() {
   }
 }
   // ===== Manage modal =====
-  function openManage() {
-    el("#wsManageBackdrop")?.setAttribute("aria-hidden", "false");
-    el("#wsManageModal")?.setAttribute("aria-hidden", "false");
+function openManage(mode = "manage") {
+  manageMode = mode;
+
+  const title = el("#wsManageModal .ws-modalHead h3");
+  const info = el("#wsManageModal .ws-mini");
+
+  if (title) {
+    title.textContent =
+      mode === "copy"
+        ? "اختر الجدول المصدر للنسخ"
+        : "إدارة الجداول";
   }
+
+  if (info) {
+    info.innerHTML =
+      mode === "copy"
+        ? `
+          <span class="ws-miniItem">
+            اختر الجدول الذي تريد نسخ حصصه إلى الجدول المفتوح حاليًا.
+          </span>
+          <span class="ws-miniItem" style="opacity:.8">
+            📌 تظهر جميع جداول السنة والترم المحددين.
+          </span>
+        `
+        : `
+          <span class="ws-miniItem">
+            يعرض جداول السنة والترم حسب الفلاتر.
+          </span>
+          <span class="ws-miniItem" style="opacity:.8">
+            📌 افتح أو احذف من هنا.
+          </span>
+        `;
+  }
+
+  el("#wsManageBackdrop")?.setAttribute("aria-hidden", "false");
+  el("#wsManageModal")?.setAttribute("aria-hidden", "false");
+}
 
   function closeManage() {
     el("#wsManageBackdrop")?.setAttribute("aria-hidden", "true");
@@ -1353,6 +1647,7 @@ async function publish() {
         teacherId: e.teacher_id,
         subjectName: e.subject_name,
         teacherName: e.teacher_name,
+        unresolvedReason: e.teacher_id ? null : "teacher_required",
         room: e.room || "",
         notes: e.notes || "",
       });
@@ -1368,108 +1663,257 @@ async function publish() {
     renderGrid();
     toast("تم فتح الجدول.", "ok");
   }
+function describeTimetable(row) {
+  if (!row) return "جدول غير معروف";
 
-  async function loadManageList() {
-    const sel = getSelection();
-    if (!sel.academicYearId) return toast("اختر السنة أولاً.", "err");
+  return [
+    row.year_name || `السنة #${row.academic_year_id || "—"}`,
+    `ترم ${row.term || "—"}`,
+    row.stage_name || `المرحلة #${row.stage_id || "—"}`,
+    row.grade_name || `الصف #${row.grade_id || "—"}`,
+    row.section_name || `الشعبة #${row.section_id || "—"}`,
+  ].join(" / ");
+}
+  async function loadManageList(mode = manageMode) {
+  manageMode = mode;
 
-    const qs = new URLSearchParams();
-    qs.set("academicYearId", String(sel.academicYearId));
-    qs.set("term", String(sel.term || 1));
+  const sel = getSelection();
+
+  if (!sel.academicYearId) {
+    return toast("اختر السنة الدراسية أولاً.", "err");
+  }
+
+  const qs = new URLSearchParams();
+
+  qs.set("academicYearId", String(sel.academicYearId));
+  qs.set("term", String(sel.term || 1));
+
+  // في وضع الإدارة نطبق جميع الفلاتر.
+  // في وضع النسخ نعرض جميع جداول السنة والترم حتى يختار المستخدم المصدر بسهولة.
+  if (mode === "manage") {
     if (sel.stageId) qs.set("stageId", String(sel.stageId));
     if (sel.gradeId) qs.set("gradeId", String(sel.gradeId));
     if (sel.sectionId) qs.set("sectionId", String(sel.sectionId));
+  }
 
-    const r = await apiGet("/timetables/list?" + qs.toString());
-    const rows = r.data || [];
-    const tbody = el("#wsManageTbody");
-    if (!tbody) return;
+  const r = await apiGet("/timetables/list?" + qs.toString());
+  const rows = Array.isArray(r?.data) ? r.data : [];
 
-    tbody.innerHTML = rows
-      .map(
-        (x) => `
+  const tbody = el("#wsManageTbody");
+  if (!tbody) return;
+
+  if (!rows.length) {
+    tbody.innerHTML = `
       <tr>
-        <td>${x.id}</td>
-        <td>${escapeHtml(x.year_name || x.academic_year_id)}</td>
-        <td>${escapeHtml(x.term)}</td>
-        <td>${escapeHtml(x.stage_name || x.stage_id)}</td>
-        <td>${escapeHtml(x.grade_name || x.grade_id)}</td>
-        <td>${escapeHtml(x.section_name || x.section_id)}</td>
-        <td>${escapeHtml(x.status)}</td>
-        <td>${escapeHtml(x.entries_count)}</td>
-        <td style="white-space:nowrap;">
-          <button class="ws-btn ws-btn-ghost" data-open-id="${x.id}">فتح</button>
-          <button class="ws-btn ws-btn-ghost" data-del-id="${x.id}">حذف</button>
+        <td colspan="9" class="ws-empty">
+          لا توجد جداول متاحة في السنة والترم المحددين.
         </td>
       </tr>
-    `
-      )
-      .join("");
+    `;
+    return;
+  }
 
-    tbody.querySelectorAll("[data-open-id]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.getAttribute("data-open-id"));
-        await openByTimetableId(id);
-        closeManage();
-      });
+  tbody.innerHTML = rows
+    .map((x) => {
+      const isCurrent =
+        Number(x.id) === Number(currentTimetableId);
+
+      const isEmpty =
+        Number(x.entries_count || 0) === 0;
+
+      let actions = "";
+
+      if (mode === "copy") {
+        if (isCurrent) {
+          actions = `
+            <span class="ws-chip ws-chip-soft">
+              الجدول الحالي
+            </span>
+          `;
+        } else if (isEmpty) {
+          actions = `
+            <span class="ws-chip ws-chip-soft">
+              جدول فارغ
+            </span>
+          `;
+        } else {
+          actions = `
+            <button
+              class="ws-btn ws-btn-primary"
+              type="button"
+              data-copy-id="${x.id}"
+            >
+              <i class="ri-file-copy-line"></i>
+              نسخ من هذا الجدول
+            </button>
+          `;
+        }
+      } else {
+        actions = `
+          <button
+            class="ws-btn ws-btn-ghost"
+            type="button"
+            data-open-id="${x.id}"
+          >
+            فتح
+          </button>
+
+          <button
+            class="ws-btn ws-btn-ghost"
+            type="button"
+            data-del-id="${x.id}"
+          >
+            حذف
+          </button>
+        `;
+      }
+
+      return `
+        <tr>
+          <td>${escapeHtml(x.id)}</td>
+          <td>${escapeHtml(x.year_name || x.academic_year_id)}</td>
+          <td>${escapeHtml(x.term)}</td>
+          <td>${escapeHtml(x.stage_name || x.stage_id)}</td>
+          <td>${escapeHtml(x.grade_name || x.grade_id)}</td>
+          <td>${escapeHtml(x.section_name || x.section_id)}</td>
+          <td>${escapeHtml(x.status)}</td>
+          <td>${escapeHtml(x.entries_count || 0)}</td>
+          <td style="white-space:nowrap;">
+            ${actions}
+          </td>
+        </tr>
+      `;
+    })
+    .join("");
+
+  tbody.querySelectorAll("[data-open-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.getAttribute("data-open-id"));
+
+      await openByTimetableId(id);
+      closeManage();
     });
+  });
 
   tbody.querySelectorAll("[data-del-id]").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const id = Number(btn.getAttribute("data-del-id"));
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.getAttribute("data-del-id"));
 
-    const ok = await wsConfirm({
-      title: "حذف جدول أسبوعي",
-      message:
-        `سيتم حذف الجدول رقم #${id}.\n` +
-        "يجب أن يكون الجدول مسودة وغير منشور.\nهذا الإجراء لا يمكن التراجع عنه.",
-      confirmText: "حذف الجدول",
-      cancelText: "إلغاء",
-      type: "danger",
+      const ok = await wsConfirm({
+        title: "حذف جدول أسبوعي",
+        message:
+          `سيتم حذف الجدول رقم #${id}.\n` +
+          "يجب أن يكون الجدول مسودة وغير منشور.\n" +
+          "هذا الإجراء لا يمكن التراجع عنه.",
+        confirmText: "حذف الجدول",
+        cancelText: "إلغاء",
+        type: "danger",
+      });
+
+      if (!ok) return;
+
+      try {
+        await apiSend(`/timetables/${id}`, "DELETE");
+
+        toast("تم حذف الجدول.", "ok");
+
+        await loadManageList("manage");
+      } catch (error) {
+        toast(error.message || "فشل الحذف.", "err");
+      }
     });
-
-    if (!ok) return;
-
-    try {
-      await apiSend(`/timetables/${id}`, "DELETE");
-      toast("تم حذف الجدول.", "ok");
-      await loadManageList();
-    } catch (e) {
-      toast(e.message || "فشل الحذف", "err");
-    }
   });
-});
-  }
 
-async function copyFromTimetable() {
-  if (!currentTimetableId) return toast("افتح جدول الهدف أولاً.", "err");
-  if (currentTimetableStatus === "published") {
-    return toast("لا يمكن النسخ لجدول منشور.", "err");
-  }
+  tbody.querySelectorAll("[data-copy-id]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.getAttribute("data-copy-id"));
 
-  const fromIdRaw = await wsPrompt({
-    title: "نسخ من جدول آخر",
-    message: "اكتب رقم الجدول المصدر الذي تريد النسخ منه.",
-    placeholder: "مثال: 15",
-    confirmText: "متابعة",
+      const sourceRow = rows.find(
+        (item) => Number(item.id) === id
+      );
+
+      await copySelectedTimetable(id, sourceRow);
+    });
+  });
+}
+
+async function chooseCopyMode() {
+  const useSmartCopy = await wsConfirm({
+    title: "طريقة نسخ الجدول",
+    message:
+      "اختر «نسخ ذكي» لنسخ المواد والمعلمين المتاحين تلقائيًا.\n" +
+      "إذا وُجد تعارض لمعلم، ستُنسخ المادة فقط وسيطلب منك النظام اختيار معلم بديل.",
+    confirmText: "نسخ ذكي",
+    cancelText: "خيارات أخرى",
+    type: "warning",
+  });
+
+  if (useSmartCopy) return "smart";
+
+  const useSubjectsOnly = await wsConfirm({
+    title: "نسخ المواد فقط",
+    message:
+      "هل تريد نسخ توزيع المواد فقط وترك جميع المعلمين فارغين؟\n" +
+      "هذا الخيار مناسب عند إنشاء جدول شعبة جديدة ثم توزيع معلميها لاحقًا.",
+    confirmText: "نسخ المواد فقط",
     cancelText: "إلغاء",
-    type: "info",
-    required: true,
-    requiredMessage: "رقم الجدول المصدر مطلوب.",
+    type: "warning",
   });
 
-  if (fromIdRaw === null) return;
+  return useSubjectsOnly ? "subjects_only" : null;
+}
 
-  const fromTimetableId = Number(fromIdRaw);
-  if (!Number.isFinite(fromTimetableId) || fromTimetableId <= 0) {
-    return toast("رقم غير صحيح.", "err");
+async function copySelectedTimetable(fromTimetableId, sourceRow) {
+  if (!currentTimetableId) {
+    return toast("افتح جدول الهدف أولاً.", "err");
   }
+
+  if (currentTimetableStatus === "published") {
+    return toast(
+      "لا يمكن النسخ إلى جدول منشور. ألغِ النشر أولاً.",
+      "err"
+    );
+  }
+
+  if (Number(fromTimetableId) === Number(currentTimetableId)) {
+    return toast(
+      "لا يمكن نسخ الجدول إلى نفسه.",
+      "err"
+    );
+  }
+
+  const mode = await chooseCopyMode();
+
+  if (!mode) return;
+
+  const sel = getSelection();
+
+  const targetDescription = [
+    getNameById(meta?.years, sel.academicYearId) ||
+      `السنة #${sel.academicYearId || "—"}`,
+    `ترم ${sel.term || 1}`,
+    getNameById(meta?.stages, sel.stageId) ||
+      `المرحلة #${sel.stageId || "—"}`,
+    getNameById(meta?.grades, sel.gradeId) ||
+      `الصف #${sel.gradeId || "—"}`,
+    getNameById(meta?.sections, sel.sectionId) ||
+      `الشعبة #${sel.sectionId || "—"}`,
+  ].join(" / ");
+
+  const sourceDescription = describeTimetable(sourceRow);
+
+  const modeDescription =
+    mode === "subjects_only"
+      ? "نسخ المواد فقط وترك اختيار المعلمين لك."
+      : "نسخ ذكي: نسخ المعلمين المتاحين وترك الخلايا المتعارضة لتعيين معلم بديل.";
 
   const ok = await wsConfirm({
     title: "تأكيد نسخ الجدول",
     message:
-      `سيتم نسخ محتوى الجدول رقم #${fromTimetableId} إلى الجدول الحالي رقم #${currentTimetableId}.\n` +
-      "قد يتم استبدال أو إضافة حصص حسب منطق النظام.",
+      `سيتم النسخ من:\n${sourceDescription}\n\n` +
+      `إلى الجدول المفتوح:\n${targetDescription}\n\n` +
+      `طريقة النسخ:\n${modeDescription}\n\n` +
+      "سيتم استبدال محتوى الجدول الهدف الحالي.",
     confirmText: "تأكيد النسخ",
     cancelText: "إلغاء",
     type: "warning",
@@ -1478,21 +1922,82 @@ async function copyFromTimetable() {
   if (!ok) return;
 
   try {
-    await apiSend(`/timetables/${currentTimetableId}/copy-from`, "POST", {
-      fromTimetableId,
-    });
-    await reloadCurrentTimetable();
-    clearConflictsUI();
-    toast("تم النسخ بنجاح.", "ok");
-  } catch (err) {
-    console.error(err);
+    const result = await apiSend(
+      `/timetables/${currentTimetableId}/copy-from`,
+      "POST",
+      { fromTimetableId, mode }
+    );
 
-    if (err.status === 409 && err.payload?.conflicts) {
-      renderArabicConflicts(err.payload.conflicts, "تعارض بعد النسخ");
-      return toast(err.message || "لا يمكن النسخ بسبب تعارض.", "err");
+    await reloadCurrentTimetable();
+
+    const unresolvedCount = Number(
+      result?.data?.unresolved_entries_count ??
+        getUnresolvedTeacherEntries().length ??
+        0
+    );
+
+    renderUnresolvedTeachersUI();
+    closeManage();
+
+    toast(
+      unresolvedCount > 0
+        ? `تم النسخ كمسودة. توجد ${unresolvedCount} حصة تحتاج إلى اختيار معلم بديل.`
+        : result?.message || "تم نسخ الحصص بنجاح.",
+      "ok"
+    );
+  } catch (error) {
+    console.error(error);
+
+    // إبقاء الدعم للسيرفر القديم مؤقتًا:
+    // إذا لم يتم استبدال copyFrom في الباك إند بعد، ستظهر التعارضات بدل فقدانها.
+    if (
+      error.status === 409 &&
+      error.payload?.conflicts
+    ) {
+      renderArabicConflicts(
+        error.payload.conflicts,
+        "تعارض بعد النسخ"
+      );
+
+      return toast(
+        "الباك إند ما زال يستخدم النسخ القديم الذي يوقف العملية عند التعارض. استبدل دالة copyFrom ثم أعد تشغيل السيرفر.",
+        "err"
+      );
     }
 
-    toast(err.message || "فشل النسخ.", "err");
+    toast(
+      error.message || "فشل نسخ الجدول.",
+      "err"
+    );
+  }
+}
+
+async function copyFromTimetable() {
+  if (!currentTimetableId) {
+    return toast(
+      "افتح جدول الهدف أولاً ثم اضغط «نسخ من جدول».",
+      "err"
+    );
+  }
+
+  if (currentTimetableStatus === "published") {
+    return toast(
+      "لا يمكن النسخ إلى جدول منشور. ألغِ النشر أولاً.",
+      "err"
+    );
+  }
+
+  openManage("copy");
+
+  try {
+    await loadManageList("copy");
+  } catch (error) {
+    console.error(error);
+
+    toast(
+      error.message || "تعذر تحميل الجداول المتاحة للنسخ.",
+      "err"
+    );
   }
 }
 
@@ -1630,14 +2135,18 @@ async function copyFromTimetable() {
 
     el("#wsCopyBtn")?.addEventListener("click", copyFromTimetable);
 
-    el("#wsManageBtn")?.addEventListener("click", async () => {
-      openManage();
-      await loadManageList();
-    });
-    el("#wsManageClose")?.addEventListener("click", closeManage);
-    el("#wsManageBackdrop")?.addEventListener("click", closeManage);
-    el("#wsManageRefresh")?.addEventListener("click", loadManageList);
+   el("#wsManageBtn")?.addEventListener("click", async () => {
+  openManage("manage");
 
+  await loadManageList("manage");
+});
+
+el("#wsManageClose")?.addEventListener("click", closeManage);
+el("#wsManageBackdrop")?.addEventListener("click", closeManage);
+
+el("#wsManageRefresh")?.addEventListener("click", async () => {
+  await loadManageList(manageMode);
+});
     el("#wsDeleteCurrentBtn")?.addEventListener("click", deleteCurrentTimetable);
 
     // ✅ Periods modal bindings
@@ -1775,31 +2284,59 @@ el("#wsExamKind")?.addEventListener("change", () => {
   }
 
   // init
-  let inited = false;
+// init
+let initializedRoot = null;
 
-  async function initWeeklySchedule() {
-    if (inited) return;
-    const root = document.getElementById("weeklySchedulePage");
-    if (!root) return;
+async function initWeeklySchedule() {
+  const root = document.getElementById("weeklySchedulePage");
 
-    inited = true;
+  if (!root) return;
+
+  // لا نكرر الربط داخل نسخة الواجهة نفسها.
+  // لكن عند مغادرة الصفحة والعودة إليها يتم إنشاء عنصر HTML جديد،
+  // ولذلك يجب إعادة تحميل البيانات وربط الأحداث من جديد.
+  if (initializedRoot === root) return;
+
+  initializedRoot = root;
+
+  try {
     await loadMeta();
     bindEvents();
+  } catch (error) {
+    console.error("Weekly schedule init error:", error);
+
+    // السماح بإعادة المحاولة إذا فشل التحميل.
+    initializedRoot = null;
+
+    toast(
+      error.message || "تعذر تحميل بيانات جدول الحصص الأسبوعية.",
+      "err"
+    );
   }
+}
 
-  window.initWeeklySchedule = initWeeklySchedule;
+window.initWeeklySchedule = initWeeklySchedule;
 
-  function watchForInjection() {
-    const tryInit = () => initWeeklySchedule();
-    tryInit();
+function watchForInjection() {
+  const tryInit = () => {
+    initWeeklySchedule().catch((error) => {
+      console.error("Weekly schedule boot error:", error);
+    });
+  };
 
-    const obs = new MutationObserver(() => tryInit());
-    obs.observe(document.documentElement, { childList: true, subtree: true });
-  }
+  tryInit();
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", watchForInjection);
-  } else {
-    watchForInjection();
-  }
+  const obs = new MutationObserver(tryInit);
+
+  obs.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", watchForInjection);
+} else {
+  watchForInjection();
+}
 })();

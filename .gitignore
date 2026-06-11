@@ -27,3 +27,10 @@ frontend_backup_before_deploy/
 smart_school_backup*.sql
 fix-*.cjs
 backend/backup.js
+*.zip
+*.bak
+*-debug.txt
+guardian-diagnosis.txt
+parents-debug.txt
+attendance-reasons-debug.txt
+frontend/parent/js/#U0627#U0644#U062c#U062f#U0627#U0648#U0644.csv

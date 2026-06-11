@@ -4943,3 +4943,201 @@ body.modal-open {
     border: 1px solid #ccc;
   }
 }
+
+
+/* =========================================================
+   Teacher attendance: clear permits view
+========================================================= */
+.perm-panel {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.perm-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+  padding: 0.85rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 1rem;
+  background: var(--bg-panel-soft);
+}
+
+.perm-hero h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.perm-hero p,
+.perm-history-head p {
+  margin: 0.3rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.7;
+}
+
+.perm-hero-actions,
+.perm-form-actions,
+.perm-history-grid,
+.perm-summary-row,
+.permit-card-head,
+.permit-student,
+.permit-badges,
+.permit-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.perm-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 0.8fr) minmax(220px, 1.5fr);
+  gap: 0.65rem;
+}
+
+.perm-history-box {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border: 1px dashed var(--border-soft);
+  border-radius: 0.9rem;
+  background: var(--bg-panel-soft);
+}
+
+.perm-history-box[hidden] {
+  display: none !important;
+}
+
+.perm-history-grid {
+  margin-top: 0.65rem;
+  align-items: end;
+}
+
+.perm-history-grid label {
+  flex: 1 1 180px;
+}
+
+.perm-form-actions {
+  margin-top: 0.75rem;
+}
+
+.perm-summary-row {
+  justify-content: space-between;
+}
+
+.perm-summary-row .muted-box {
+  flex: 1 1 260px;
+}
+
+.perm-mode-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.15rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--bg-panel-soft);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.perm-list {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.permit-card {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border-soft);
+  border-radius: 1rem;
+  background: var(--bg-panel-soft);
+}
+
+.permit-card-head {
+  justify-content: space-between;
+}
+
+.permit-student strong {
+  font-size: 0.9rem;
+}
+
+.permit-card-meta {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+}
+
+.permit-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.permit-card-note {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--border-soft);
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.permit-card-note strong {
+  color: var(--text-main);
+}
+
+.permit-status--pending {
+  border-color: rgba(234, 179, 8, 0.45);
+  background: rgba(234, 179, 8, 0.13);
+}
+
+.permit-status--approved {
+  border-color: rgba(34, 197, 94, 0.45);
+  background: rgba(34, 197, 94, 0.13);
+}
+
+.permit-status--rejected {
+  border-color: rgba(239, 68, 68, 0.45);
+  background: rgba(239, 68, 68, 0.13);
+}
+
+@media (max-width: 760px) {
+  .perm-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .perm-hero,
+  .permit-card-head,
+  .perm-summary-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .perm-hero-actions,
+  .perm-form-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .perm-hero-actions .primary-btn,
+  .perm-hero-actions .primary-btn--ghost,
+  .perm-form-actions .primary-btn,
+  .perm-form-actions .primary-btn--ghost,
+  .perm-history-grid .primary-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .perm-mode-chip {
+    white-space: normal;
+  }
+}

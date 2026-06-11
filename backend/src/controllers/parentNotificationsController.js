@@ -1,5 +1,7 @@
 // backend/src/controllers/parentNotificationsController.js
 import { pool } from "../config/db.js";
+import { createNotification as createCentralNotification } from "../modules/notifications/notificationCreateService.js";
+import { getAttachmentsForNotificationIds } from "../modules/notifications/notificationsAttachmentsService.js";
 
 // ==========================================
 // ✅ Helpers (Schema-safe & Multi-tenant)
@@ -49,7 +51,10 @@ async function getAdminUserIds(schoolId) {
       FROM users u
       JOIN roles r ON r.id=u.role_id
       WHERE u.school_id = $1
-        AND LOWER(r.name) IN ('admin','administrator','super_admin','school_admin')
+        AND (
+          LOWER(COALESCE(r.name,'')) IN ('admin','administrator','super_admin','superadmin','school_admin','school-admin')
+          OR COALESCE(r.name,'') ILIKE '%مدير%'
+        )
         AND COALESCE(u.status,'active')='active'
     `,
       [schoolId]
@@ -71,7 +76,10 @@ async function getAdminUserIds(schoolId) {
         JOIN roles r ON r.id=ur.role_id
         JOIN users u ON u.id=ur.user_id
         WHERE u.school_id = $1
-          AND LOWER(r.name) IN ('admin','administrator','super_admin','school_admin')
+          AND (
+          LOWER(COALESCE(r.name,'')) IN ('admin','administrator','super_admin','superadmin','school_admin','school-admin')
+          OR COALESCE(r.name,'') ILIKE '%مدير%'
+        )
           AND COALESCE(u.status,'active')='active'
       `,
         [schoolId]
@@ -88,7 +96,10 @@ async function getAdminUserIds(schoolId) {
         SELECT id
         FROM users
         WHERE school_id = $1
-          AND LOWER(${col}) IN ('admin','administrator')
+          AND (
+          LOWER(COALESCE(${col},'')) IN ('admin','administrator','super_admin','superadmin','school_admin','school-admin')
+          OR COALESCE(${col},'') ILIKE '%مدير%'
+        )
           AND COALESCE(status,'active')='active'
       `,
         [schoolId]
@@ -238,48 +249,38 @@ async function getTeachersForStudent(studentId, schoolId) {
 // ==========================================
 // ✉️ Notifications Core (Multi-tenant)
 // ==========================================
-
-const ALLOWED_SOURCES = new Set(["manual", "system"]);
-
-async function createNotification(
+async function sendManualNotification({
+  req,
   senderUserId,
   schoolId,
   title,
   body,
-  source = "manual"
-) {
-  const safeSource = ALLOWED_SOURCES.has(String(source).toLowerCase())
-    ? source.toLowerCase()
-    : "manual";
-  const { rows } = await pool.query(
-    `
-    INSERT INTO notifications (sender_user_id, school_id, sender_display_name, title, body, source)
-    VALUES ($1, $2, (SELECT name FROM users WHERE id=$1 AND school_id=$2), $3, $4, $5)
-    RETURNING id, created_at
-  `,
-    [senderUserId, schoolId, title, body, safeSource]
-  );
-  return rows[0];
-}
-
-async function insertRecipients(notificationId, schoolId, recipientUserIds) {
-  const ids = [...new Set(recipientUserIds.map(Number).filter(Boolean))];
-  if (!ids.length) return 0;
-
-  const params = [notificationId, schoolId];
-  const values = ids.map((uid, i) => {
-    params.push(uid);
-    return `($1, $2, $${i + 3}, false)`;
+  recipientUserIds,
+  meta = {},
+}) {
+  const result = await createCentralNotification({
+    app: req.app,
+    schoolId,
+    source: "manual",
+    category: "general",
+    priority: "normal",
+    title,
+    body,
+    senderUserId,
+    meta,
+    recipientUserIds,
   });
 
-  await pool.query(
-    `
-    INSERT INTO notification_recipients (notification_id, school_id, recipient_user_id, is_read)
-    VALUES ${values.join(",")}
-  `,
-    params
-  );
-  return ids.length;
+  return {
+    id: result.request_id,
+    recipients: result.recipients_created || 0,
+  };
+}
+
+function emitUnreadRefresh(req) {
+  const userId = pickUserId(req);
+  const io = req.app?.get?.("io");
+  if (io && userId) io.to(`user_${userId}`).emit("notification:unread-count:refresh");
 }
 
 // ==========================================
@@ -344,14 +345,23 @@ export async function listInbox(req, res) {
       SELECT n.id, n.title, n.body, n.created_at, COALESCE(nr.is_read,false) AS is_read, 
              nr.read_at, u.name AS sender_display_name
       FROM notification_recipients nr
-      JOIN notifications n ON n.id = nr.notification_id
-      LEFT JOIN users u ON u.id = n.sender_user_id
+      JOIN notifications n ON n.id = nr.notification_id AND n.school_id = $2
+      LEFT JOIN users u ON u.id = n.sender_user_id AND u.school_id = $2
       WHERE ${where.join(" AND ")}
       ORDER BY n.created_at DESC LIMIT 200
     `,
       params
     );
-    res.json({ items: rows });
+    const attachmentsMap = await getAttachmentsForNotificationIds(
+      rows.map((row) => Number(row.id)),
+      schoolId
+    );
+    res.json({
+      items: rows.map((row) => ({
+        ...row,
+        attachments: attachmentsMap.get(Number(row.id)) || [],
+      })),
+    });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -364,6 +374,7 @@ export async function markOneRead(req, res) {
        WHERE recipient_user_id=$1 AND notification_id=$2 AND school_id=$3`,
       [pickUserId(req), Number(req.params.id), getSchoolId(req)]
     );
+    emitUnreadRefresh(req);
     res.status(204).send();
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -377,6 +388,7 @@ export async function markAllRead(req, res) {
        WHERE recipient_user_id=$1 AND school_id=$2 AND COALESCE(is_read,false)=false`,
       [pickUserId(req), getSchoolId(req)]
     );
+    emitUnreadRefresh(req);
     res.status(204).send();
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -401,7 +413,7 @@ export async function listOutbox(req, res) {
              COUNT(nr.recipient_user_id)::int AS recipients_total,
              SUM(CASE WHEN COALESCE(nr.is_read,false)=true THEN 1 ELSE 0 END)::int AS recipients_read
       FROM notifications n
-      JOIN notification_recipients nr ON nr.notification_id=n.id
+      JOIN notification_recipients nr ON nr.notification_id=n.id AND nr.school_id=$2
       WHERE ${where}
       GROUP BY n.id ORDER BY n.created_at DESC LIMIT 200
     `,
@@ -429,8 +441,8 @@ export async function outboxRecipients(req, res) {
       `
       SELECT nr.recipient_user_id, u.name, nr.read_at, n.created_at AS delivered_at
       FROM notification_recipients nr
-      JOIN notifications n ON n.id=nr.notification_id
-      JOIN users u ON u.id=nr.recipient_user_id
+      JOIN notifications n ON n.id=nr.notification_id AND n.school_id=$2
+      JOIN users u ON u.id=nr.recipient_user_id AND u.school_id=$2
       WHERE nr.notification_id=$1 AND nr.school_id=$2
       ORDER BY u.name
     `,
@@ -455,9 +467,16 @@ export async function sendAdmins(req, res) {
         .status(400)
         .json({ message: "لا توجد حسابات إدارة لهذه المدرسة." });
 
-    const n = await createNotification(pickUserId(req), schoolId, title, body);
-    const recipients = await insertRecipients(n.id, schoolId, adminIds);
-    res.json({ id: n.id, recipients });
+    const sent = await sendManualNotification({
+      req,
+      senderUserId: pickUserId(req),
+      schoolId,
+      title,
+      body,
+      recipientUserIds: adminIds,
+      meta: { ui_source: "parent_send_admins" },
+    });
+    res.json(sent);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -494,9 +513,16 @@ export async function sendChildren(req, res) {
         .status(400)
         .json({ message: "لا توجد حسابات مستخدم للأبناء." });
 
-    const n = await createNotification(parentUserId, schoolId, title, body);
-    const recipients = await insertRecipients(n.id, schoolId, recipientUserIds);
-    res.json({ id: n.id, recipients });
+    const sent = await sendManualNotification({
+      req,
+      senderUserId: parentUserId,
+      schoolId,
+      title,
+      body,
+      recipientUserIds,
+      meta: { ui_source: "parent_send_children", mode },
+    });
+    res.json(sent);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -524,9 +550,16 @@ export async function sendTeachers(req, res) {
         .status(400)
         .json({ message: "لا يوجد معلمون متاحون لهذا الابن." });
 
-    const n = await createNotification(parentUserId, schoolId, title, body);
-    const recipients = await insertRecipients(n.id, schoolId, targets);
-    res.json({ id: n.id, recipients });
+    const sent = await sendManualNotification({
+      req,
+      senderUserId: parentUserId,
+      schoolId,
+      title,
+      body,
+      recipientUserIds: targets,
+      meta: { ui_source: "parent_send_teachers", student_id: Number(student_id) },
+    });
+    res.json(sent);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -81,37 +81,92 @@ function buildBanner(permit, counts) {
 ========================= */
 
 // ✅ إضافة school_id للتأكد من انتماء الطالب للمدرسة
+// التحقق الآمن من ارتباط ولي الأمر بالطالب داخل المدرسة الحالية
 async function canParentAccessStudent(db, userId, studentId, schoolId) {
-  if (!userId) return false;
+  if (!userId || !studentId || !schoolId) {
+    return false;
+  }
+
+  // الطالب يجب أن ينتمي إلى مدرسة المستخدم الحالية.
+  const studentCheck = await db.query(
+    `
+    SELECT 1
+    FROM students
+    WHERE id = $1
+      AND school_id = $2
+    LIMIT 1
+    `,
+    [studentId, schoolId]
+  );
+
+  if (!studentCheck.rowCount) {
+    return false;
+  }
 
   const hasGuardians = await tableExists(db, "guardians");
-  if (!hasGuardians) return true;
 
-  const linkTables = ["guardian_students", "student_guardians", "parent_students"];
+  // لا نسمح بالوصول إذا كانت بنية الربط غير موجودة.
+  if (!hasGuardians) {
+    console.warn("canParentAccessStudent: guardians table not found");
+    return false;
+  }
 
-  for (const lt of linkTables) {
-    const ok = await tableExists(db, lt);
-    if (!ok) continue;
+  const linkTables = [
+    "guardian_students",
+    "student_guardians",
+    "parent_students",
+  ];
 
-    // نحاول بفرضية الأعمدة الشائعة والتأكد من مدرسة الطالب:
+  let foundExistingLinkTable = false;
+
+  for (const linkTable of linkTables) {
+    const exists = await tableExists(db, linkTable);
+
+    if (!exists) {
+      continue;
+    }
+
+    foundExistingLinkTable = true;
+
     try {
-      const q = `
+      const result = await db.query(
+        `
         SELECT 1
         FROM guardians g
-        JOIN ${lt} gs ON gs.guardian_id = g.id
-        JOIN students s ON s.id = gs.student_id
-        WHERE g.user_id = $1 AND gs.student_id = $2 AND s.school_id = $3
+        JOIN ${linkTable} gs
+          ON gs.guardian_id = g.id
+        JOIN students s
+          ON s.id = gs.student_id
+        WHERE g.user_id = $1
+          AND gs.student_id = $2
+          AND s.school_id = $3
         LIMIT 1
-      `;
-      const r = await db.query(q, [userId, studentId, schoolId]);
-      return r.rowCount > 0;
-    } catch (_) {
-      // لو اختلاف أعمدة الربط، لا نكسر النظام
-      return true;
+        `,
+        [userId, studentId, schoolId]
+      );
+
+      // لا نتوقف عند أول جدول فارغ.
+      // نستمر حتى نجد علاقة صحيحة في أي جدول ربط موجود.
+      if (result.rowCount > 0) {
+        return true;
+      }
+    } catch (error) {
+      // لا نمنح صلاحية عند حدوث خطأ.
+      // قد يكون أحد الجداول القديمة مختلف البنية، لذلك نجرب الجدول التالي.
+      console.warn(
+        `canParentAccessStudent skipped ${linkTable}:`,
+        error.message
+      );
     }
   }
 
-  return true;
+  if (!foundExistingLinkTable) {
+    console.warn(
+      "canParentAccessStudent: no supported parent-student link table found"
+    );
+  }
+
+  return false;
 }
 
 /* =========================

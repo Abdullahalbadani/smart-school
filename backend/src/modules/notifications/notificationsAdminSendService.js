@@ -198,6 +198,7 @@ export async function sendManualNotification({
   senderDisplayName = null,
   payload = {},
   schoolId, // 👈 NEW
+  deferRealtime = false,
 }) {
   if (!schoolId) throw new Error("schoolId is required for sending notification");
 
@@ -264,8 +265,9 @@ export async function sendManualNotification({
     recipientUserIds,
     dedupeWindowSeconds: normalizedPayload.dedupe_window_seconds,
 
-    // إن كانت createNotification تدعم realtime flag فسيستفيد، وإن لم تدعم فلن يضر
-    allowRealtime: !!normalizedPayload.allow_realtime,
+    // عند وجود مرفقات نؤجل Socket حتى تُحفظ المرفقات بنجاح، فلا يصل
+    // إشعار لحظي ناقص أو يفشل فتح مرفقه عند الضغط السريع.
+    allowRealtime: deferRealtime ? false : !!normalizedPayload.allow_realtime,
   });
 
   const summary = extractSendResultSummary(sendResult);
@@ -286,6 +288,7 @@ export async function sendManualNotification({
 
     // النتيجة الأصلية (للاستفادة الكاملة)
     send_result: sendResult,
+    should_emit_realtime: !!(deferRealtime && normalizedPayload.allow_realtime && !summary.skipped),
 
     payload_version: normalizedPayload.payload_version,
   };

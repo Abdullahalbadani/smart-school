@@ -1,5 +1,6 @@
 // src/controllers/studentTransferRequestsController.js
 import { pool } from "../config/db.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function normalizeStatus(status) {
   const value = String(status || "pending").trim().toLowerCase();
@@ -404,6 +405,16 @@ export const StudentTransferRequestsController = {
         ]
       );
 
+      try {
+        await WorkflowNotifications.notifyStudentTransferRequestCreated({
+          app: req.app,
+          schoolId,
+          requestId: result.rows[0].id,
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (student transfer request created):", notifyErr);
+      }
+
       return res.status(201).json({
         success: true,
         message: "تم إرسال طلب نقل الطالب إلى المدير",
@@ -536,6 +547,17 @@ export const StudentTransferRequestsController = {
 
       await client.query("COMMIT");
 
+      try {
+        await WorkflowNotifications.notifyStudentTransferRequestDecision({
+          app: req.app,
+          schoolId,
+          requestId,
+          status: "approved",
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (student transfer approved):", notifyErr);
+      }
+
       const io = req.app?.get?.("io");
 
       if (io) {
@@ -637,6 +659,17 @@ export const StudentTransferRequestsController = {
       );
 
       await client.query("COMMIT");
+
+      try {
+        await WorkflowNotifications.notifyStudentTransferRequestDecision({
+          app: req.app,
+          schoolId,
+          requestId,
+          status: "rejected",
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (student transfer rejected):", notifyErr);
+      }
 
       const io = req.app?.get?.("io");
 

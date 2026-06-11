@@ -28,15 +28,94 @@
   const TT_LS_YEAR = "TT_YEAR_ID";
   const TT_LS_TERM = "TT_TERM";
 
+  const toPositiveInt = (value) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? Math.trunc(n) : 0;
+  };
+
+  const toBool = (value) => {
+    if (value === true || value === 1) return true;
+    const s = String(value ?? "").trim().toLowerCase();
+    return ["true", "t", "1", "yes", "on"].includes(s);
+  };
+
+  function getStoredTerm() {
+    return Number(localStorage.getItem(TT_LS_TERM)) === 2 ? 2 : 1;
+  }
+
   function getYearTermForTeacher() {
-    const yearId = Number(localStorage.getItem(TT_LS_YEAR) || 1);
-    const term = Number(localStorage.getItem(TT_LS_TERM) || 1);
-    return { yearId, term };
+    return {
+      yearId: toPositiveInt(localStorage.getItem(TT_LS_YEAR)),
+      term: getStoredTerm(),
+    };
+  }
+
+  let __YEAR_META = null;
+  let __YEAR_TERM_PROMISE = null;
+
+  function extractYears(response) {
+    const data = response?.data || response || {};
+    const rows = data?.years || data?.data?.years || [];
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  async function ensureYearTermForTeacher({ force = false } = {}) {
+    if (__YEAR_TERM_PROMISE) return __YEAR_TERM_PROMISE;
+
+    const current = getYearTermForTeacher();
+    const cachedYears = Array.isArray(__YEAR_META) ? __YEAR_META : [];
+    const currentIsValid = cachedYears.some(
+      (year) => String(year?.id ?? year?.academic_year_id ?? "") === String(current.yearId)
+    );
+
+    if (!force && cachedYears.length && currentIsValid) return current;
+
+    __YEAR_TERM_PROMISE = (async () => {
+      try {
+        const response = await apiGet("/teacher/timetables/meta");
+        const years = extractYears(response);
+        __YEAR_META = years;
+
+        const storedYearId = current.yearId;
+        const storedYear = years.find(
+          (year) => String(year?.id ?? year?.academic_year_id ?? "") === String(storedYearId)
+        );
+        const activeYear = years.find((year) => toBool(year?.is_active ?? year?.isActive));
+
+        // إدارة الحصص اليومية يجب أن تبدأ من السنة النشطة.
+        // نستخدم السنة المخزنة فقط إذا كانت نشطة أو إذا لم توجد سنة نشطة أصلًا.
+        const selected =
+          (storedYear && (toBool(storedYear?.is_active ?? storedYear?.isActive) || !activeYear)
+            ? storedYear
+            : activeYear) ||
+          storedYear ||
+          years[0] ||
+          null;
+
+        const yearId = toPositiveInt(selected?.id ?? selected?.academic_year_id ?? storedYearId);
+        const term = getStoredTerm();
+
+        if (yearId) localStorage.setItem(TT_LS_YEAR, String(yearId));
+        localStorage.setItem(TT_LS_TERM, String(term));
+
+        return { yearId, term };
+      } catch (error) {
+        console.warn("ensureYearTermForTeacher failed:", error);
+        return current;
+      } finally {
+        __YEAR_TERM_PROMISE = null;
+      }
+    })();
+
+    return __YEAR_TERM_PROMISE;
   }
 
   function todayISO() {
     const d = new Date();
-    return d.toISOString().slice(0, 10);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
   }
 
   const delay = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -47,15 +126,19 @@
 
   async function ensurePeriodsMeta() {
     if (__PERIODS_LOADED) return Array.isArray(__PERIODS_META) ? __PERIODS_META : [];
-    __PERIODS_LOADED = true;
+
     try {
       const r = await apiGet("/teacher/timetables/meta");
       const meta = r?.data || r || {};
       const periods = meta?.periods || meta?.data?.periods || [];
       __PERIODS_META = Array.isArray(periods) ? periods : [];
-    } catch {
+      __PERIODS_LOADED = true;
+    } catch (error) {
+      console.warn("ensurePeriodsMeta failed:", error);
       __PERIODS_META = [];
+      __PERIODS_LOADED = false;
     }
+
     return Array.isArray(__PERIODS_META) ? __PERIODS_META : [];
   }
 
@@ -118,7 +201,12 @@
     const dayId = mapToSchoolDay[jsDay];
     if (!dayId) return;
 
-    const { yearId, term } = getYearTermForTeacher();
+    const { yearId, term } = await ensureYearTermForTeacher();
+    if (!yearId) {
+      selectEl.innerHTML = `<option value="">تعذر تحديد السنة الدراسية</option>`;
+      selectEl.disabled = true;
+      return;
+    }
 
     const periodsMeta = (await ensurePeriodsMeta()).slice();
     const periodById = new Map(periodsMeta.map((p) => [String(p.id), p]));
@@ -196,13 +284,16 @@
 
   async function ensureAttendanceMeta() {
     if (__ATT_META_LOADED) return __ATT_META || { reasons: [] };
-    __ATT_META_LOADED = true;
+
     try {
       const r = await apiGet("/teacher/attendance/meta");
       const data = r?.data || r || {};
       __ATT_META = { reasons: Array.isArray(data.reasons) ? data.reasons : [] };
-    } catch {
+      __ATT_META_LOADED = true;
+    } catch (error) {
+      console.warn("ensureAttendanceMeta failed:", error);
       __ATT_META = { reasons: [] };
+      __ATT_META_LOADED = false;
     }
 
     try {
@@ -214,39 +305,84 @@
 
   // ===== Teaching scopes picker =====
   const __TEACHING_CACHE = { key: "", rows: [], loaded: false };
+  let __TEACHING_PROMISE = null;
+  let __TEACHING_PROMISE_KEY = "";
 
-  async function loadTeachingScopes() {
-    const { yearId, term } = getYearTermForTeacher();
+  function extractScopeRows(response) {
+    const rows =
+      response?.data?.scopes ??
+      response?.scopes ??
+      response?.items ??
+      response?.data?.items ??
+      response?.data ??
+      [];
+
+    return Array.isArray(rows) ? rows : [];
+  }
+
+  function rowsForYearTerm(rows, yearId, term) {
+    return (Array.isArray(rows) ? rows : []).filter((row) => {
+      const rowYear = toPositiveInt(row?.academic_year_id ?? row?.academicYearId);
+      const rowTerm = toPositiveInt(row?.term);
+      if (rowYear && rowYear !== yearId) return false;
+      if (rowTerm && rowTerm !== term) return false;
+      return true;
+    });
+  }
+
+  async function loadTeachingScopes({ force = false } = {}) {
+    const { yearId, term } = await ensureYearTermForTeacher();
+    if (!yearId) return [];
+
     const key = `${yearId}-${term}`;
-    if (__TEACHING_CACHE.loaded && __TEACHING_CACHE.key === key) return __TEACHING_CACHE.rows;
+    if (!force && __TEACHING_CACHE.loaded && __TEACHING_CACHE.key === key && __TEACHING_CACHE.rows.length) {
+      return __TEACHING_CACHE.rows;
+    }
+
+    if (!force && __TEACHING_PROMISE && __TEACHING_PROMISE_KEY === key) {
+      return __TEACHING_PROMISE;
+    }
+
+    __TEACHING_PROMISE_KEY = key;
+    __TEACHING_PROMISE = (async () => {
+      const paths = [
+        `/teacher/attendance/scopes?academicYearId=${encodeURIComponent(yearId)}&term=${encodeURIComponent(term)}`,
+        `/teacher/timetables/students/scopes?academicYearId=${encodeURIComponent(yearId)}&term=${encodeURIComponent(term)}`,
+        `/teacher/scopes?term=${encodeURIComponent(term)}`,
+      ];
+
+      let lastError = null;
+
+      for (const path of paths) {
+        try {
+          const response = await apiGet(path);
+          const rows = rowsForYearTerm(extractScopeRows(response), yearId, term);
+
+          if (rows.length) {
+            __TEACHING_CACHE.key = key;
+            __TEACHING_CACHE.rows = rows;
+            __TEACHING_CACHE.loaded = true;
+            return rows;
+          }
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (lastError) console.warn("loadTeachingScopes failed:", lastError);
+
+      // لا نخزن القائمة الفارغة بصورة دائمة؛ حتى تعاد المحاولة عند فتح المودال مجددًا.
+      __TEACHING_CACHE.key = key;
+      __TEACHING_CACHE.rows = [];
+      __TEACHING_CACHE.loaded = false;
+      return [];
+    })();
 
     try {
-      const r = await apiGet(
-        `/teacher/attendance/scopes?academicYearId=${encodeURIComponent(yearId)}&term=${encodeURIComponent(term)}`
-      );
-      const rows = r?.data?.scopes || r?.scopes || r?.data || [];
-      __TEACHING_CACHE.key = key;
-      __TEACHING_CACHE.rows = Array.isArray(rows) ? rows : [];
-      __TEACHING_CACHE.loaded = true;
-      return __TEACHING_CACHE.rows;
-    } catch {
-      try {
-        const r2 = await apiGet(
-          `/teacher/timetables/students/scopes?academicYearId=${encodeURIComponent(yearId)}&term=${encodeURIComponent(
-            term
-          )}`
-        );
-        const rows2 = r2?.data?.scopes || r2?.scopes || r2?.data || [];
-        __TEACHING_CACHE.key = key;
-        __TEACHING_CACHE.rows = Array.isArray(rows2) ? rows2 : [];
-        __TEACHING_CACHE.loaded = true;
-        return __TEACHING_CACHE.rows;
-      } catch {
-        __TEACHING_CACHE.key = key;
-        __TEACHING_CACHE.rows = [];
-        __TEACHING_CACHE.loaded = true;
-        return [];
-      }
+      return await __TEACHING_PROMISE;
+    } finally {
+      __TEACHING_PROMISE = null;
+      __TEACHING_PROMISE_KEY = "";
     }
   }
 
@@ -296,7 +432,7 @@
     const sectionSel = $(`${prefix}-section`);
     const subjectSel = $(`${prefix}-subject`);
 
-    if (!stageSel || !gradeSel || !sectionSel || !subjectSel) return;
+    if (!stageSel || !gradeSel || !sectionSel || !subjectSel) return Promise.resolve();
 
     const getKey = () => {
       const { yearId, term } = getYearTermForTeacher();
@@ -312,9 +448,9 @@
 
       // فقط إذا تغيّر year/term أو الخيارات فاضية
       if ((oldKey && oldKey !== currentKey) || !hasStages) {
-        if (typeof stageSel.__applyFromCache === "function") stageSel.__applyFromCache();
+        if (typeof stageSel.__applyFromCache === "function") return stageSel.__applyFromCache();
       }
-      return;
+      return Promise.resolve();
     }
 
     stageSel.dataset.inited = "1";
@@ -437,7 +573,7 @@
       });
     });
 
-    applyFromCache();
+    return applyFromCache();
   }
 
   function getTeachingScope(prefix) {
@@ -489,6 +625,9 @@
     const sectionSel = $("att-section");
     const subjectSel = $("att-subject");
     const lessonSel = $("att-lesson");
+
+    if (!lessonSel || lessonSel.dataset.filterHooked === "1") return;
+    lessonSel.dataset.filterHooked = "1";
 
     const run = async () => {
       await filterLessonsByTeacherDay(lessonSel, getTeachingScope("att"), String(dateInput?.value || "").slice(0, 10));
@@ -577,8 +716,8 @@
 
   // ✅ تُستدعى من modals.js
   window.__loadTeacherTeachingScopes = async () => {
-    initTeachingPicker("att");
-    initTeachingPicker("ls");
+    await ensureYearTermForTeacher();
+    await Promise.all([initTeachingPicker("att"), initTeachingPicker("ls")]);
     ensureAttendanceMeta().catch(() => {});
 
     hookAttendanceLessonFiltering();
@@ -588,7 +727,7 @@
         $("att-lesson"),
         getTeachingScope("att"),
         String($("att-date")?.value || "").slice(0, 10)
-      );
+      ).catch(() => {});
     }, 0);
 
     const savedCtx = loadAttCtx();
@@ -601,6 +740,7 @@
 
   window.TeachingScopes = {
     getYearTermForTeacher,
+    ensureYearTermForTeacher,
     todayISO,
     ensurePeriodsMeta,
     ensureLessonSelectOptions,

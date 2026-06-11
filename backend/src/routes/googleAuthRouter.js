@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { google } from 'googleapis';
 import jwt from 'jsonwebtoken';
 import { pool } from '../config/db.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 const router = Router();
 
@@ -76,6 +77,7 @@ if (!code || !state) {
 }
 
 let schoolId;
+let oauthUserId = null;
 
 try {
   const decodedState = jwt.verify(
@@ -88,6 +90,7 @@ try {
   );
 
   schoolId = Number(decodedState.schoolId);
+  oauthUserId = Number(decodedState.userId) || null;
 
   if (!Number.isSafeInteger(schoolId) || schoolId <= 0) {
     throw new Error('رقم المدرسة غير صالح');
@@ -139,6 +142,24 @@ try {
            updated_at = NOW()`,
       [schoolId, tokens.refresh_token, folderId]
     );
+
+    await logAudit({
+      req,
+      action: 'ACTIVATE',
+      actionLabel: 'ربط Google Drive',
+      module: 'backups',
+      moduleLabel: 'النسخ الاحتياطية',
+      tableName: 'backup_settings',
+      description: `تم ربط النسخ الاحتياطية للمدرسة (${schoolName}) بحساب Google Drive`,
+      newData: { google_drive_linked: true },
+      metadata: { severity: 'sensitive', result: 'success' },
+      eventKey: 'GOOGLE_DRIVE_LINK',
+      statusCode: 200,
+      schoolIdFallback: schoolId,
+      userIdFallback: oauthUserId,
+      userNameFallback: oauthUserId ? `المستخدم رقم ${oauthUserId}` : 'مستخدم المدرسة',
+      userRoleFallback: 'school_user'
+    });
 
     // 🎯 إعادة توجيه المستخدم لصفحة الإعدادات لوحة التحكم في الفرونت إند بنجاح
     // (قم بتحديث المسار النصي ليتطابق مع مجلدات العرض لديك)

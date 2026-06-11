@@ -33,6 +33,25 @@ function isValidStatus(s) {
   return ["present", "absent", "late", "excused"].includes(String(s || ""));
 }
 
+
+async function notifyAttendanceEntriesSafely(req, attendanceEntryIds = []) {
+  const uniqueIds = [...new Set((attendanceEntryIds || []).map(Number).filter((id) => Number.isInteger(id) && id > 0))];
+
+  for (const attendanceEntryId of uniqueIds) {
+    try {
+      await NotificationAutoService.notifyStudentAttendanceByEntryId({
+        app: req.app,
+        attendanceEntryId,
+        includeStudent: true,
+        includeAdmins: false,
+        dedupeWindowSeconds: 300,
+      });
+    } catch (notifyErr) {
+      console.error("Auto notification error (student attendance entry):", notifyErr);
+    }
+  }
+}
+
 // 1=Saturday,2=Sunday,3=Mon,...7=Fri
 function schoolDayIdFromISO(iso) {
   const dStr = String(iso || "").slice(0, 10);
@@ -628,6 +647,7 @@ export async function scopes(req, res) {
       WHERE t.school_id = $1
         AND t.academic_year_id = $2
         AND t.term = $3
+        AND t.status = 'published'
         AND te.teacher_id = $4
       ORDER BY stage_name, grade_order, section_name, subject_name
     `;
@@ -1658,6 +1678,8 @@ export async function saveEntries(req, res) {
       return res.json({ data: { ok: true, corrected: true, saved } });
     }
 
+    const changedAttendanceEntryIds = [];
+
     for (const e of entries) {
       const studentId = toInt(e.studentId);
       const status = String(e.status || "present");
@@ -1684,7 +1706,7 @@ export async function saveEntries(req, res) {
         });
       }
 
-      await client.query(
+      const updateEntryResult = await client.query(
         `
         UPDATE attendance_entries
         SET
@@ -1695,9 +1717,14 @@ export async function saveEntries(req, res) {
         WHERE school_id = $5
           AND session_id = $6
           AND student_id = $7
+        RETURNING id
         `,
         [status, note || null, reasonId, lateMinutes, schoolId, id, studentId]
       );
+
+      if (updateEntryResult.rows[0]?.id) {
+        changedAttendanceEntryIds.push(updateEntryResult.rows[0].id);
+      }
     }
 
     if (req.body?.lock === true) {
@@ -1718,6 +1745,8 @@ export async function saveEntries(req, res) {
     }
 
     await client.query("COMMIT");
+
+    await notifyAttendanceEntriesSafely(req, changedAttendanceEntryIds);
 
     if (req.body?.lock === true) {
       try {
@@ -2200,8 +2229,8 @@ export async function scanMarkPresentByToken(req, res) {
       await NotificationAutoService.notifyStudentAttendanceByEntryId({
         app: req.app,
         attendanceEntryId: savedEntry.id,
-        includeStudent: false,
-        includeAdmins: true,
+        includeStudent: true,
+        includeAdmins: false,
       });
     } catch (notifyErr) {
       console.error("Auto notification error (attendance scan):", notifyErr);

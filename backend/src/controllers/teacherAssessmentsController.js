@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function pickUserId(req) {
   return req.user?.id ?? req.user?.user_id ?? req.user?.userId ?? null;
@@ -1094,6 +1095,16 @@ export async function publishAssessment(req, res) {
       `,
       [assessmentId, schoolId]
     );
+
+    try {
+      await WorkflowNotifications.notifyAssessmentPublished({
+        app: req.app,
+        schoolId,
+        assessmentId,
+      });
+    } catch (notifyErr) {
+      console.error("Notification error (assessment published):", notifyErr);
+    }
 
     return res.status(204).send();
   } catch (e) {

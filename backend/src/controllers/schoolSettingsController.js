@@ -19,6 +19,16 @@ import {
 } from "../modules/schoolSettingsModel.js";
 
 function reqStr(v) { return String(v ?? "").trim(); }
+function toBoolOrNull(v) {
+  if (v === undefined || v === null || v === "") return null;
+
+  return (
+    v === true ||
+    v === 1 ||
+    v === "1" ||
+    String(v).toLowerCase() === "true"
+  );
+}
 function toInt(v) {
   const n = Number(v);
   return Number.isFinite(n) ? Math.trunc(n) : null;
@@ -117,27 +127,51 @@ export async function financeUpdate(req, res) {
 export async function portalsGet(req, res) {
   try {
     const schoolId = req.user?.school_id;
+
+    if (!schoolId) {
+      return res.status(401).json({ error: "غير مصرح" });
+    }
+
     const data = await getPortalsSettings(schoolId);
+
     return res.json({ data });
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    console.error("portalsGet error:", e);
+
+    return res.status(500).json({
+      error: e.message || "فشل جلب إعدادات البوابات",
+    });
   }
 }
 
 export async function portalsUpdate(req, res) {
   try {
     const schoolId = req.user?.school_id;
+
+    if (!schoolId) {
+      return res.status(401).json({ error: "غير مصرح" });
+    }
+
     const payload = {
-      teacher_portal: Boolean(req.body.teacher_portal),
-      parent_portal: Boolean(req.body.parent_portal)
+      teacher_portal: toBoolOrNull(req.body.teacher_portal),
+      parent_portal: toBoolOrNull(req.body.parent_portal),
+      student_portal: toBoolOrNull(req.body.student_portal),
     };
+
     const row = await updatePortalsSettings(schoolId, payload);
-    return res.json({ message: "تم تحديث صلاحيات البوابات بنجاح ✅", data: row });
+
+    return res.json({
+      message: "تم تحديث صلاحيات البوابات بنجاح ✅",
+      data: row,
+    });
   } catch (e) {
-    return res.status(400).json({ error: e.message });
+    console.error("portalsUpdate error:", e);
+
+    return res.status(400).json({
+      error: e.message || "فشل تحديث صلاحيات البوابات",
+    });
   }
 }
-
 /* =========================
     SCHOOL PROFILE (هوية المدرسة)
 ========================= */

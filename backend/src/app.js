@@ -5,6 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import http from "http";
 import { Server } from "socket.io";
+import { configureNotificationSockets } from "./socket/notificationSocketSecurity.js";
 import platformAuthMiddleware from "./middleware/platformAuthMiddleware.js";
 import platformAuthRoutes from "./routes/platformAuthRoutes.js";
 import platformSchoolsRoutes from "./routes/platformSchoolsRoutes.js";
@@ -64,6 +65,7 @@ import adminTeachersRoutes from "./routes/adminTeachersRoutes.js";
 
 // 2. أضف في قسم Protected Routes
 // Parent Portal Routes
+import adminFeesSchoolReportsRoutes from "./routes/adminFeesSchoolReportsRoutes.js";
 import parentPortalRoutes from "./routes/parentPortalRoutes.js";
 import parentRoutes from "./routes/parentRoutes.js";
 import parentPermissionsRoutes from "./routes/parentPermissionsRoutes.js";
@@ -95,6 +97,7 @@ import schoolSettingsRoutes from "./routes/schoolSettingsRoutes.js";
 import adminPermissionsRoutes from "./routes/adminPermissionsRoutes.js";
 import adminTeacherAttendanceRoutes from "./routes/adminTeacherAttendanceRoutes.js";
 import adminTeacherPermitsRoutes from "./routes/adminTeacherPermitsRoutes.js";
+import adminAttendanceSchoolReportsRoutes from "./routes/adminAttendanceSchoolReportsRoutes.js";
 import attendanceReportsRoutes from "./routes/attendanceReportsRoutes.js";
 import adminAssessmentsRoutes from "./routes/adminAssessmentsRoutes.js";
 import assessmentReopenRequestsRoutes from "./routes/assessmentReopenRequestsRoutes.js";
@@ -170,32 +173,9 @@ const io = new Server(httpServer, {
 
 app.set("io", io);
 
-io.on("connection", (socket) => {
-  const schoolId = socket.handshake.query.schoolId;
-
-  if (schoolId) {
-    socket.join(`school_${schoolId}`);
-    console.log(`[Socket] Client joined school room: school_${schoolId}`);
-  }
-
-  socket.on("join_user_room", (userId) => {
-    const id = Number(userId);
-
-    if (!Number.isInteger(id) || id <= 0) return;
-
-    socket.join(`user_${id}`);
-    console.log(`[Socket] user_${id} joined personal room`);
-  });
-
-  socket.on("join_teacher_room", (teacherId) => {
-    socket.join(`teacher_${teacherId}`);
-    console.log(`[Socket] Teacher ${teacherId} joined room`);
-  });
-
-  socket.on("disconnect", () => {
-    console.log("[Socket] Client disconnected");
-  });
-});
+// Rooms are derived from a verified JWT. The client cannot subscribe to
+// another school's or another user's private real-time notifications.
+configureNotificationSockets(io);
 
 function mountRoutes(routes) {
   routes.forEach(({ path, middlewares = [], router }) => {
@@ -227,6 +207,11 @@ app.use(xssSanitizer);
 // Static Files
 // ==============================
 app.use("/frontend", express.static(frontendPath));
+// Notification attachments are private: they must be served only through the
+// authenticated notification attachment endpoints, never through public static files.
+app.use("/uploads/notifications", (_req, res) => {
+  res.status(404).json({ message: "المرفق غير متاح عبر المسار العام" });
+});
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
 app.get("/", (req, res) => {
   res.redirect("/frontend/register/register.html");
@@ -248,9 +233,10 @@ mountRoutes([
 
 // ==============================
 // Activity Logger
-// يبدأ بعد الروابط العامة
+// يركب بعد المصادقة وعزل المدرسة داخل protectedMiddlewares حتى يتمكن
+// من حفظ المستخدم والمدرسة والتقاط البيانات السابقة قبل التعديل.
+// المسارات العامة مثل تسجيل الدخول تسجل أحداثها يدويًا داخل authController.
 // ==============================
-app.use(autoActivityLogger);
 
 // ==============================
 // Open Routes
@@ -278,7 +264,7 @@ mountRoutes([
 // Protected Routes
 // تحتاج تسجيل دخول
 // ==============================
-const protectedMiddlewares = [authMiddleware, tenantMiddleware];
+const protectedMiddlewares = [authMiddleware, tenantMiddleware, autoActivityLogger];
 
 mountRoutes([
   // Core System
@@ -324,6 +310,7 @@ mountRoutes([
 { path: "/api/admin/reports/students", middlewares: protectedMiddlewares, router: studentReportsRoutes },
   { path: "/api/admin/school-reports/students", middlewares: protectedMiddlewares, router: adminStudentSchoolReportsRoutes },
   { path: "/api/admin/school-reports/staff", middlewares: protectedMiddlewares, router: adminStaffSchoolReportsRoutes },
+  { path: "/api/admin/school-reports/attendance", middlewares: protectedMiddlewares, router: adminAttendanceSchoolReportsRoutes },
   // Parent Portal
   { path: "/api/parent/attendance", middlewares: protectedMiddlewares, router: parentAttendanceRoutes },
   { path: "/api/parent/notifications", middlewares: protectedMiddlewares, router: parentNotificationsRoutes },
@@ -344,16 +331,17 @@ mountRoutes([
   { path: "/api/admin", middlewares: protectedMiddlewares, router: adminPermissionsRoutes },
   { path: "/api/admin/fee-rules", middlewares: protectedMiddlewares, router: feeRulesRoutes },
   { path: "/api/admin/control", middlewares: protectedMiddlewares, router: adminTermWorksRoutes },
-
+{ path: "/api/admin/school-reports/fees", middlewares: protectedMiddlewares, router: adminFeesSchoolReportsRoutes },
   // Timetables and Exams
   { path: "/api/timetables", middlewares: protectedMiddlewares, router: timetablesRoutes },
   { path: "/api/exam-timetables", middlewares: protectedMiddlewares, router: examTimetablesRoutes },
 
   // Fees and Meta
-  { path: "/api", middlewares: protectedMiddlewares, router: feesRoutes },
-  { path: "/api", middlewares: protectedMiddlewares, router: studentFeesPortalRoutes },
-  { path: "/api", middlewares: protectedMiddlewares, router: parentFeesPortalRoutes },
-  { path: "/api", middlewares: protectedMiddlewares, router: metaRoutes },
+// Fees and Meta
+{ path: "/api", middlewares: protectedMiddlewares, router: feesRoutes },
+{ path: "/api/student/fees", middlewares: protectedMiddlewares, router: studentFeesPortalRoutes },
+{ path: "/api", middlewares: protectedMiddlewares, router: parentFeesPortalRoutes },
+{ path: "/api", middlewares: protectedMiddlewares, router: metaRoutes },
 { path: "/api/parents", middlewares: protectedMiddlewares, router: parentsRoutes },
   { path: "/api", middlewares: protectedMiddlewares, router: continuingRoutes },
 
@@ -369,9 +357,9 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-startFeesCronJob(io);
+startFeesCronJob(app);
 startSubscriptionsCronJob();
-startBackupsCronJob();
+startBackupsCronJob(app);
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log("Socket.io is ready!");

@@ -1,5 +1,6 @@
 // src/controllers/assessmentReopenRequestsController.js
 import { pool } from "../config/db.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function normalizeStatus(status) {
   const value = String(status || "pending").trim().toLowerCase();
@@ -239,6 +240,17 @@ await client.query(
 
       await client.query("COMMIT");
 
+      try {
+        await WorkflowNotifications.notifyAssessmentReopenRequestDecision({
+          app: req.app,
+          schoolId,
+          requestId,
+          status: "approved",
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (assessment reopen approved):", notifyErr);
+      }
+
       const io = req.app?.get?.("io");
 
       if (io) {
@@ -357,6 +369,17 @@ await client.query(
       );
 
       await client.query("COMMIT");
+
+      try {
+        await WorkflowNotifications.notifyAssessmentReopenRequestDecision({
+          app: req.app,
+          schoolId,
+          requestId,
+          status: "rejected",
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (assessment reopen rejected):", notifyErr);
+      }
 
       const io = req.app?.get?.("io");
 

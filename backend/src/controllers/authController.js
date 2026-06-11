@@ -6,6 +6,7 @@ import PermissionRoleModel from "../modules/permissionRoleModel.js";
 import { getPortalsSettings } from "../modules/schoolSettingsModel.js";
 import { pool } from "../config/db.js";
 import { logAudit } from "../utils/auditLogger.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function buildSubscriptionRedirectUrl(school, code) {
   const params = new URLSearchParams({
@@ -88,6 +89,55 @@ async function getFullSchoolForLogin(schoolId, slug) {
   );
 
   return result.rows[0] || null;
+}
+
+async function auditLoginFailure({
+  req,
+  schoolId = null,
+  userId = null,
+  userName = null,
+  userRole = null,
+  loginValue = null,
+  reason = "فشل تسجيل الدخول",
+  severity = "important",
+  statusCode = 401,
+}) {
+  if (!schoolId) return;
+
+  await logAudit({
+    req,
+    action: "LOGIN",
+    actionLabel: "فشل تسجيل الدخول",
+    module: "Security",
+    moduleLabel: "الأمان وتسجيل الدخول",
+    tableName: "users",
+    recordId: userId,
+    newData: { username: loginValue || userName || null },
+    description: `محاولة تسجيل دخول فاشلة للمستخدم (${loginValue || userName || "غير معروف"}) - ${reason}`,
+    reason,
+    metadata: {
+      severity,
+      result: "failure",
+    },
+    eventKey: "LOGIN_FAILED",
+    statusCode,
+    schoolIdFallback: schoolId,
+    userIdFallback: userId,
+    userNameFallback: userName || loginValue || "مستخدم غير معروف",
+    userRoleFallback: userRole || "system",
+  });
+
+  try {
+    await WorkflowNotifications.notifyRepeatedLoginFailures({
+      app: req.app,
+      schoolId,
+      userId,
+      loginValue: loginValue || userName || "",
+      reason,
+    });
+  } catch (notifyErr) {
+    console.error("Notification error (repeated login failures):", notifyErr);
+  }
 }
 
 async function checkSchoolAccessForLogin(res, school) {
@@ -203,6 +253,14 @@ export const AuthController = {
       const user = await UserModel.getByLoginAndSchoolSlug(slug, loginValue);
 
       if (!user) {
+        const schoolForAudit = await getFullSchoolForLogin(null, slug).catch(() => null);
+        await auditLoginFailure({
+          req,
+          schoolId: schoolForAudit?.id || null,
+          loginValue,
+          reason: "اسم المستخدم أو البريد غير موجود داخل المدرسة",
+        });
+
         return res.status(401).json({
           success: false,
           message: "بيانات الدخول غير صحيحة",
@@ -216,24 +274,31 @@ export const AuthController = {
       );
 
       if (blockedSchoolResponse) {
+        await auditLoginFailure({
+          req,
+          schoolId: user.school_id,
+          userId: user.id,
+          userName: user.name || user.full_name || user.username || "مستخدم",
+          userRole: user.role_name || "system",
+          loginValue: user.username || loginValue,
+          reason: `الدخول مرفوض بسبب حالة المدرسة أو الاشتراك (${school?.subscription_status || "غير متاح"})`,
+          statusCode: 403,
+          severity: "critical",
+        });
         return blockedSchoolResponse;
       }
 
       const match = await bcrypt.compare(password, user.password_hash);
 
       if (!match) {
-        await logAudit({
+        await auditLoginFailure({
           req,
-          action: "LOGIN",
-          actionLabel: "فشل تسجيل الدخول",
-          module: "Security",
-          tableName: "users",
-          recordId: user.id,
-          description: `محاولة تسجيل دخول فاشلة للمستخدم (${user.username}) - كلمة مرور خاطئة`,
-          schoolIdFallback: user.school_id,
-          userIdFallback: user.id,
-          userNameFallback: user.name || user.full_name || user.username || "مستخدم",
-          userRoleFallback: user.role_name || "system"
+          schoolId: user.school_id,
+          userId: user.id,
+          userName: user.name || user.full_name || user.username || "مستخدم",
+          userRole: user.role_name || "system",
+          loginValue: user.username || loginValue,
+          reason: "كلمة مرور خاطئة",
         });
         return res.status(401).json({
           success: false,
@@ -251,6 +316,18 @@ export const AuthController = {
           : true;
 
       if (!isActive) {
+        await auditLoginFailure({
+          req,
+          schoolId: user.school_id,
+          userId: user.id,
+          userName: user.name || user.full_name || user.username || "مستخدم",
+          userRole: user.role_name || "system",
+          loginValue: user.username || loginValue,
+          reason: "الحساب معطل",
+          statusCode: 403,
+          severity: "sensitive",
+        });
+
         return res.status(403).json({
           success: false,
           message: "هذا الحساب معطل. راجع إدارة المدرسة.",
@@ -258,6 +335,17 @@ export const AuthController = {
       }
 
       if (!user.role_name || !user.role_id) {
+        await auditLoginFailure({
+          req,
+          schoolId: user.school_id,
+          userId: user.id,
+          userName: user.name || user.full_name || user.username || "مستخدم",
+          loginValue: user.username || loginValue,
+          reason: "الحساب لا يمتلك دورًا يسمح بتسجيل الدخول",
+          statusCode: 403,
+          severity: "sensitive",
+        });
+
         return res.status(403).json({
           success: false,
           message: "هذا الحساب ليس لديه صلاحيات دخول",
@@ -275,6 +363,17 @@ export const AuthController = {
           role.includes("مدرس")
         ) {
           if (portalSettings.allow_teacher_portal === false) {
+            await auditLoginFailure({
+              req,
+              schoolId: user.school_id,
+              userId: user.id,
+              userName: user.name || user.full_name || user.username || "مستخدم",
+              userRole: user.role_name || "system",
+              loginValue: user.username || loginValue,
+              reason: "بوابة المعلمين معطلة بواسطة الإدارة",
+              statusCode: 403,
+              severity: "sensitive",
+            });
             return res.status(403).json({
               success: false,
               message:
@@ -289,6 +388,17 @@ export const AuthController = {
           role.includes("ولي أمر")
         ) {
           if (portalSettings.allow_parent_portal === false) {
+            await auditLoginFailure({
+              req,
+              schoolId: user.school_id,
+              userId: user.id,
+              userName: user.name || user.full_name || user.username || "مستخدم",
+              userRole: user.role_name || "system",
+              loginValue: user.username || loginValue,
+              reason: "بوابة أولياء الأمور معطلة بواسطة الإدارة",
+              statusCode: 403,
+              severity: "sensitive",
+            });
             return res.status(403).json({
               success: false,
               message:
@@ -299,6 +409,17 @@ export const AuthController = {
 
         if (role.includes("student") || role.includes("طالب")) {
           if (portalSettings.allow_student_portal === false) {
+            await auditLoginFailure({
+              req,
+              schoolId: user.school_id,
+              userId: user.id,
+              userName: user.name || user.full_name || user.username || "مستخدم",
+              userRole: user.role_name || "system",
+              loginValue: user.username || loginValue,
+              reason: "بوابة الطلاب معطلة بواسطة الإدارة",
+              statusCode: 403,
+              severity: "sensitive",
+            });
             return res.status(403).json({
               success: false,
               message:
@@ -347,6 +468,12 @@ export const AuthController = {
         recordId: user.id,
         newData: { username: user.username, role: user.role_name },
         description: `قام المستخدم (${user.username}) بتسجيل الدخول إلى النظام بنجاح`,
+        metadata: {
+          severity: "normal",
+          result: "success",
+        },
+        eventKey: "LOGIN_SUCCESS",
+        statusCode: 200,
         schoolIdFallback: user.school_id,
         userIdFallback: user.id,
         userNameFallback: user.name || user.full_name || user.username || "مستخدم",

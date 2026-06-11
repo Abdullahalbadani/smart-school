@@ -1,5 +1,6 @@
 // src/controllers/timetablesController.js
 import { pool } from "../config/db.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function toInt(v) {
   const n = Number(v);
@@ -818,7 +819,7 @@ export const TimetablesController = {
                te.teacher_id, t.full_name AS teacher_name
         FROM timetable_entries te
         JOIN subjects s ON s.id = te.subject_id
-        JOIN teachers t ON t.id = te.teacher_id
+LEFT JOIN teachers t ON t.id = te.teacher_id
         WHERE te.timetable_id=$1
         ORDER BY te.day_of_week, te.period_id
         `,
@@ -902,8 +903,7 @@ export const TimetablesController = {
         const room = String(e.room || "").trim() || null;
         const notes = String(e.notes || "").trim() || null;
 
-        if (!day || !periodId || !subjectId || !teacherId) continue;
-
+if (!day || !periodId || !subjectId) continue;
         const cellKey = `${day}-${periodId}`;
         if (cellSet.has(cellKey)) {
           return res.status(400).json({
@@ -953,9 +953,12 @@ export const TimetablesController = {
           if (!allowedMap.has(sid)) allowedMap.set(sid, new Set());
           allowedMap.get(sid).add(tid);
         }
+for (const x of clean) {
+  // الخلية المنسوخة قد تحتوي المادة فقط مؤقتًا.
+  // نسمح بحفظها كمسودة حتى يختار المدير معلمًا بديلًا.
+  if (!x.teacherId) continue;
 
-        for (const x of clean) {
-          const allowedTeachers = allowedMap.get(x.subjectId);
+  const allowedTeachers = allowedMap.get(x.subjectId);
 
           if (!allowedTeachers || allowedTeachers.size === 0) {
             return res.status(400).json({
@@ -1038,7 +1041,26 @@ export const TimetablesController = {
       if (!ttQ.rows.length) {
         return res.status(404).json({ message: "الجدول غير موجود" });
       }
+const unresolvedEntriesQ = await pool.query(
+  `
+  SELECT COUNT(*)::int AS c
+  FROM timetable_entries
+  WHERE timetable_id = $1
+    AND teacher_id IS NULL
+  `,
+  [timetableId]
+);
 
+const unresolvedCount = Number(unresolvedEntriesQ.rows[0]?.c || 0);
+
+if (unresolvedCount > 0) {
+  return res.status(400).json({
+    message:
+      `لا يمكن نشر الجدول قبل تحديد معلم بديل لـ ${unresolvedCount} حصة منسوخة.`,
+    code: "UNASSIGNED_TEACHERS",
+    unresolved_count: unresolvedCount,
+  });
+}
       const countEntriesQ = await pool.query(
         "SELECT COUNT(*)::int AS c FROM timetable_entries WHERE timetable_id=$1",
         [timetableId]
@@ -1074,6 +1096,17 @@ await pool.query(
   `,
   [timetableId, schoolId]
 );
+
+      try {
+        await WorkflowNotifications.notifyWeeklyTimetablePublication({
+          app: req.app,
+          schoolId,
+          timetableId,
+          published: true,
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (weekly timetable published):", notifyErr);
+      }
 
       return res.json({ message: "تم نشر الجدول" });
     } catch (e) {
@@ -1119,6 +1152,17 @@ await pool.query(
   `,
   [timetableId, schoolId]
 );
+
+      try {
+        await WorkflowNotifications.notifyWeeklyTimetablePublication({
+          app: req.app,
+          schoolId,
+          timetableId,
+          published: false,
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (weekly timetable unpublished):", notifyErr);
+      }
 
       return res.json({ message: "تم إرجاع الجدول إلى مسودة" });
     } catch (e) {
@@ -1218,110 +1262,308 @@ await pool.query(
   // =========================
   // POST /api/timetables/:id/copy-from
   // =========================
-  async copyFrom(req, res) {
-    const client = await pool.connect();
-    try {
-      const schoolId = req.user?.school_id;
-      if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
+ async copyFrom(req, res) {
+  const client = await pool.connect();
 
-      const targetId = toInt(req.params.id);
-      const fromTimetableId = toInt(req.body?.fromTimetableId);
+  try {
+    const schoolId = req.user?.school_id;
 
-      if (!targetId) {
-        return res.status(400).json({ message: "target id غير صحيح" });
-      }
-      if (!fromTimetableId) {
-        return res.status(400).json({ message: "fromTimetableId مطلوب" });
-      }
-
-      const tgtQ = await client.query("SELECT * FROM timetables WHERE id=$1 AND school_id=$2", [targetId, schoolId]);
-      if (!tgtQ.rows.length) {
-        return res.status(404).json({ message: "الجدول الهدف غير موجود" });
-      }
-
-      const ttTarget = tgtQ.rows[0];
-      if (ttTarget.status === "published") {
-        return res.status(400).json({
-          message: "لا يمكن النسخ إلى جدول منشور، اجعله مسودة أولاً.",
-        });
-      }
-
-      const srcQ = await client.query("SELECT * FROM timetables WHERE id=$1 AND school_id=$2", [fromTimetableId, schoolId]);
-      if (!srcQ.rows.length) {
-        return res.status(404).json({ message: "الجدول المصدر غير موجود" });
-      }
-
-      const srcEntriesQ = await client.query(
-        `
-        SELECT day_of_week, period_id, subject_id, teacher_id, room, notes
-        FROM timetable_entries
-        WHERE timetable_id=$1
-        ORDER BY day_of_week, period_id
-        `,
-        [fromTimetableId]
-      );
-
-      const clean = srcEntriesQ.rows.map((e) => ({
-        day: toInt(e.day_of_week),
-        periodId: toInt(e.period_id),
-        subjectId: toInt(e.subject_id),
-        teacherId: toInt(e.teacher_id),
-        room: String(e.room || "").trim() || null,
-        room_norm: normRoom(e.room),
-        notes: String(e.notes || "").trim() || null,
-      }));
-
-      const conflicts = await runConflictsCheck(client, ttTarget, clean, schoolId);
-      if (conflicts.teacher.length) {
-        return res.status(409).json({
-          message: "لا يمكن النسخ: يوجد تعارض معلم في نفس الوقت مع جدول منشور لشعبة أخرى.",
-          conflicts: conflicts.teacher,
-        });
-      }
-      if (conflicts.room.length) {
-        return res.status(409).json({
-          message: "لا يمكن النسخ: يوجد تعارض قاعة في نفس الوقت مع جدول منشور لشعبة أخرى.",
-          conflicts: conflicts.room,
-        });
-      }
-
-      await client.query("BEGIN");
-      await client.query("DELETE FROM timetable_entries WHERE timetable_id=$1", [targetId]);
-      await client.query("DELETE FROM timetable_overrides WHERE timetable_id=$1", [targetId]);
-
-    for (const x of clean) {
-        if (!x.day || !x.periodId || !x.subjectId || !x.teacherId) continue;
-
-        await client.query(
-          `
-          INSERT INTO timetable_entries
-            (timetable_id, day_of_week, period_id, subject_id, teacher_id, room, notes, school_id)
-          VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
-          `,
-          [targetId, x.day, x.periodId, x.subjectId, x.teacherId, x.room, x.notes, schoolId]
-        );
-      }
-
-      await client.query("UPDATE timetables SET updated_at=now() WHERE id=$1", [targetId]);
-      await client.query("COMMIT");
-
-      return res.json({
-        message: "تم نسخ الجدول بنجاح",
-        data: { fromTimetableId, targetId },
-      });
-    } catch (e) {
-      try {
-        await client.query("ROLLBACK");
-      } catch (rollbackError) {
-        console.error("Rollback failed in copyFrom:", rollbackError);
-      }
-      console.error("copyFrom error:", e);
-      return res.status(500).json({ message: "خطأ في نسخ الجدول" });
-    } finally {
-      client.release();
+    if (!schoolId) {
+      return res.status(401).json({ message: "غير مصرح" });
     }
-  },
 
+    const targetId = toInt(req.params.id);
+    const fromTimetableId = toInt(req.body?.fromTimetableId);
+
+    // smart:
+    // يحاول نسخ المادة والمعلم، وإذا تعارض المعلم ينسخ المادة فقط.
+    //
+    // subjects_only:
+    // ينسخ المواد فقط دائمًا ويترك اختيار المعلمين للمدير.
+    const mode = String(req.body?.mode || "smart").trim();
+
+    if (!targetId) {
+      return res.status(400).json({ message: "target id غير صحيح" });
+    }
+
+    if (!fromTimetableId) {
+      return res.status(400).json({ message: "fromTimetableId مطلوب" });
+    }
+
+    if (!["smart", "subjects_only"].includes(mode)) {
+      return res.status(400).json({ message: "وضع النسخ غير صحيح" });
+    }
+
+    if (Number(targetId) === Number(fromTimetableId)) {
+      return res.status(400).json({
+        message: "لا يمكن نسخ الجدول إلى نفسه.",
+      });
+    }
+
+    const tgtQ = await client.query(
+      `
+      SELECT *
+      FROM timetables
+      WHERE id = $1
+        AND school_id = $2
+      `,
+      [targetId, schoolId]
+    );
+
+    if (!tgtQ.rows.length) {
+      return res.status(404).json({ message: "الجدول الهدف غير موجود" });
+    }
+
+    const ttTarget = tgtQ.rows[0];
+
+    if (ttTarget.status === "published") {
+      return res.status(400).json({
+        message: "لا يمكن النسخ إلى جدول منشور. ألغِ النشر أولاً.",
+      });
+    }
+
+    const srcQ = await client.query(
+      `
+      SELECT *
+      FROM timetables
+      WHERE id = $1
+        AND school_id = $2
+      `,
+      [fromTimetableId, schoolId]
+    );
+
+    if (!srcQ.rows.length) {
+      return res.status(404).json({ message: "الجدول المصدر غير موجود" });
+    }
+
+    const srcEntriesQ = await client.query(
+      `
+      SELECT
+        day_of_week,
+        period_id,
+        subject_id,
+        teacher_id,
+        room,
+        notes
+      FROM timetable_entries
+      WHERE timetable_id = $1
+      ORDER BY day_of_week, period_id
+      `,
+      [fromTimetableId]
+    );
+
+    const sourceEntries = srcEntriesQ.rows
+      .map((entry) => ({
+        day: toInt(entry.day_of_week),
+        periodId: toInt(entry.period_id),
+        subjectId: toInt(entry.subject_id),
+        teacherId: toInt(entry.teacher_id),
+        room: String(entry.room || "").trim() || null,
+        notes: String(entry.notes || "").trim() || null,
+      }))
+      .filter((entry) => {
+        return entry.day && entry.periodId && entry.subjectId;
+      });
+
+    const preparedEntries = [];
+    const unresolvedEntries = [];
+    const clearedRooms = [];
+
+    for (const sourceEntry of sourceEntries) {
+      let teacherId =
+        mode === "subjects_only"
+          ? null
+          : sourceEntry.teacherId;
+
+      let room =
+        mode === "subjects_only"
+          ? null
+          : sourceEntry.room;
+
+      let unresolvedReason =
+        mode === "subjects_only"
+          ? "materials_only"
+          : null;
+
+      // 1. التأكد أن المعلم مرتبط أصلًا بهذه المادة في الشعبة الهدف.
+      if (teacherId) {
+        const isAssigned = await ensureTeacherAssignedForSection(
+          client,
+          ttTarget,
+          sourceEntry.subjectId,
+          teacherId,
+          schoolId
+        );
+
+        if (!isAssigned) {
+          teacherId = null;
+          room = null;
+          unresolvedReason = "teacher_not_assigned";
+        }
+      }
+
+      // 2. فحص تعارض المعلم مع الجداول المنشورة.
+      if (teacherId) {
+        const teacherConflicts = await runConflictsCheck(
+          client,
+          ttTarget,
+          [
+            {
+              day: sourceEntry.day,
+              periodId: sourceEntry.periodId,
+              teacherId,
+              room: null,
+              room_norm: null,
+            },
+          ],
+          schoolId
+        );
+
+        if (teacherConflicts.teacher.length) {
+          teacherId = null;
+          room = null;
+          unresolvedReason = "teacher_conflict";
+        }
+      }
+
+      // 3. فحص القاعة بصورة مستقلة.
+      // إذا كانت القاعة مستخدمة، ننسخ الحصة دون القاعة ولا نوقف النسخ.
+      if (room) {
+        const roomConflicts = await runConflictsCheck(
+          client,
+          ttTarget,
+          [
+            {
+              day: sourceEntry.day,
+              periodId: sourceEntry.periodId,
+              teacherId: null,
+              room,
+              room_norm: normRoom(room),
+            },
+          ],
+          schoolId
+        );
+
+        if (roomConflicts.room.length) {
+          clearedRooms.push({
+            day: sourceEntry.day,
+            periodId: sourceEntry.periodId,
+            room,
+          });
+
+          room = null;
+        }
+      }
+
+      preparedEntries.push({
+        day: sourceEntry.day,
+        periodId: sourceEntry.periodId,
+        subjectId: sourceEntry.subjectId,
+        teacherId,
+        room,
+        notes: sourceEntry.notes,
+      });
+
+      if (!teacherId) {
+        unresolvedEntries.push({
+          day: sourceEntry.day,
+          periodId: sourceEntry.periodId,
+          subjectId: sourceEntry.subjectId,
+          reason: unresolvedReason || "teacher_required",
+        });
+      }
+    }
+
+    await client.query("BEGIN");
+
+    await client.query(
+      `
+      DELETE FROM timetable_entries
+      WHERE timetable_id = $1
+      `,
+      [targetId]
+    );
+
+    await client.query(
+      `
+      DELETE FROM timetable_overrides
+      WHERE timetable_id = $1
+      `,
+      [targetId]
+    );
+
+    for (const entry of preparedEntries) {
+      await client.query(
+        `
+        INSERT INTO timetable_entries (
+          timetable_id,
+          day_of_week,
+          period_id,
+          subject_id,
+          teacher_id,
+          room,
+          notes,
+          school_id
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        `,
+        [
+          targetId,
+          entry.day,
+          entry.periodId,
+          entry.subjectId,
+          entry.teacherId,
+          entry.room,
+          entry.notes,
+          schoolId,
+        ]
+      );
+    }
+
+    await client.query(
+      `
+      UPDATE timetables
+      SET updated_at = NOW()
+      WHERE id = $1
+        AND school_id = $2
+      `,
+      [targetId, schoolId]
+    );
+
+    await client.query("COMMIT");
+
+    return res.json({
+      message:
+        unresolvedEntries.length > 0
+          ? "تم نسخ الجدول كمسودة. توجد حصص تحتاج إلى اختيار معلمين بدلاء."
+          : "تم نسخ الجدول بنجاح.",
+      data: {
+        fromTimetableId,
+        targetId,
+        mode,
+        copied_entries_count: preparedEntries.length,
+        unresolved_entries_count: unresolvedEntries.length,
+        unresolved_entries: unresolvedEntries,
+        cleared_rooms_count: clearedRooms.length,
+        cleared_rooms: clearedRooms,
+      },
+    });
+  } catch (e) {
+    try {
+      await client.query("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("Rollback failed in copyFrom:", rollbackError);
+    }
+
+    console.error("copyFrom error:", e);
+
+    return res.status(500).json({
+      message: "خطأ في نسخ الجدول",
+    });
+  } finally {
+    client.release();
+  }
+},
   // =========================================================
   // GET /api/timetables/:id/overrides?weekStart=YYYY-MM-DD
   // =========================================================

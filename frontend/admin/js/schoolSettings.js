@@ -364,10 +364,11 @@ const payload = {
       }
     });
     // --- منطق أزرار التفعيل والتعطيل (البوابات) ---
-    const tTeacher = $("#toggleTeacherPortal", root);
-    const tParent = $("#toggleParentPortal", root);
+  const tTeacher = $("#toggleTeacherPortal", root);
+const tParent = $("#toggleParentPortal", root);
+const tStudent = $("#toggleStudentPortal", root);
 
-    [tTeacher, tParent].forEach(btn => {
+[tTeacher, tParent, tStudent].forEach((btn) => {
         if (btn) {
             btn.addEventListener("click", () => {
                 btn.classList.toggle("is-on");
@@ -383,10 +384,11 @@ const payload = {
       btn.innerHTML = `<i class="ri-loader-4-line ri-spin"></i> جاري الحفظ...`;
 
       try {
-        const payload = {
-          teacher_portal: tTeacher.classList.contains("is-on"),
-          parent_portal: tParent.classList.contains("is-on")
-        };
+       const payload = {
+  teacher_portal: tTeacher?.classList.contains("is-on") || false,
+  parent_portal: tParent?.classList.contains("is-on") || false,
+  student_portal: tStudent?.classList.contains("is-on") || false,
+};
         await apiFetch("/admin/school-settings/portals", {
           method: "POST",
           body: JSON.stringify(payload)
@@ -450,6 +452,7 @@ function bindAcademicTotals(root) {
 }
   function summaryText(key) {
     const map = {
+      portals: "تفعيل أو إيقاف دخول المعلمين وأولياء الأمور والطلاب إلى بوابات النظام.",
       profile: "تحديث الشعار والاسم ومعلومات التواصل الخاصة بمدرستك.",
       academic: "ضبط التقويم الدراسي (بداية الأسبوع وأيام العمل) ونظام درجات النجاح والرسوب.",
       years: "إدارة السنوات الدراسية (تفعيل/تعطيل) — يفضّل وجود سنة واحدة فعّالة.",
@@ -627,23 +630,42 @@ recalcAcademicTotals(root);
       console.warn("فشل جلب الإعدادات المالية:", e.message); 
     }
 // --- جلب حالة البوابات الحالية وتعبئتها ---
-    try {
-      const portalsRes = await apiFetch("/admin/school-settings/portals");
-      if (portalsRes.data) {
-          const tTeacher = $("#toggleTeacherPortal", root);
-          const tParent = $("#toggleParentPortal", root);
-          
-          if (tTeacher) {
-              if (portalsRes.data.allow_teacher_portal) tTeacher.classList.add("is-on");
-              else tTeacher.classList.remove("is-on");
-          }
-          if (tParent) {
-              if (portalsRes.data.allow_parent_portal) tParent.classList.add("is-on");
-              else tParent.classList.remove("is-on");
-          }
-      }
-    } catch (e) { console.warn("تعذر جلب إعدادات البوابات", e.message); }
+  // --- جلب حالة البوابات الحالية وتعبئتها ---
+try {
+  const portalsRes = await apiFetch("/admin/school-settings/portals");
 
+  if (portalsRes.data) {
+    const tTeacher = $("#toggleTeacherPortal", root);
+    const tParent = $("#toggleParentPortal", root);
+    const tStudent = $("#toggleStudentPortal", root);
+
+    function setPortalToggle(button, enabled) {
+      if (!button) return;
+
+      const isEnabled = Boolean(enabled);
+
+      button.classList.toggle("is-on", isEnabled);
+      button.setAttribute("aria-checked", String(isEnabled));
+    }
+
+    setPortalToggle(
+      tTeacher,
+      portalsRes.data.allow_teacher_portal
+    );
+
+    setPortalToggle(
+      tParent,
+      portalsRes.data.allow_parent_portal
+    );
+
+    setPortalToggle(
+      tStudent,
+      portalsRes.data.allow_student_portal
+    );
+  }
+} catch (e) {
+  console.warn("تعذر جلب إعدادات البوابات", e.message);
+}
   }
 
   async function ensureTeachers(root) {
@@ -888,37 +910,115 @@ recalcAcademicTotals(root);
     });
   }
 
-  function renderPeriods(root) {
-    const tb = $("#tbPeriods", root);
-    const rows = (META?.periods || []).slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
+ async function deletePeriod(root, id) {
+  const period = (META?.periods || []).find(
+    (item) => Number(item.id) === Number(id)
+  );
 
-    tb.innerHTML =
-      rows
-        .map(
-          (p) => `
+  const name = period?.name || `#${id}`;
+
+  const ok = await ssConfirm({
+    title: "حذف الفترة",
+    message:
+      `هل تريد حذف الفترة «${name}»؟\n\n` +
+      "لن يتم الحذف إذا كانت الفترة مرتبطة بحصص محفوظة داخل الجداول الأسبوعية.",
+    confirmText: "حذف الفترة",
+    cancelText: "إلغاء",
+    type: "danger",
+  });
+
+  if (!ok) return;
+
+  try {
+    await apiFetch(`/periods/${id}`, {
+      method: "DELETE",
+    });
+
+    await loadMeta(root, { keepActivePanel: true });
+
+    toast("تم حذف الفترة بنجاح ✅", "success");
+  } catch (error) {
+    toast(
+      error.message ||
+        "تعذر حذف الفترة. قد تكون مرتبطة بجدول حصص محفوظ.",
+      "warning"
+    );
+  }
+}
+
+function renderPeriods(root) {
+  const tb = $("#tbPeriods", root);
+
+  const rows = (META?.periods || [])
+    .slice()
+    .sort(
+      (a, b) =>
+        (a.sort_order ?? 0) - (b.sort_order ?? 0)
+    );
+
+  tb.innerHTML =
+    rows
+      .map(
+        (p) => `
       <tr>
         <td>${p.id}</td>
+
         <td>${escapeHtml(p.name)}</td>
-        <td>${escapeHtml(p.start_time)} → ${escapeHtml(p.end_time)}</td>
+
+        <td>
+          <span dir="ltr" style="display:inline-block; white-space:nowrap;">
+            ${escapeHtml(String(p.start_time || "").slice(0, 5))}
+            -
+            ${escapeHtml(String(p.end_time || "").slice(0, 5))}
+          </span>
+        </td>
+
         <td>${p.sort_order ?? "—"}</td>
+
         <td>
           <div class="ss-row-actions">
-            <button class="ss-miniBtn ss-miniBtn--accent" data-act="edit-period" data-id="${p.id}">تعديل</button>
+            <button
+              class="ss-miniBtn ss-miniBtn--accent"
+              data-act="edit-period"
+              data-id="${p.id}"
+              type="button"
+            >
+              تعديل
+            </button>
+
+            <button
+              class="ss-miniBtn ss-miniBtn--danger"
+              data-act="delete-period"
+              data-id="${p.id}"
+              type="button"
+            >
+              حذف
+            </button>
           </div>
         </td>
       </tr>
     `
-        )
-        .join("") || `<tr><td colspan="5" class="ss-empty">لا توجد فترات</td></tr>`;
+      )
+      .join("") ||
+    `<tr><td colspan="5" class="ss-empty">لا توجد فترات</td></tr>`;
 
-    tb.querySelectorAll("[data-act]").forEach((btn) => {
-      btn.addEventListener("click", async () => {
-        const id = Number(btn.dataset.id);
-        if (btn.dataset.act === "edit-period")
-          openPeriodModal(root, META.periods.find((x) => x.id === id));
-      });
+  tb.querySelectorAll("[data-act]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = Number(btn.dataset.id);
+
+      if (btn.dataset.act === "edit-period") {
+        openPeriodModal(
+          root,
+          META.periods.find((item) => Number(item.id) === id)
+        );
+      }
+
+      if (btn.dataset.act === "delete-period") {
+        await deletePeriod(root, id);
+      }
     });
-  }
+  });
+}
 
   // ---------- CURRICULUM ----------
   function fillCurGrades(root) {

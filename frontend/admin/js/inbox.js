@@ -163,6 +163,54 @@ function toApiUrl(path) {
   return data;
 }
 
+
+ async function openProtectedNotificationAttachment(url, download = false) {
+  const res = await fetch(toApiUrl(url), { headers: getAuthHeaders() });
+  if (!res.ok) throw new Error("تعذر فتح المرفق");
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  if (download) a.download = "";
+  else a.target = "_blank";
+  a.rel = "noopener noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+ }
+
+ function renderNotificationAttachments(item, bodyEl) {
+  qs("#detailAttachmentsRuntime")?.remove();
+  const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+  if (!bodyEl || !attachments.length) return;
+
+  const wrap = document.createElement("section");
+  wrap.id = "detailAttachmentsRuntime";
+  wrap.style.marginTop = "12px";
+  wrap.style.paddingTop = "10px";
+  wrap.style.borderTop = "1px dashed rgba(148,163,184,.35)";
+  wrap.innerHTML = `
+    <strong style="display:block;margin-bottom:8px;">المرفقات</strong>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      ${attachments.map((a) => {
+        const label = escapeHtml(a.label || a.name || "فتح المرفق");
+        if (a.kind === "link" && a.url) {
+          return `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer" class="detail-badge">🔗 ${label}</a>`;
+        }
+        if (!a.view_url) return "";
+        return `<button type="button" class="detail-badge runtime-attachment" data-url="${escapeHtml(a.view_url)}">📎 ${label}</button>`;
+      }).join("")}
+    </div>`;
+  bodyEl.insertAdjacentElement("afterend", wrap);
+  wrap.querySelectorAll(".runtime-attachment").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      try { await openProtectedNotificationAttachment(btn.dataset.url, false); }
+      catch (error) { showToast(error.message || "تعذر فتح المرفق", "error"); }
+    });
+  });
+ }
+
  function mapApiItemToUi(item) {
   const categoryKey = String(item.category || "general").toLowerCase();
 
@@ -183,6 +231,7 @@ function toApiUrl(path) {
     read_at: item.read_at || null,
     related: item.related || null,
     meta: item.meta || {},
+    attachments: Array.isArray(item.attachments) ? item.attachments : [],
   };
 }
 
@@ -423,6 +472,7 @@ else if (state.filter === "finance") {
     }
 
     if (bodyEl) bodyEl.textContent = item.body || "";
+    renderNotificationAttachments(item, bodyEl);
 
     if (relatedWrap && relatedContent) {
       if (item.related) {

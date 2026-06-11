@@ -254,9 +254,13 @@
              style="border-radius: 8px; border: 1px solid var(--border-soft); background: var(--bg-panel-soft); color: var(--text-main); padding: 4px 10px; font-size: 11.5px; outline: none; cursor: pointer;">
     </div>
 
-    <button class="text-btn" onclick="window.location.href='/admin/activity-logs.html'">
-      عرض السجل الكامل
-    </button>
+    <button
+  type="button"
+  class="text-btn"
+  onclick="window.location.href='./activity-logs.html'"
+>
+  عرض السجل الكامل
+</button>
     
   </div>
   
@@ -721,56 +725,10 @@
                 </button>
               </article>
 
-              <article
-                class="module-card"
-                data-permission="reports.term_grades"
-              >
-                <div class="module-icon">
-                  <i class="ri-line-chart-line" aria-hidden="true"></i>
-                </div>
-                <h3>تقارير الدرجات الفصلية</h3>
-                <p>تقارير الدرجات الفصلية حسب المادة والصف.</p>
-                <button
-                  class="primary-btn"
-                  onclick="Dashboard.openPage('termGrades','تقارير الدرجات الفصلية')"
-                >
-                  فتح
-                </button>
-              </article>
+            
 
-              <article
-                class="module-card"
-                data-permission="reports.final_grades"
-              >
-                <div class="module-icon">
-                  <i class="ri-medal-2-line" aria-hidden="true"></i>
-                </div>
-                <h3>تقارير الدرجات النهائية</h3>
-                <p>نتائج نهاية العام الدراسي.</p>
-                <button
-                  class="primary-btn"
-                  onclick="Dashboard.openPage('finalGrades','تقارير الدرجات النهائية')"
-                >
-                  فتح
-                </button>
-              </article>
+          
 
-              <article
-                class="module-card"
-                data-permission="reports.student_stats"
-              >
-                <div class="module-icon">
-                  <i class="ri-pie-chart-2-line" aria-hidden="true"></i>
-                </div>
-                <h3>إحصائيات الطلاب</h3>
-                <p>ملخصات وإحصائيات عامة عن أداء وحضور الطلاب.</p>
-                <button
-                  class="primary-btn"
-                  onclick="Dashboard.openPage('studentStats','إحصائيات الطلاب')"
-                >
-                  فتح
-                </button>
-              </article>
             </div>
           </div>
         </section>
@@ -824,7 +782,7 @@
                 <div class="module-icon">
                   <i class="ri-award-line" aria-hidden="true"></i>
                 </div>
-                <h3>شهادات شهرية</h3>
+                <h3>شهادات شهرية وفصلية </h3>
                 <p>إصدار شهادات أعمال شهرية للطلاب.</p>
                 <button
                   class="primary-btn"
@@ -834,22 +792,6 @@
                 </button>
               </article>
 
-              <article
-                class="module-card"
-                data-permission="control.print_certificates"
-              >
-                <div class="module-icon">
-                  <i class="ri-award-line" aria-hidden="true"></i>
-                </div>
-                <h3>شهادات فصلية</h3>
-                <p>إخراج شهادات درجات نهاية الفصل.</p>
-                <button
-                  class="primary-btn"
-                  onclick="Dashboard.openPage('termReports','شهادات فصلية')"
-                >
-                  فتح
-                </button>
-              </article>
 
               <article
                 class="module-card"
@@ -858,7 +800,7 @@
                 <div class="module-icon">
                   <i class="ri-trophy-line" aria-hidden="true"></i>
                 </div>
-                <h3>نتائج نهاية الفصل</h3>
+                <h3>نتائج نهاية الفصل والعام</h3>
                 <p>عرض واعتماد نتائج نهاية الفصل الدراسي.</p>
                 <button
                   class="primary-btn"
@@ -868,22 +810,6 @@
                 </button>
               </article>
 
-              <article
-                class="module-card"
-                data-permission="control.final_grades"
-              >
-                <div class="module-icon">
-                  <i class="ri-vip-crown-line" aria-hidden="true"></i>
-                </div>
-                <h3>نتائج نهاية العام</h3>
-                <p>عرض واعتماد النتائج النهائية للعام الدراسي.</p>
-                <button
-                  class="primary-btn"
-                  onclick="Dashboard.openPage('yearResults','نتائج نهاية العام')"
-                >
-                  فتح
-                </button>
-              </article>
             </div>
           </div>
         </section>
@@ -1348,6 +1274,7 @@
 <script src="/frontend/shared/profile-account.js?v=4"></script>
 
 <script src="/socket.io/socket.io.js"></script>
+<script src="/frontend/shared/js/notification-socket.js?v=1"></script>
 
 <script src="js/admin.js?v=5"></script>
 <script src="js/main.js?v=4"></script>
@@ -1365,7 +1292,7 @@
 <script src="js/permissionsWidget.js?v=4"></script>
 <script src="js/adminTeacherAttendance.js?v=4"></script>
 <script src="js/adminTeacherPermits.js?v=5"></script>
-<script src="js/attendanceReports.js?v=4"></script>
+<script src="js/attendanceReports.js?v=5"></script>
 <script src="js/inbox.js?v=4"></script>
 <script src="js/notificationsSend.js?v=4"></script>
 <script src="js/notificationsLog.js?v=4"></script>
@@ -1382,7 +1309,7 @@
 <script src="js/staffData.js"></script>
 
 <script src="/frontend/shared/js/ui-dialogs.js?v=1"></script>
-<script src="/frontend/shared/js/school-reports.js?v=3"></script>
+<script src="/frontend/shared/js/school-reports.js?v=4"></script>
 
 <script
   defer
@@ -1394,39 +1321,6 @@
 ></script>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-  // الاستماع الفوري للإشعارات للإدارة
-  document.addEventListener("DOMContentLoaded", () => {
-    if (typeof io !== "undefined") {
-const adminSocket = io(window.location.origin);      
-      adminSocket.on("connect", () => {
-        console.log("🟢 [Socket] الإدارة متصلة بالسيرفر الحي بنجاح!");
-      });
 
-      // 1. عند رفض المعلم
-      adminSocket.on("substitute_rejected", (data) => {
-        console.log("🚨 [Socket] تم استلام رفض من المعلم:", data?.teacherName);
-        if (typeof window.showToast === "function") {
-          window.showToast(`تحذير: الأستاذ (${data?.teacherName || 'المعلم'}) اعتذر عن التغطية!`, "error");
-        }
-        // تحديث الصندوق الأحمر فوراً بدون ريفريش!
-        if (typeof window.refreshEagleEye === "function") window.refreshEagleEye();
-      });
-
-      // 2. عند قبول المعلم
-      adminSocket.on("substitute_accepted", (data) => {
-        if (typeof window.showToast === "function") {
-          window.showToast(`ممتاز: الأستاذ (${data?.teacherName || 'المعلم'}) وافق على التغطية.`, "success");
-        }
-      });
-
-      // 3. تحديث قائمة الأذونات لو كانت مفتوحة أمام المدير
-      adminSocket.on("refresh_admin_permits", () => {
-        const refreshBtn = document.getElementById("tp-refresh");
-        if (refreshBtn) refreshBtn.click();
-      });
-    }
-  });
-</script>
   </body>
 </html>

@@ -5,30 +5,20 @@ import {
   unreadCount,
   markRead,
   markAllRead,
+  viewAttachment,
+  downloadAttachment,
 } from "../controllers/notificationsInboxController.js";
 
 const router = Router();
 
-/**
- * 🔒 صندوق الوارد للمستخدمين (Inbox)
- * ملاحظة: authMiddleware مضاف في app.js عند الربط، 
- * وهو المسؤول عن حقن req.user.school_id لضمان عزل البيانات بين المدارس.
- */
-
-// 1️⃣ جلب قائمة الإشعارات (مع الفلترة والبحث والمرفقات)
-// GET /api/notifications/inbox?filter=unread&q=search_term
 router.get("/inbox", listInbox);
-
-// 2️⃣ جلب عدد الإشعارات غير المقروءة فقط (لإظهار التنبيهات في الواجهة)
-// GET /api/notifications/inbox/unread-count
 router.get("/inbox/unread-count", unreadCount);
 
-// 3️⃣ تعليم إشعار محدد كمقروء (باستخدام معرف سجل الاستلام)
-// PATCH /api/notifications/inbox/123/read
+// Static route must be registered before /:recipientRowId/read.
+router.patch("/inbox/read-all", markAllRead);
 router.patch("/inbox/:recipientRowId/read", markRead);
 
-// 4️⃣ تعليم جميع إشعارات المستخدم في المدرسة الحالية كمقروءة
-// PATCH /api/notifications/inbox/read-all
-router.patch("/inbox/read-all", markAllRead);
+router.get("/attachments/:attachmentId/view", viewAttachment);
+router.get("/attachments/:attachmentId/download", downloadAttachment);
 
 export default router;

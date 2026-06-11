@@ -1,4 +1,5 @@
 import { pool } from "../config/db.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function pickUserId(req) {
   return req.user?.id ?? req.user?.user_id ?? req.user?.userId ?? null;
@@ -1105,6 +1106,17 @@ export async function publishTermResults(req, res) {
 
     const data = await loadBatchData(pool, rows[0].id, filters.schoolId);
 
+    try {
+      await WorkflowNotifications.notifyTermResultsPublication({
+        app: req.app,
+        schoolId: filters.schoolId,
+        batchId: rows[0].id,
+        published: true,
+      });
+    } catch (notifyErr) {
+      console.error("Notification error (term results published):", notifyErr);
+    }
+
     return res.json({
       message: "تم نشر نتائج نهاية الفصل.",
       ...data,
@@ -1152,6 +1164,17 @@ export async function unpublishTermResults(req, res) {
     );
 
     const data = await loadBatchData(pool, rows[0].id, filters.schoolId);
+
+    try {
+      await WorkflowNotifications.notifyTermResultsPublication({
+        app: req.app,
+        schoolId: filters.schoolId,
+        batchId: rows[0].id,
+        published: false,
+      });
+    } catch (notifyErr) {
+      console.error("Notification error (term results unpublished):", notifyErr);
+    }
 
     return res.json({
       message: "تم إلغاء نشر النتائج.",

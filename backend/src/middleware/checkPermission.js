@@ -1,5 +1,6 @@
 // src/middleware/checkPermission.js
 import PermissionRoleModel from "../modules/permissionRoleModel.js";
+import { logAudit } from "../utils/auditLogger.js";
 
 export default function checkPermission(permissionCode) {
   return async function (req, res, next) {
@@ -55,6 +56,27 @@ export default function checkPermission(permissionCode) {
 
       // 3️⃣ النتيجة النهائية
       if (!hasPermission) {
+        await logAudit({
+          req,
+          action: "DENY",
+          actionLabel: "رفض الوصول لعدم امتلاك الصلاحية",
+          module: "Security",
+          moduleLabel: "الأمان والصلاحيات",
+          tableName: "permissions",
+          description: `تم رفض وصول المستخدم ${user.name || user.username || user.id} لعدم امتلاك الصلاحية (${permissionCode})`,
+          details: {
+            required_permission: permissionCode,
+            requested_path: req.originalUrl || req.url,
+            requested_method: req.method,
+          },
+          metadata: {
+            severity: "sensitive",
+            result: "failure",
+          },
+          eventKey: "ACCESS_DENIED_PERMISSION",
+          statusCode: 403,
+        });
+
         return res
           .status(403)
           .json({ message: "ليس لديك صلاحية لتنفيذ هذا الإجراء" });

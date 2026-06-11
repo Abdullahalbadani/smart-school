@@ -128,27 +128,50 @@ function normalizeRoleIds(roleIds) {
  * دور المعلم لا يختاره المستخدم من شاشة تسجيل الموظفين.
  * نبحث عنه داخل جدول roles بالاسم أو بالكود إن كان العمود موجودًا.
  */
-async function getTeacherRoleIdTx(client) {
-  const rcols = await detectCols(client, "roles");
+const TEACHER_ROLE_VALUES = ["teacher", "teachers", "معلم", "مدرس"];
+
+function teacherRoleWhereSql(rcols, alias = "r", valuesParam = "$1") {
   const textParts = [];
 
-  if (rcols.has("name")) textParts.push(`LOWER(TRIM(COALESCE(name, '')))`);
-  if (rcols.has("code")) textParts.push(`LOWER(TRIM(COALESCE(code, '')))`);
-  if (rcols.has("key")) textParts.push(`LOWER(TRIM(COALESCE(key, '')))`);
-  if (rcols.has("slug")) textParts.push(`LOWER(TRIM(COALESCE(slug, '')))`);
+  if (rcols.has("name"))
+    textParts.push(`LOWER(TRIM(COALESCE(${alias}.name, '')))`);
+  if (rcols.has("code"))
+    textParts.push(`LOWER(TRIM(COALESCE(${alias}.code, '')))`);
+  if (rcols.has("key"))
+    textParts.push(`LOWER(TRIM(COALESCE(${alias}.key, '')))`);
+  if (rcols.has("slug"))
+    textParts.push(`LOWER(TRIM(COALESCE(${alias}.slug, '')))`);
 
   if (!textParts.length) {
     throw new Error("جدول roles لا يحتوي اسمًا أو كودًا يمكن استخدامه لتحديد دور المعلم");
   }
 
-  const exactValues = ["teacher", "teachers", "معلم", "مدرس"];
-  const where = textParts
-    .map((expr) => `${expr} = ANY($1::text[])`)
-    .join(" OR ");
+  return `(${textParts
+    .map((expr) => `${expr} = ANY(${valuesParam}::text[])`)
+    .join(" OR ")})`;
+}
+
+async function getTeacherRoleIdTx(client, schoolId = null) {
+  const rcols = await detectCols(client, "roles");
+  const params = [TEACHER_ROLE_VALUES];
+  const where = [teacherRoleWhereSql(rcols, "r", "$1")];
+  let orderBy = "r.id ASC";
+
+  // إذا كانت الأدوار خاصة بكل مدرسة نفضّل دور المدرسة الحالية.
+  // هذا يمنع اختيار دور teacher يخص مدرسة أخرى عند وجود أكثر من سجل.
+  if (schoolId && rcols.has("school_id")) {
+    params.push(Number(schoolId));
+    where.push(`(r.school_id = $2 OR r.school_id IS NULL)`);
+    orderBy = `CASE WHEN r.school_id = $2 THEN 0 ELSE 1 END, r.id ASC`;
+  }
 
   const r = await client.query(
-    `SELECT id FROM roles WHERE ${where} ORDER BY id ASC LIMIT 1`,
-    [exactValues]
+    `SELECT r.id
+     FROM roles r
+     WHERE ${where.join(" AND ")}
+     ORDER BY ${orderBy}
+     LIMIT 1`,
+    params
   );
 
   const id = r.rows[0]?.id ? Number(r.rows[0].id) : null;
@@ -159,13 +182,39 @@ async function getTeacherRoleIdTx(client) {
   return id;
 }
 
-async function userHasTeacherRoleTx(client, userId) {
+async function userHasTeacherRoleTx(client, userId, schoolId = null) {
   if (!userId) return false;
-  const teacherRoleId = await getTeacherRoleIdTx(client);
+
+  const rcols = await detectCols(client, "roles");
+  const urcols = await detectCols(client, "user_roles");
+  const params = [userId, TEACHER_ROLE_VALUES];
+  const where = [
+    `ur.user_id = $1`,
+    teacherRoleWhereSql(rcols, "r", "$2"),
+  ];
+  let p = 3;
+
+  // نتحقق من الدور المرتبط بالحساب نفسه مباشرة بدل مقارنة الحساب
+  // بأول رقم دور teacher موجود في قاعدة البيانات.
+  if (schoolId && urcols.has("school_id")) {
+    where.push(`ur.school_id = $${p++}`);
+    params.push(Number(schoolId));
+  }
+
+  if (schoolId && rcols.has("school_id")) {
+    where.push(`(r.school_id = $${p++} OR r.school_id IS NULL)`);
+    params.push(Number(schoolId));
+  }
+
   const r = await client.query(
-    `SELECT 1 FROM user_roles WHERE user_id=$1 AND role_id=$2 LIMIT 1`,
-    [userId, teacherRoleId]
+    `SELECT 1
+     FROM user_roles ur
+     INNER JOIN roles r ON r.id = ur.role_id
+     WHERE ${where.join(" AND ")}
+     LIMIT 1`,
+    params
   );
+
   return !!r.rows[0];
 }
 
@@ -218,7 +267,7 @@ async function assertLinkableUserTx(client, {
     throw new Error("هذا الحساب مربوط مسبقًا بمعلم آخر");
   }
 
-  const hasTeacherRole = await userHasTeacherRoleTx(client, userId);
+  const hasTeacherRole = await userHasTeacherRoleTx(client, userId, schoolId);
   if (isTeacher && !hasTeacherRole) {
     throw new Error("لا يمكن ربط المعلم إلا بحساب يحمل دور teacher");
   }
@@ -642,9 +691,9 @@ export const employeeCreate = async (req, res) => {
 
     const full_name = s(body.full_name);
     const phone = s(body.phone);
-    const job_title = s(body.job_title);
-    const notes = s(body.notes);
     const is_teacher = toBool(body.is_teacher);
+    const job_title = is_teacher ? null : s(body.job_title);
+    const notes = s(body.notes);
     const is_active = toBool(body.is_active ?? true);
 
     if (!full_name) return res.status(400).json({ error: "الاسم مطلوب" });
@@ -697,7 +746,7 @@ export const employeeCreate = async (req, res) => {
         // عند ربط حساب معلم موجود نحافظ على أدواره كما هي.
         // عند إنشاء حساب جديد نضيف دور teacher تلقائيًا.
         if (acc.mode === "create") {
-          const teacherRoleId = await getTeacherRoleIdTx(client);
+          const teacherRoleId = await getTeacherRoleIdTx(client, schoolId);
           await setUserRolesTx(client, userId, [teacherRoleId], schoolId);
         }
       } else if (acc.mode === "create") {
@@ -759,9 +808,9 @@ export const employeeUpdate = async (req, res) => {
     const body = req.body || {};
     const full_name = s(body.full_name);
     const phone = s(body.phone);
-    const job_title = s(body.job_title);
-    const notes = s(body.notes);
     const is_teacher = toBool(body.is_teacher);
+    const job_title = is_teacher ? null : s(body.job_title);
+    const notes = s(body.notes);
     const is_active = toBool(body.is_active ?? true);
 
     if (!full_name) return res.status(400).json({ error: "الاسم مطلوب" });
@@ -833,7 +882,7 @@ export const employeeUpdate = async (req, res) => {
         // لا نغيّر أدوار الحساب عند ربط حساب معلم موجود.
         // نعيّن teacher تلقائيًا فقط للحساب المنشأ من هذه الشاشة.
         if (acc.mode === "create") {
-          const teacherRoleId = await getTeacherRoleIdTx(client);
+          const teacherRoleId = await getTeacherRoleIdTx(client, schoolId);
           await setUserRolesTx(client, userId, [teacherRoleId], schoolId);
         }
       } else if (acc.mode === "create") {

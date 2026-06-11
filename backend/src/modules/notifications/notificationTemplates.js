@@ -14,10 +14,10 @@ function arStudentAttendanceStatus(status) {
 }
 
 function permissionStatusAr(status) {
-  const s = String(status || "").toUpperCase();
-  if (["PENDING", "pending"].includes(s)) return "قيد المراجعة";
-  if (["APPROVED", "accepted", "approved"].includes(s)) return "مقبول";
-  if (["REJECTED", "refused", "rejected"].includes(s)) return "مرفوض";
+  const s = String(status || "").trim().toUpperCase();
+  if (s === "PENDING") return "قيد المراجعة";
+  if (["APPROVED", "ACCEPTED"].includes(s)) return "مقبول";
+  if (["REJECTED", "REFUSED"].includes(s)) return "مرفوض";
   return normalizeText(status, "غير محدد");
 }
 
@@ -126,20 +126,35 @@ export function buildAttendanceSessionLockedTemplate(ctx) {
   const periodName = normalizeText(ctx.periodName);
   const teacherName = normalizeText(ctx.teacherName);
 
+  const studentsCount = Number(ctx.studentsCount || 0);
+  const presentCount = Number(ctx.presentCount || 0);
+  const absentCount = Number(ctx.absentCount || 0);
+  const lateCount = Number(ctx.lateCount || 0);
+  const excusedCount = Number(ctx.excusedCount || 0);
+
+  const priority = absentCount > 0 || lateCount > 0 ? "important" : "normal";
+
   return {
     category: "admin",
-    priority: "important",
-    title: "تم إغلاق جلسة حضور",
+    priority,
+    title: "تم اعتماد كشف حضور",
     body:
-      `تم إغلاق جلسة الحضور بنجاح.` +
+      `تم اعتماد كشف الحضور بنجاح.` +
       `\nالتاريخ: ${attendanceDate}` +
       `\nالفصل: ${sectionName}` +
       `\nالمادة: ${subjectName}` +
       `\nالحصة: ${periodName}` +
-      `\nالمعلم: ${teacherName}`,
+      `\nالمعلم: ${teacherName}` +
+      `\nإجمالي الطلاب: ${studentsCount}` +
+      `\nحاضر: ${presentCount} · غائب: ${absentCount} · متأخر: ${lateCount} · بعذر: ${excusedCount}`,
     meta: {
       related_label: `جلسة حضور رقم ${ctx.attendanceSessionId}`,
       school_id: ctx.schoolId || null,
+      students_count: studentsCount,
+      present_count: presentCount,
+      absent_count: absentCount,
+      late_count: lateCount,
+      excused_count: excusedCount,
     },
   };
 }

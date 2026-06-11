@@ -203,6 +203,7 @@
   }
 
   function updateActionButtons(data) {
+    const pdfBtn = qs("#mwPdfBtn");
     const printBtn = qs("#mwPrintBtn");
     const approveBtn = qs("#mwApproveBtn");
     const returnBtn = qs("#mwReturnBtn");
@@ -211,6 +212,7 @@
     const isApproved = data?.approval?.status === "approved";
     const canApprove = !!data?.summary?.can_approve && !isApproved;
 
+    if (pdfBtn) pdfBtn.disabled = !hasData;
     if (printBtn) printBtn.disabled = !hasData;
 
     if (approveBtn) {
@@ -263,6 +265,7 @@
     const empty = qs("#mwEmpty");
     const table = qs("#mwTableCard");
     const info = qs("#mwExamInfo");
+    const pdfBtn = qs("#mwPdfBtn");
     const printBtn = qs("#mwPrintBtn");
 
     if (empty) {
@@ -272,6 +275,7 @@
 
     if (table) table.classList.remove("show");
     if (info) info.classList.remove("show");
+    if (pdfBtn) pdfBtn.disabled = true;
     if (printBtn) printBtn.disabled = true;
     updateActionButtons(null);
     state.currentData = null;
@@ -426,16 +430,13 @@
       if (!state.assessments.length) {
         renderEmpty("لا توجد اختبارات شهرية لهذه المادة والشعبة.");
         showAlert("لا توجد اختبارات شهرية حسب الفلاتر المختارة.", "error");
-        window.AppUI?.toast("لا توجد اختبارات شهرية حسب الفلاتر المختارة.", "warning");
         return;
       }
 
       renderEmpty("اختر الاختبار الشهري ثم اضغط عرض الكشف.");
       showAlert(`تم العثور على ${state.assessments.length} اختبار شهري.`, "success");
-      window.AppUI?.toast(`تم العثور على ${state.assessments.length} اختبار شهري.`, "success");
     } catch (err) {
       showAlert(err.message || "تعذر تحميل الاختبارات الشهرية.", "error");
-      window.AppUI?.toast(err.message || "تعذر تحميل الاختبارات الشهرية.", "error");
     } finally {
       setButtonLoading(button, false);
     }
@@ -588,7 +589,6 @@
       renderData(data);
     } catch (err) {
       showAlert(err.message || "تعذر عرض كشف الأعمال الشهرية.", "error");
-      window.AppUI?.toast(err.message || "تعذر عرض كشف الأعمال الشهرية.", "error");
     } finally {
       setButtonLoading(button, false);
     }
@@ -600,7 +600,6 @@
       const filters = validateFilters(true);
 
       if (!state.currentData?.summary?.can_approve) {
-        window.AppUI?.toast("لا يمكن الاعتماد قبل اكتمال الكشف ونشر الدرجات.", "warning");
         return showAlert("لا يمكن الاعتماد قبل اكتمال الكشف ونشر الدرجات.", "error");
       }
 
@@ -611,11 +610,9 @@
       });
 
       showAlert(result?.message || "تم اعتماد الكشف الشهري.", "success");
-      window.AppUI?.toast(result?.message || "تم اعتماد الكشف الشهري.", "success");
       await loadMonthlyWorks();
     } catch (err) {
       showAlert(err.message || "تعذر اعتماد الكشف الشهري.", "error");
-      window.AppUI?.toast(err.message || "تعذر اعتماد الكشف الشهري.", "error");
     } finally {
       setButtonLoading(button, false);
       updateActionButtons(state.currentData);
@@ -629,26 +626,16 @@
       const filters = validateFilters(true);
 
       if (state.currentData?.approval?.status === "approved") {
-        window.AppUI?.toast("لا يمكن إرجاع كشف شهري معتمد.", "warning");
         return showAlert("لا يمكن إرجاع كشف شهري معتمد.", "error");
       }
 
-      const note = await window.AppUI.prompt({
-        title: "إرجاع الكشف الشهري",
-        message: "اكتب سبب إرجاع الكشف الشهري للمعلم.",
-        defaultValue: "",
-        confirmText: "إرجاع الكشف",
-        cancelText: "إلغاء",
-        required: true,
-        requiredMessage: "سبب الإرجاع مطلوب.",
-      });
+      const note = window.prompt("اكتب سبب إرجاع الكشف الشهري للمعلم:");
 
       if (note === null) return;
 
       const returnNote = String(note || "").trim();
 
       if (!returnNote) {
-        window.AppUI?.toast("سبب الإرجاع مطلوب.", "warning");
         return showAlert("سبب الإرجاع مطلوب.", "error");
       }
 
@@ -660,16 +647,37 @@
       });
 
       showAlert(result?.message || "تم إرجاع الكشف الشهري للمعلم.", "success");
-      window.AppUI?.toast(result?.message || "تم إرجاع الكشف الشهري للمعلم.", "success");
       await loadMonthlyWorks();
     } catch (err) {
       showAlert(err.message || "تعذر إرجاع الكشف الشهري.", "error");
-      window.AppUI?.toast(err.message || "تعذر إرجاع الكشف الشهري.", "error");
     } finally {
       setButtonLoading(button, false);
       updateActionButtons(state.currentData);
     }
   }
+  async function openMonthlyWorksSchoolReport(action = "pdf") {
+    const assessmentId = Number(state.currentData?.assessment?.id || 0);
+
+    if (!assessmentId || !Array.isArray(state.currentData?.students) || !state.currentData.students.length) {
+      const message = "يرجى عرض كشف الأعمال الشهرية أولًا قبل التصدير أو الطباعة.";
+      showAlert(message, "error");
+      window.AppUI?.toast(message, "warning");
+      return;
+    }
+
+    if (!window.SchoolReports?.openMonthlyWorksReport) {
+      const message = "تعذر تشغيل نظام التقارير الرسمي. حدّث الصفحة ثم حاول مرة أخرى.";
+      showAlert(message, "error");
+      window.AppUI?.toast(message, "error");
+      return;
+    }
+
+    await window.SchoolReports.openMonthlyWorksReport({
+      action,
+      filters: { assessment_id: assessmentId },
+    });
+  }
+
   function setupEvents() {
     qs("#mwStage")?.addEventListener("change", () => {
       fillGrades();
@@ -692,10 +700,8 @@
     qs("#mwLoadAssessmentsBtn")?.addEventListener("click", loadAssessments);
     qs("#mwShowBtn")?.addEventListener("click", loadMonthlyWorks);
 
-    qs("#mwPrintBtn")?.addEventListener("click", () => {
-      window.print();
-
-    });
+    qs("#mwPdfBtn")?.addEventListener("click", () => openMonthlyWorksSchoolReport("pdf"));
+    qs("#mwPrintBtn")?.addEventListener("click", () => openMonthlyWorksSchoolReport("print"));
     qs("#mwApproveBtn")?.addEventListener("click", approveMonthlyWorks);
     qs("#mwReturnBtn")?.addEventListener("click", returnMonthlyWorks);
   }
@@ -716,7 +722,6 @@
       renderEmpty("اختر الفلاتر ثم اضغط تحميل الاختبارات الشهرية.");
     } catch (err) {
       showAlert(err.message || "تعذر تحميل بيانات الصفحة.", "error");
-      window.AppUI?.toast(err.message || "تعذر تحميل بيانات الصفحة.", "error");
       renderEmpty("تعذر تحميل بيانات الصفحة.");
     }
   };

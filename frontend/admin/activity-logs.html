@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>السجل الكامل للأحداث</title>
+  <link rel="stylesheet" href="./css/activity-logs.css" />
+</head>
+<body class="theme-dark">
+  <main class="audit-page">
+    <header class="audit-hero">
+      <div>
+        <p class="audit-kicker">مركز المراجعة والتدقيق</p>
+        <h1>السجل الكامل للأحداث</h1>
+        <p class="audit-subtitle">
+          راجع العمليات الإدارية والأمنية، وابحث حسب التاريخ أو المستخدم أو القسم، ثم افتح تفاصيل أي حدث.
+        </p>
+      </div>
+
+      <div class="audit-hero-actions">
+        <button type="button" class="audit-btn audit-btn--ghost" id="audit-back-btn">
+          العودة إلى لوحة المدير
+        </button>
+        <button type="button" class="audit-btn audit-btn--primary" id="audit-refresh-btn">
+          تحديث السجل
+        </button>
+      </div>
+    </header>
+
+    <section class="audit-panel audit-filters" aria-labelledby="auditFiltersTitle">
+      <div class="audit-section-head">
+        <div>
+          <h2 id="auditFiltersTitle">البحث والتصفية</h2>
+          <p>اترك الحقول فارغة لعرض جميع الأحداث المحفوظة.</p>
+        </div>
+        <button type="button" class="audit-link-btn" id="audit-reset-btn">مسح الفلاتر</button>
+      </div>
+
+      <form id="audit-filter-form" class="audit-filter-grid">
+        <label class="audit-field audit-field--wide">
+          <span>بحث عام</span>
+          <input id="audit-q" type="search" placeholder="الوصف، اسم المستخدم، رقم السجل..." autocomplete="off" />
+        </label>
+
+        <label class="audit-field">
+          <span>من تاريخ</span>
+          <input id="audit-date-from" type="date" />
+        </label>
+
+        <label class="audit-field">
+          <span>إلى تاريخ</span>
+          <input id="audit-date-to" type="date" />
+        </label>
+
+        <label class="audit-field">
+          <span>المستخدم</span>
+          <input id="audit-user" type="search" placeholder="اسم المستخدم" autocomplete="off" />
+        </label>
+
+        <label class="audit-field">
+          <span>القسم</span>
+          <select id="audit-module">
+            <option value="">جميع الأقسام</option>
+            <option value="Security">الأمان وتسجيل الدخول</option>
+            <option value="users">المستخدمون</option>
+            <option value="roles">الأدوار والصلاحيات</option>
+            <option value="permissions">الصلاحيات</option>
+            <option value="students">الطلاب</option>
+            <option value="guardians">أولياء الأمور</option>
+            <option value="employees">الموظفون والمعلمون</option>
+            <option value="school-settings">إعدادات المدرسة</option>
+            <option value="academic-years">السنوات الدراسية</option>
+            <option value="stages">المراحل الدراسية</option>
+            <option value="grades">الصفوف الدراسية</option>
+            <option value="sections">الشعب الدراسية</option>
+            <option value="subjects">المواد الدراسية</option>
+            <option value="periods">الحصص الدراسية</option>
+            <option value="assign-teachers">توزيع المعلمين</option>
+            <option value="attendance">الحضور والغياب</option>
+            <option value="assessments">الاختبارات والتقييمات</option>
+            <option value="results">النتائج الدراسية</option>
+            <option value="fees">الرسوم والمدفوعات</option>
+            <option value="fee-rules">قواعد الرسوم</option>
+            <option value="fee-adjustments">طلبات تعديل الرسوم</option>
+            <option value="school-reports">التقارير المدرسية</option>
+            <option value="backups">النسخ الاحتياطية</option>
+            <option value="notifications">الإشعارات والرسائل</option>
+            <option value="timetables">الجداول الدراسية</option>
+            <option value="certificates">الشهادات</option>
+            <option value="transfers">طلبات نقل الطلاب</option>
+            <option value="permits">الأذونات</option>
+            <option value="learning">الأنشطة التعليمية</option>
+            <option value="system">النظام</option>
+          </select>
+        </label>
+
+        <label class="audit-field">
+          <span>نوع العملية</span>
+          <select id="audit-action">
+            <option value="">جميع العمليات</option>
+            <option value="CREATE">إضافة</option>
+            <option value="UPDATE">تعديل</option>
+            <option value="DELETE">حذف</option>
+            <option value="LOGIN">تسجيل دخول</option>
+            <option value="LOGOUT">تسجيل خروج</option>
+            <option value="APPROVE">اعتماد</option>
+            <option value="REJECT">رفض</option>
+            <option value="PUBLISH">نشر</option>
+            <option value="UNPUBLISH">إلغاء نشر</option>
+            <option value="PRINT">طباعة</option>
+            <option value="EXPORT">تصدير</option>
+            <option value="IMPORT">استيراد</option>
+            <option value="ISSUE">إصدار</option>
+            <option value="CANCEL">إلغاء</option>
+            <option value="LOCK">إغلاق</option>
+            <option value="UNLOCK">إعادة فتح</option>
+            <option value="ACTIVATE">تفعيل</option>
+            <option value="DEACTIVATE">تعطيل</option>
+            <option value="RESTORE">استعادة</option>
+            <option value="DOWNLOAD">تنزيل</option>
+            <option value="SEND">إرسال</option>
+            <option value="SUBMIT">تسليم</option>
+            <option value="TRANSFER">نقل</option>
+            <option value="DENY">رفض وصول</option>
+            <option value="RESET">إعادة تعيين</option>
+          </select>
+        </label>
+
+        <label class="audit-field">
+          <span>مستوى الأهمية</span>
+          <select id="audit-severity">
+            <option value="">جميع المستويات</option>
+            <option value="normal">عادي</option>
+            <option value="important">مهم</option>
+            <option value="sensitive">حساس</option>
+            <option value="danger">خطير</option>
+          </select>
+        </label>
+
+        <label class="audit-field">
+          <span>حالة العملية</span>
+          <select id="audit-result">
+            <option value="">الناجحة والفاشلة</option>
+            <option value="success">ناجحة</option>
+            <option value="failure">فاشلة</option>
+          </select>
+        </label>
+
+        <label class="audit-field">
+          <span>عدد السجلات في الصفحة</span>
+          <select id="audit-limit">
+            <option value="20">20</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </label>
+
+        <label class="audit-check">
+          <input id="audit-include-noise" type="checkbox" />
+          <span>إظهار الأحداث التقنية المتكررة مثل المعاينات</span>
+        </label>
+
+        <div class="audit-filter-actions">
+          <button type="submit" class="audit-btn audit-btn--primary">تطبيق الفلاتر</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="audit-stats" aria-label="ملخص السجل">
+      <article class="audit-stat">
+        <span>إجمالي النتائج</span>
+        <strong id="audit-total-count">—</strong>
+      </article>
+      <article class="audit-stat">
+        <span>الصفحة الحالية</span>
+        <strong id="audit-current-page">—</strong>
+      </article>
+      <article class="audit-stat">
+        <span>عدد الصفحات</span>
+        <strong id="audit-total-pages">—</strong>
+      </article>
+      <article class="audit-stat">
+        <span>وضع العرض</span>
+        <strong>السجل الكامل</strong>
+      </article>
+    </section>
+
+    <section class="audit-panel audit-table-panel" aria-labelledby="auditTableTitle">
+      <div class="audit-section-head">
+        <div>
+          <h2 id="auditTableTitle">الأحداث المحفوظة</h2>
+          <p id="audit-table-subtitle">جاري تحميل سجل الأحداث...</p>
+        </div>
+      </div>
+
+      <div class="audit-table-wrap">
+        <table class="audit-table">
+          <thead>
+            <tr>
+              <th>التاريخ والوقت</th>
+              <th>العملية</th>
+              <th>القسم</th>
+              <th>الوصف</th>
+              <th>المستخدم</th>
+              <th>الأهمية</th>
+              <th>الحالة</th>
+              <th>التفاصيل</th>
+            </tr>
+          </thead>
+          <tbody id="audit-table-body">
+            <tr>
+              <td colspan="8" class="audit-empty">جاري تحميل السجل...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <nav class="audit-pagination" aria-label="التنقل بين صفحات السجل">
+        <button type="button" class="audit-btn audit-btn--ghost" id="audit-prev-btn">السابق</button>
+        <span id="audit-page-info">—</span>
+        <button type="button" class="audit-btn audit-btn--ghost" id="audit-next-btn">التالي</button>
+      </nav>
+    </section>
+  </main>
+
+  <div class="audit-drawer" id="audit-details-drawer" aria-hidden="true">
+    <button type="button" class="audit-drawer-backdrop" data-audit-close aria-label="إغلاق التفاصيل"></button>
+    <aside class="audit-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="auditDetailsTitle">
+      <header class="audit-drawer-header">
+        <div>
+          <p>تفاصيل سجل التدقيق</p>
+          <h2 id="auditDetailsTitle">تفاصيل الحدث</h2>
+        </div>
+        <button type="button" class="audit-close-btn" data-audit-close aria-label="إغلاق">×</button>
+      </header>
+      <div class="audit-drawer-body" id="audit-details-body"></div>
+    </aside>
+  </div>
+
+  <script src="./js/activity-logs.js"></script>
+</body>
+</html>

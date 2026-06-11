@@ -3,6 +3,7 @@ import { pool } from "../config/db.js";
 import { generateInstallments, computeInstallmentStatus } from "../utils/feesInstallments.js";
 import { genReceiptNumber } from "../utils/receipt.js";
 import { logAudit } from "../utils/auditLogger.js";
+import { emitRealtimeToUsers } from "../modules/notifications/notificationCreateService.js";
 
 async function hasTable(db, name) {
   const { rows } = await db.query(`SELECT to_regclass($1) AS t`, [`public.${name}`]);
@@ -28,7 +29,10 @@ async function getAdminUserIds(db, schoolId) {
       SELECT u.id
       FROM users u
       JOIN roles r ON r.id=u.role_id
-      WHERE LOWER(r.name) IN ('admin','administrator')
+      WHERE (
+          LOWER(r.name) IN ('admin','administrator','school_admin','school-admin','super_admin','superadmin')
+          OR COALESCE(r.name, '') ILIKE '%مدير%'
+        )
         AND COALESCE(u.status,'active')='active'
         AND u.school_id = $1 -- ✅ فلترة المدرسة
     `, [schoolId]);
@@ -43,7 +47,10 @@ async function getAdminUserIds(db, schoolId) {
         FROM ${linkTable} ur
         JOIN roles r ON r.id=ur.role_id
         JOIN users u ON u.id=ur.user_id
-        WHERE LOWER(r.name) IN ('admin','administrator')
+        WHERE (
+            LOWER(r.name) IN ('admin','administrator','school_admin','school-admin','super_admin','superadmin')
+            OR COALESCE(r.name, '') ILIKE '%مدير%'
+          )
           AND COALESCE(u.status,'active')='active'
           AND u.school_id = $1 -- ✅ فلترة المدرسة
       `, [schoolId]);
@@ -57,7 +64,10 @@ async function getAdminUserIds(db, schoolId) {
       const { rows } = await db.query(`
         SELECT id
         FROM users
-        WHERE LOWER(${col}) IN ('admin','administrator')
+        WHERE (
+            LOWER(${col}) IN ('admin','administrator','school_admin','school-admin','super_admin','superadmin')
+            OR COALESCE(${col}, '') ILIKE '%مدير%'
+          )
           AND COALESCE(status,'active')='active'
           AND school_id = $1 -- ✅ فلترة المدرسة
       `, [schoolId]);
@@ -79,8 +89,59 @@ async function getAdminUserIds(db, schoolId) {
   return [];
 }
 
-async function notifyFinanceAdmins({ db, io, senderUserId, studentId, contractId, paymentId, amount, method, schoolId }) {
+async function getFinanceReviewerUserIds(db, schoolId) {
   const adminIds = await getAdminUserIds(db, schoolId);
+
+  if (
+    !(await hasTable(db, "user_roles")) ||
+    !(await hasTable(db, "roles")) ||
+    !(await hasTable(db, "role_permissions")) ||
+    !(await hasTable(db, "permissions"))
+  ) {
+    return [...new Set(adminIds)];
+  }
+
+  const { rows } = await db.query(
+    `SELECT DISTINCT u.id
+     FROM users u
+     JOIN user_roles ur
+       ON ur.user_id = u.id
+      AND ur.school_id = u.school_id
+     JOIN roles r
+       ON r.id = ur.role_id
+      AND r.school_id = u.school_id
+     JOIN role_permissions rp
+       ON rp.role_id = r.id
+      AND rp.school_id = u.school_id
+     JOIN permissions p
+       ON p.id = rp.permission_id
+     WHERE u.school_id = $1
+       AND COALESCE(u.status, 'active') = 'active'
+       AND p.code = ANY($2::text[])`,
+    [schoolId, ["fees.manage", "finance.manage", "fees.payments.review"]]
+  );
+
+  return [
+    ...new Set([
+      ...adminIds,
+      ...rows.map((row) => Number(row.id)).filter((id) => Number.isInteger(id) && id > 0),
+    ]),
+  ];
+}
+
+function queueRealtimeNotification(queue, notification, recipients) {
+  if (!Array.isArray(queue) || !notification || !Array.isArray(recipients) || !recipients.length) return;
+  queue.push({ notification, recipients });
+}
+
+function flushQueuedRealtimeNotifications(app, queue = []) {
+  for (const item of queue) {
+    emitRealtimeToUsers(app, item.recipients, item.notification);
+  }
+}
+
+async function notifyFinanceAdmins({ db, senderUserId, studentId, contractId, paymentId, amount, method, schoolId }) {
+  const adminIds = await getFinanceReviewerUserIds(db, schoolId);
   if (!adminIds.length) return;
 
   const st = await db.query(`SELECT full_name FROM students WHERE id=$1 AND school_id=$2 LIMIT 1`, [studentId, schoolId]);
@@ -96,7 +157,7 @@ async function notifyFinanceAdmins({ db, io, senderUserId, studentId, contractId
       (school_id, sender_user_id, sender_display_name, title, body, source, category, priority, related_type, related_id, meta)
     VALUES
       ($1, $2, (SELECT name FROM users WHERE id=$2), $3, $4, 'system', 'finance', 'important', 'fee_payment', $5, $6)
-    RETURNING id, created_at
+    RETURNING *
     `,
     [
       schoolId,
@@ -111,32 +172,20 @@ async function notifyFinanceAdmins({ db, io, senderUserId, studentId, contractId
   const notifId = nRes.rows[0].id;
 
   // ✅ recipients
-  const params = [notifId];
-  const values = adminIds.map((uid, i) => {
-    params.push(uid);
-    return `($1, $${i + 2}, false)`;
-  });
+const params = [schoolId, notifId];
+const values = adminIds.map((uid, i) => {
+  params.push(uid);
+  return `($1, $2, $${i + 3}, false)`;
+});
 
-  await db.query(
-    `INSERT INTO notification_recipients (notification_id, recipient_user_id, is_read)
-     VALUES ${values.join(",")}`,
-    params
-  );
+const recipientsRes = await db.query(
+  `INSERT INTO notification_recipients (school_id, notification_id, recipient_user_id, is_read)
+   VALUES ${values.join(",")}
+   RETURNING *`,
+  params
+);
 
-  // ✅ Socket (اختياري)
-  if (io) {
-    for (const uid of adminIds) {
-      io.to(`user_${uid}`).emit("notification:new", {
-        id: notifId,
-        title,
-        body,
-        category: "finance",
-        source: "system",
-        created_at: nRes.rows[0].created_at,
-        meta: { studentId, contractId, paymentId }
-      });
-    }
-  }
+  return { notification: nRes.rows[0], recipients: recipientsRes.rows };
 }
 
 export async function getContract(req, res) {
@@ -408,6 +457,7 @@ export async function confirmPayment(req, res) {
   if (!paymentId) return res.status(400).json({ message: "Invalid payment id" });
 
   const client = await pool.connect();
+  const queuedRealtimeNotifications = [];
   try {
     await client.query("BEGIN");
 
@@ -500,7 +550,7 @@ export async function confirmPayment(req, res) {
       const parentRes = await client.query(`
         SELECT g.user_id 
         FROM student_guardians sg
-        JOIN guardians g ON sg.guardian_id = g.id
+        JOIN guardians g ON sg.guardian_id = g.id AND g.school_id = sg.school_id
         WHERE sg.student_id = $1 AND sg.is_primary = true AND sg.school_id = $2
         LIMIT 1
       `, [payment.studentId, schoolId]);
@@ -515,34 +565,25 @@ export async function confirmPayment(req, res) {
         const nRes = await client.query(`
           INSERT INTO notifications (school_id, sender_user_id, sender_display_name, title, body, source, category, priority, related_type, related_id)
           VALUES ($1, NULL, 'الإدارة المالية', $2, $3, 'system', 'finance', 'normal', 'fee_payment', $4)
-          RETURNING id, created_at
+          RETURNING *
         `, [schoolId, title, body, paymentId]);
 
         const notifId = nRes.rows[0].id;
 
-        await client.query(`
-          INSERT INTO notification_recipients (notification_id, recipient_user_id, is_read)
-          VALUES ($1, $2, false)
-        `, [notifId, parentUserId]);
+        const recipientsRes = await client.query(`
+          INSERT INTO notification_recipients (school_id, notification_id, recipient_user_id, is_read)
+          VALUES ($1, $2, $3, false)
+          RETURNING *
+        `, [schoolId, notifId, parentUserId]);
 
-        // 3. الإرسال اللحظي
-        const io = req.app.get("io");
-        if (io) {
-          io.to(`user_${parentUserId}`).emit("notification:new", {
-            id: notifId,
-            title,
-            body,
-            category: "finance",
-            source: "system",
-            created_at: nRes.rows[0].created_at
-          });
-        }
+        queueRealtimeNotification(queuedRealtimeNotifications, nRes.rows[0], recipientsRes.rows);
       }
     } catch (e) {
       console.warn("Parent notification failed on confirm:", e.message);
     }
 
     await client.query("COMMIT");
+    flushQueuedRealtimeNotifications(req.app, queuedRealtimeNotifications);
     return res.json({ message: "Payment confirmed", paymentId });
   } catch (e) {
     try { await client.query("ROLLBACK"); } catch {}
@@ -574,6 +615,7 @@ export async function createPayment(req, res) {
   const attachmentMime = attachment ? attachment.mimetype : null;
 
   const client = await pool.connect();
+  const queuedRealtimeNotifications = [];
   try {
     await client.query("BEGIN");
 
@@ -612,14 +654,12 @@ export async function createPayment(req, res) {
     if (!paymentRow) throw new Error("Failed to generate unique receipt number.");
 
     const paymentId = paymentRow.id;
-    const io = req.app.get("io");
 
     // أي حوالة/غير نقدي أو pending → إشعار مالي
     if (status === "pending" || method !== "cash") {
       try {
-        await notifyFinanceAdmins({
+        const queued = await notifyFinanceAdmins({
           db: client,
-          io,
           senderUserId: req.user?.id || null,
           studentId,
           contractId,
@@ -628,6 +668,7 @@ export async function createPayment(req, res) {
           method,
           schoolId // ✅ تمرير المدرسة
         });
+        if (queued) queueRealtimeNotification(queuedRealtimeNotifications, queued.notification, queued.recipients);
       } catch (e) {
         console.warn("finance notify failed:", e.message);
       }
@@ -679,7 +720,7 @@ export async function createPayment(req, res) {
         try {
           const parentRes = await client.query(`
             SELECT g.user_id FROM student_guardians sg
-            JOIN guardians g ON sg.guardian_id = g.id
+            JOIN guardians g ON sg.guardian_id = g.id AND g.school_id = sg.school_id
             WHERE sg.student_id = $1 AND sg.is_primary = true AND sg.school_id = $2
             LIMIT 1
           `, [studentId, schoolId]);
@@ -690,16 +731,22 @@ export async function createPayment(req, res) {
             const nRes = await client.query(`
               INSERT INTO notifications (school_id, sender_user_id, sender_display_name, title, body, source, category, priority, related_type, related_id)
               VALUES ($1, NULL, 'الإدارة المالية', $2, $3, 'system', 'finance', 'normal', 'fee_payment', $4)
-              RETURNING id, created_at
+              RETURNING *
             `, [schoolId, title, body, paymentId]);
             const notifId = nRes.rows[0].id;
-            await client.query(`INSERT INTO notification_recipients (notification_id, recipient_user_id, is_read) VALUES ($1, $2, false)`, [notifId, parentUserId]);
-            if (io) { io.to(`user_${parentUserId}`).emit("notification:new", { id: notifId, title, body, category: "finance", created_at: nRes.rows[0].created_at }); }
+            const recipientsRes = await client.query(
+              `INSERT INTO notification_recipients (school_id, notification_id, recipient_user_id, is_read)
+               VALUES ($1, $2, $3, false)
+               RETURNING *`,
+              [schoolId, notifId, parentUserId]
+            );
+            queueRealtimeNotification(queuedRealtimeNotifications, nRes.rows[0], recipientsRes.rows);
           }
         } catch (e) { console.warn("Direct Payment notification failed:", e.message); }
     }
 
     await client.query("COMMIT");
+    flushQueuedRealtimeNotifications(req.app, queuedRealtimeNotifications);
 
     return res.status(201).json({
       id: paymentId,

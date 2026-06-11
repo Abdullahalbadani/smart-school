@@ -1,5 +1,11 @@
 import { pool } from "../config/db.js";
 import { genReceiptNumber } from "../utils/receipt.js";
+import { createSystemNotification } from "../modules/notifications/notificationCreateService.js";
+import {
+  getAdminUserIds as getNotificationAdminUserIds,
+  getUserIdsByPermissionCodes,
+  mergeUserIds,
+} from "../modules/notifications/notificationTargetsResolvers.js";
 
 // ===================== Helpers =====================
 function buildAttachmentUrl(req, path) {
@@ -37,41 +43,6 @@ async function assertGuardianOwnsStudent(guardianId, studentId, schoolId) {
     [guardianId, studentId, schoolId]
   );
   return !!rows.length;
-}
-
-async function getAdminUserIds(schoolId) {
-  // ✅ الطريقة الأساسية: users.role_id + roles (مع حماية المدرسة)
-  try {
-    const { rows } = await pool.query(`
-      SELECT u.id
-      FROM users u
-      JOIN roles r ON r.id = u.role_id
-      WHERE LOWER(r.name) IN ('admin','administrator')
-        AND COALESCE(u.status,'active')='active'
-        AND u.school_id = $1
-    `, [schoolId]);
-
-    const ids = (rows || []).map(r => Number(r.id)).filter(Boolean);
-    if (ids.length) return ids;
-  } catch (e) {
-    console.warn("getAdminUserIds(role_id) failed:", e.message);
-  }
-
-  // ✅ fallback: username=admin (مع حماية المدرسة)
-  try {
-    const { rows } = await pool.query(`
-      SELECT id
-      FROM users
-      WHERE LOWER(COALESCE(username,''))='admin'
-        AND COALESCE(status,'active')='active'
-        AND school_id = $1
-    `, [schoolId]);
-    return (rows || []).map(r => Number(r.id)).filter(Boolean);
-  } catch (e) {
-    console.warn("getAdminUserIds(username) failed:", e.message);
-  }
-
-  return [];
 }
 
 // ===================== Controllers =====================
@@ -273,77 +244,52 @@ export async function parentPaymentRequest(req, res) {
 
   if (!inserted) return res.status(500).json({ message: "Failed to create payment request" });
 
-  // ✅ إشعار مالي للأدمن
+  // إشعار مالي آمن للإدارة عبر الخدمة المركزية.
+  // لا يؤثر فشل الإشعار على حفظ طلب الدفع نفسه.
   try {
-    const adminIds = await getAdminUserIds(schoolId);
+    const [adminIds, financeReviewerIds] = await Promise.all([
+      getNotificationAdminUserIds({ schoolId }),
+      getUserIdsByPermissionCodes({
+        schoolId,
+        codes: ["fees.manage", "finance.manage", "fees.payments.review"],
+      }),
+    ]);
+    const recipients = mergeUserIds(adminIds, financeReviewerIds);
+    const studentResult = await pool.query(
+      `SELECT full_name FROM students WHERE id=$1 AND school_id=$2 LIMIT 1`,
+      [studentId, schoolId]
+    );
+    const studentName = studentResult.rows[0]?.full_name || `طالب #${studentId}`;
 
-    if (adminIds.length) {
-      const st = await pool.query(`SELECT full_name FROM students WHERE id=$1 AND school_id=$2 LIMIT 1`, [studentId, schoolId]);
-      const studentName = st.rows[0]?.full_name || `طالب #${studentId}`;
-
-      const title = "حوالة رسوم جديدة (ولي أمر)";
-      const body =
-        `${studentName} — مبلغ: ${amount.toLocaleString("en-US")} — طريقة: ${method}` +
-        `${provider ? " — الجهة: " + provider : ""}` +
-        `${reference ? " — المرجع: " + reference : ""}` +
-        ` — إيصال: ${inserted.receiptNo} (قيد المراجعة)`;
-
-      const meta = {
-        studentId,
-        contractId,
-        paymentId: inserted.id,
+    await createSystemNotification({
+      app: req.app,
+      schoolId,
+      category: "finance",
+      priority: "important",
+      title: "إثبات دفعة جديد من ولي أمر",
+      body:
+        `أرسل ولي أمر الطالب ${studentName} إثبات دفعة بمبلغ ${amount.toLocaleString("ar-EG")}.` +
+        ` رقم الإيصال: ${inserted.receiptNo}. الطلب بانتظار المراجعة.`,
+      relatedType: "fee_payment",
+      relatedId: inserted.id,
+      meta: {
+        related_label: `إثبات دفعة للطالب ${studentName}`,
+        student_id: studentId,
+        student_name: studentName,
+        contract_id: contractId,
+        payment_id: inserted.id,
         amount,
         method,
         provider,
         reference,
-        receiptNo: inserted.receiptNo,
+        receipt_no: inserted.receiptNo,
         status: "pending",
-      };
-
-      const nRes = await pool.query(
-        `
-        INSERT INTO notifications
-          (school_id, sender_user_id, sender_display_name, title, body, source, category, priority, related_type, related_id, meta)
-        VALUES
-          ($1, $2, (SELECT name FROM users WHERE id=$2), $3, $4, 'system', 'finance', 'important', 'fee_payment', $5, $6)
-        RETURNING id, created_at
-        `,
-        [schoolId, userId, title, body, inserted.id, JSON.stringify(meta)]
-      );
-
-      const notifId = nRes.rows[0].id;
-
-      const params = [notifId];
-      const values = adminIds.map((uid, i) => {
-        params.push(uid);
-        return `($1, $${i + 2}, false)`;
-      });
-
-      await pool.query(
-        `
-        INSERT INTO notification_recipients (notification_id, recipient_user_id, is_read)
-        VALUES ${values.join(",")}
-        `,
-        params
-      );
-
-      const io = req.app.get("io");
-      if (io) {
-        for (const uid of adminIds) {
-          io.to(`user_${uid}`).emit("notification:new", {
-            id: notifId,
-            title,
-            body,
-            category: "finance",
-            source: "system",
-            created_at: nRes.rows[0].created_at,
-            meta,
-          });
-        }
-      }
-    }
-  } catch (e) {
-    console.warn("finance notification failed:", e.message);
+      },
+      recipientUserIds: recipients,
+      dedupeWindowSeconds: 120,
+    });
+  } catch (error) {
+    console.warn("finance notification failed:", error.message);
   }
 
   return res.status(201).json({

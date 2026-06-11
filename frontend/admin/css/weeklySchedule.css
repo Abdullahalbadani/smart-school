@@ -191,14 +191,14 @@
   overflow: auto;
 }
 .ws-grid {
-  min-width: 860px;
+  min-width: 1180px;
   display: grid;
   gap: 8px;
 }
 .ws-gridHeader,
 .ws-gridRow {
   display: grid;
-  grid-template-columns: 120px repeat(var(--ws-cols), 1fr);
+  grid-template-columns: 110px repeat(var(--ws-cols), minmax(145px, 1fr));
   gap: 8px;
 }
 .ws-colHead {
@@ -219,8 +219,8 @@
   font-size: 12px;
 }
 .ws-cell {
-  min-height: 56px;
-  padding: 10px;
+  min-height: 105px;
+  padding: 12px;
   border-radius: 16px;
   border: 1px solid var(--border-soft);
   background: linear-gradient(
@@ -230,29 +230,86 @@
   );
   cursor: pointer;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 7px;
+  overflow: hidden;
 }
 .ws-cell:hover {
   filter: brightness(1.05);
 }
+.ws-cell .ws-subject,
+.ws-cell .ws-teacher,
+.ws-cell .ws-room {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
 .ws-cell .ws-subject {
   font-weight: 800;
-  font-size: 12px;
+  font-size: 13px;
+  color: var(--text-main);
 }
+
+.ws-cell .ws-subject i {
+  color: var(--primary);
+  flex-shrink: 0;
+}
+
 .ws-cell .ws-teacher {
-  margin-top: 4px;
+  margin-top: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ws-cell .ws-teacher i,
+.ws-cell .ws-room i {
+  flex-shrink: 0;
+}
+
+.ws-cell .ws-room {
   font-size: 11px;
   color: var(--text-muted);
 }
+
 .ws-cell .ws-pill {
-  position: absolute;
-  top: 8px;
-  left: 8px;
+  position: static;
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 10px;
   padding: 3px 8px;
   border-radius: 999px;
   border: 1px solid var(--border-soft);
   background: var(--bg-panel-soft);
   color: var(--text-muted);
+}
+
+.ws-examTitle {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
+  color: var(--text-main);
+}
+
+.ws-addCell {
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.ws-addCell i {
+  color: var(--primary);
+  font-size: 17px;
 }
 .ws-cell.ws-empty {
   opacity: 0.75;

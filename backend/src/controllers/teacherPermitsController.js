@@ -1,12 +1,28 @@
 import { pool } from "../config/db.js";
 import { NotificationAutoService } from "../modules/notifications/index.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 function toInt(v) {
   const n = Number(v);
-  return Number.isFinite(n) ? n : null;
+  return Number.isInteger(n) && n > 0 ? n : null;
 }
+
 function isISODate(d) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(String(d || ""));
+  const value = String(d || "");
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    date.getUTCFullYear() === year &&
+    date.getUTCMonth() === month - 1 &&
+    date.getUTCDate() === day
+  );
 }
+
 // 1=Saturday..7=Fri
 function schoolDayIdFromISO(iso) {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || ""));
@@ -18,8 +34,11 @@ function schoolDayIdFromISO(iso) {
   const map = { 6: 1, 0: 2, 1: 3, 2: 4, 3: 5, 4: 6, 5: 7 };
   return map[jsDay] || null;
 }
-async function getTeacherIdByUserId(db, userId) {
-  const r = await db.query(`SELECT id FROM teachers WHERE user_id = $1 LIMIT 1`, [userId]);
+async function getTeacherIdByUserId(db, userId, schoolId) {
+  const r = await db.query(
+    `SELECT id FROM teachers WHERE user_id = $1 AND school_id = $2 LIMIT 1`,
+    [userId, schoolId]
+  );
   return r.rows?.[0]?.id ?? null;
 }
 
@@ -38,30 +57,44 @@ async function columnExists(db, tableName, columnName) {
 
 export const TeacherPermitsController = {
   // GET /api/teacher/permits
-  async listMyPermits(req, res) {
-    const userId = req.user?.id;
-    const client = await pool.connect();
-    try {
-      const teacherId = await getTeacherIdByUserId(client, userId);
-      if (!teacherId) return res.status(404).json({ message: "Teacher not found" });
+ // GET /api/teacher/permits
+async listMyPermits(req, res) {
+  const userId = req.user?.id;
+  const schoolId = req.user?.school_id;
 
-      const r = await client.query(
-        `SELECT *
-         FROM teacher_permission_requests
-         WHERE teacher_id = $1
-         ORDER BY requested_at DESC, id DESC
-         LIMIT 200`,
-        [teacherId]
-      );
+  if (!userId || !schoolId) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
 
-      return res.json({ items: r.rows || [] });
-    } catch (e) {
-      console.error("listMyPermits error:", e);
-      return res.status(500).json({ message: "Server error" });
-    } finally {
-      client.release();
+  const client = await pool.connect();
+
+  try {
+    const teacherId = await getTeacherIdByUserId(client, userId, schoolId);
+
+    if (!teacherId) {
+      return res.status(404).json({ message: "Teacher not found" });
     }
-  },
+
+    const r = await client.query(
+      `
+      SELECT *
+      FROM teacher_permission_requests
+      WHERE teacher_id = $1
+        AND school_id = $2
+      ORDER BY requested_at DESC, id DESC
+      LIMIT 200
+      `,
+      [teacherId, schoolId]
+    );
+
+    return res.json({ items: r.rows || [] });
+  } catch (e) {
+    console.error("listMyPermits error:", e);
+    return res.status(500).json({ message: "Server error" });
+  } finally {
+    client.release();
+  }
+},
 
   // GET /api/teacher/permits/available-slots?date=YYYY-MM-DD
   async availableSlots(req, res) {
@@ -76,7 +109,7 @@ export const TeacherPermitsController = {
 
     const client = await pool.connect();
     try {
-      const teacherId = await getTeacherIdByUserId(client, userId);
+      const teacherId = await getTeacherIdByUserId(client, userId, req.user?.school_id);
       if (!teacherId) return res.status(404).json({ message: "Teacher not found" });
 
       // ✅ نتحقق من وجود الأعمدة حتى ما يطيح الاستعلام
@@ -156,146 +189,291 @@ export const TeacherPermitsController = {
   // body: { request_date, scope:'full_day'|'slots', timetable_entry_ids? أو slots?, reason_text?, notes? }
 // POST /api/teacher/permits
   // body: { request_date, scope:'full_day'|'slots', timetable_entry_ids? أو slots?, reason_text?, notes? }
-  async createPermit(req, res) {
-    const userId = req.user?.id;
-    const requestDate = String(req.body?.request_date || "").slice(0, 10);
-    
-    const scope = String(req.body?.scope || "full_day");
-    const reasonText = String(req.body?.reason_text || "").trim();
-    const notes = String(req.body?.notes || "").trim();
+ // POST /api/teacher/permits
+// body: {
+//   request_date,
+//   scope: "full_day" | "slots",
+//   timetable_entry_ids? أو slots?,
+//   reason_text?,
+//   notes?
+// }
+async createPermit(req, res) {
+  const userId = req.user?.id;
+  const schoolId = req.user?.school_id;
 
-    const timetableEntryIds = Array.isArray(req.body?.timetable_entry_ids)
-      ? req.body.timetable_entry_ids.map(toInt).filter(Boolean)
-      : Array.isArray(req.body?.slots)
-      ? req.body.slots.map(toInt).filter(Boolean)
-      : [];
-
-    if (!isISODate(requestDate)) return res.status(400).json({ message: "Invalid request_date" });
-    if (!["full_day", "slots"].includes(scope)) return res.status(400).json({ message: "Invalid scope" });
-    if (scope === "slots" && timetableEntryIds.length === 0)
-      return res.status(400).json({ message: "timetable_entry_ids required for slots scope" });
-
-    const client = await pool.connect();
-    try {
-      const teacherId = await getTeacherIdByUserId(client, userId);
-      if (!teacherId) {
-        return res.status(404).json({ message: "Teacher not found" });
-      }
-
-      // ==========================================
-      // 🟢 الحارس الأول: فحص الطلبات السابقة في نفس اليوم
-      // ==========================================
-// ==========================================
-      // 🟢 الحارس الأول: فحص الطلبات السابقة في نفس اليوم
-      // ==========================================
-      const checkExisting = await client.query(
-        `SELECT id, status FROM teacher_permission_requests WHERE teacher_id = $1 AND request_date = $2 LIMIT 1`,
-        [teacherId, requestDate]
-      );
-
-      let existingId = null;
-      let existingStatus = null;
-
-      if (checkExisting.rowCount > 0) {
-        existingId = checkExisting.rows[0].id;
-        existingStatus = checkExisting.rows[0].status;
-
-        // ❌ نطرده فقط إذا كان الطلب منتهياً (مقبول أو مرفوض)
-        if (existingStatus === 'approved') {
-          return res.status(400).json({ message: "لقد تمت الموافقة على إذن لك في هذا اليوم مسبقاً، ولا يمكنك تعديله أو تقديم طلب جديد." });
-        }
-        if (existingStatus === 'rejected') {
-          return res.status(400).json({ message: "لقد تم رفض إذنك في هذا اليوم من قبل الإدارة، ولا يُسمح بتقديم طلب آخر." });
-        }
-        
-        // ✅ إذا كان (pending)، سيتجاهل هذا الشرط وينزل للأسفل لكي يقوم بتحديث الطلب بنجاح!
-      }
-
-      // ==========================================
-      // 🟢 الحارس الثاني: فحص إذا كان اليوم فارغاً (عطلة أو لا يوجد حصص)
-      // ==========================================
-      const schoolDay = schoolDayIdFromISO(requestDate);
-      if (!schoolDay) {
-        return res.status(400).json({ message: "التاريخ المحدد يوافق يوم عطلة، لا حاجة لتقديم إذن غياب." });
-      }
-
-      const checkSchedule = await client.query(
-        `SELECT 1 FROM timetable_entries WHERE teacher_id = $1 AND day_of_week = $2 LIMIT 1`,
-        [teacherId, schoolDay]
-      );
-
-      if (checkSchedule.rowCount === 0) {
-        return res.status(400).json({ message: "لا يمكنك تقديم إذن غياب لأنه ليس لديك أي حصص في هذا اليوم أصلاً." });
-      }
-      // ==========================================
-
-      await client.query("BEGIN");
-
-      let permit;
-      let isUpdated = false;
-
-      // 🔄 إذا كان عنده طلب "معلق"، نقوم بتحديثه بدلاً من إنشاء واحد جديد
-      if (existingStatus === 'pending') {
-        const upd = await client.query(
-          `UPDATE teacher_permission_requests
-           SET scope = $2, reason_text = $3, notes = $4, requested_at = now()
-           WHERE id = $1
-           RETURNING *`,
-          [existingId, scope, reasonText || null, notes || null]
-        );
-        permit = upd.rows[0];
-        isUpdated = true;
-
-        // نحذف الحصص القديمة المرتبطة بهذا الطلب تمهيداً لوضع الحصص الجديدة
-        await client.query(`DELETE FROM teacher_permission_request_slots WHERE permission_request_id = $1`, [existingId]);
-
-      } else {
-        // 🆕 إذا لم يكن لديه أي طلب مسبق (طلب جديد تماماً)
-        const ins = await client.query(
-          `INSERT INTO teacher_permission_requests
-            (teacher_id, request_date, scope, status, reason_text, notes, requested_at)
-           VALUES ($1, $2, $3, 'pending', $4, $5, now())
-           RETURNING *`,
-          [teacherId, requestDate, scope, reasonText || null, notes || null]
-        );
-        permit = ins.rows[0];
-      }
-
-      // 💉 إدخال الحصص الجديدة في جدول التفاصيل (تعمل في حالة التحديث والإنشاء)
-      if (scope === "slots" && timetableEntryIds.length > 0) {
-        for (const teId of timetableEntryIds) {
-          await client.query(
-            `INSERT INTO teacher_permission_request_slots (permission_request_id, timetable_entry_id)
-             VALUES ($1, $2)`,
-            [permit.id, teId]
-          );
-        }
-      }
-await client.query("COMMIT");
-
-// ✅ إشعار فقط إذا كان الطلب "جديد" (INSERT) وليس تحديث طلب pending قديم
-if (!isUpdated && permit?.id) {
-  try {
-    await NotificationAutoService.notifyTeacherPermissionRequestCreated({
-      app: req.app,
-      teacherPermissionRequestId: permit.id,
-    });
-  } catch (notifyErr) {
-    console.error("Auto notification error (teacher permission request created):", notifyErr);
-    // لا نرمي الخطأ حتى لا يفشل إنشاء الطلب
+  if (!userId || !schoolId) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
-}
 
-return res.json({ permit, updated: isUpdated });
+  const requestDate = String(req.body?.request_date || "").slice(0, 10);
+  const scope = String(req.body?.scope || "full_day");
+  const reasonText = String(req.body?.reason_text || "").trim();
+  const notes = String(req.body?.notes || "").trim();
 
-    } catch (e) {
-      await client.query("ROLLBACK").catch(() => {});
-      console.error("createPermit error:", e);
-      return res.status(500).json({ message: "Server error" });
-    } finally {
-      client.release();
+  const receivedTimetableEntryIds = Array.isArray(
+    req.body?.timetable_entry_ids
+  )
+    ? req.body.timetable_entry_ids
+    : Array.isArray(req.body?.slots)
+    ? req.body.slots
+    : [];
+
+  const timetableEntryIds = [
+    ...new Set(receivedTimetableEntryIds.map(toInt).filter(Boolean)),
+  ];
+
+  if (!isISODate(requestDate)) {
+    return res.status(400).json({ message: "Invalid request_date" });
+  }
+
+  if (!["full_day", "slots"].includes(scope)) {
+    return res.status(400).json({ message: "Invalid scope" });
+  }
+
+  if (scope === "slots" && timetableEntryIds.length === 0) {
+    return res.status(400).json({
+      message: "timetable_entry_ids required for slots scope",
+    });
+  }
+
+  const client = await pool.connect();
+
+  try {
+    const teacherId = await getTeacherIdByUserId(client, userId, schoolId);
+
+    if (!teacherId) {
+      return res.status(404).json({ message: "Teacher not found" });
     }
-  },
+
+    // ==========================================
+    // الحارس الأول: فحص وجود طلب سابق للمعلم
+    // في المدرسة نفسها وفي التاريخ نفسه
+    // ==========================================
+    const checkExisting = await client.query(
+      `
+      SELECT id, status
+      FROM teacher_permission_requests
+      WHERE teacher_id = $1
+        AND school_id = $2
+        AND request_date = $3
+      ORDER BY id DESC
+      LIMIT 1
+      `,
+      [teacherId, schoolId, requestDate]
+    );
+
+    let existingId = null;
+    let existingStatus = null;
+
+    if (checkExisting.rowCount > 0) {
+      existingId = checkExisting.rows[0].id;
+      existingStatus = checkExisting.rows[0].status;
+
+      if (existingStatus === "approved") {
+        return res.status(400).json({
+          message:
+            "لقد تمت الموافقة على إذن لك في هذا اليوم مسبقاً، ولا يمكنك تعديله أو تقديم طلب جديد.",
+        });
+      }
+
+      if (existingStatus === "rejected") {
+        return res.status(400).json({
+          message:
+            "لقد تم رفض إذنك في هذا اليوم من قبل الإدارة، ولا يُسمح بتقديم طلب آخر.",
+        });
+      }
+    }
+
+    // ==========================================
+    // الحارس الثاني: التأكد من وجود حصص للمعلم
+    // في اليوم المحدد
+    // ==========================================
+    const schoolDay = schoolDayIdFromISO(requestDate);
+
+    if (!schoolDay) {
+      return res.status(400).json({
+        message: "التاريخ المحدد غير صالح.",
+      });
+    }
+
+    const checkSchedule = await client.query(
+      `
+      SELECT 1
+      FROM timetable_entries
+      WHERE teacher_id = $1
+        AND day_of_week = $2
+      LIMIT 1
+      `,
+      [teacherId, schoolDay]
+    );
+
+    if (checkSchedule.rowCount === 0) {
+      return res.status(400).json({
+        message:
+          "لا يمكنك تقديم إذن غياب لأنه ليس لديك أي حصص في هذا اليوم أصلاً.",
+      });
+    }
+
+    // ==========================================
+    // الحارس الثالث: عند اختيار حصص محددة،
+    // يجب أن تكون جميع الحصص تابعة للمعلم نفسه
+    // وفي اليوم نفسه
+    // ==========================================
+    if (scope === "slots") {
+      const validSlots = await client.query(
+        `
+        SELECT id
+        FROM timetable_entries
+        WHERE teacher_id = $1
+          AND day_of_week = $2
+          AND id = ANY($3::int[])
+        `,
+        [teacherId, schoolDay, timetableEntryIds]
+      );
+
+      if (validSlots.rowCount !== timetableEntryIds.length) {
+        return res.status(400).json({
+          message:
+            "توجد حصة غير صالحة أو لا تخص المعلم أو لا تقع في اليوم المحدد.",
+        });
+      }
+    }
+
+    await client.query("BEGIN");
+
+    let permit;
+    let isUpdated = false;
+
+    // ==========================================
+    // إذا كان الطلب السابق معلقًا، يتم تحديثه
+    // بدل إنشاء سجل مكرر
+    // ==========================================
+    if (existingStatus === "pending") {
+      const upd = await client.query(
+        `
+        UPDATE teacher_permission_requests
+        SET
+          scope = $4,
+          reason_text = $5,
+          notes = $6,
+          requested_at = now()
+        WHERE id = $1
+          AND teacher_id = $2
+          AND school_id = $3
+          AND status = 'pending'
+        RETURNING *
+        `,
+        [
+          existingId,
+          teacherId,
+          schoolId,
+          scope,
+          reasonText || null,
+          notes || null,
+        ]
+      );
+
+      if (upd.rowCount === 0) {
+        await client.query("ROLLBACK");
+
+        return res.status(409).json({
+          message:
+            "تعذر تحديث الطلب؛ ربما تغيرت حالته بواسطة الإدارة. حدّث الصفحة وحاول مرة أخرى.",
+        });
+      }
+
+      permit = upd.rows[0];
+      isUpdated = true;
+
+      await client.query(
+        `
+        DELETE FROM teacher_permission_request_slots
+        WHERE permission_request_id = $1
+        `,
+        [existingId]
+      );
+    } else {
+      // ==========================================
+      // طلب جديد: school_id إلزامي ويؤخذ من التوكن
+      // وليس من بيانات الواجهة
+      // ==========================================
+      const ins = await client.query(
+        `
+        INSERT INTO teacher_permission_requests (
+          teacher_id,
+          school_id,
+          request_date,
+          scope,
+          status,
+          reason_text,
+          notes,
+          requested_at
+        )
+        VALUES ($1, $2, $3, $4, 'pending', $5, $6, now())
+        RETURNING *
+        `,
+        [
+          teacherId,
+          schoolId,
+          requestDate,
+          scope,
+          reasonText || null,
+          notes || null,
+        ]
+      );
+
+      permit = ins.rows[0];
+    }
+
+    // ==========================================
+    // إدخال الحصص المرتبطة بالطلب
+    // ==========================================
+    if (scope === "slots") {
+      for (const timetableEntryId of timetableEntryIds) {
+        await client.query(
+          `
+          INSERT INTO teacher_permission_request_slots (
+            permission_request_id,
+            timetable_entry_id
+          )
+          VALUES ($1, $2)
+          `,
+          [permit.id, timetableEntryId]
+        );
+      }
+    }
+
+    await client.query("COMMIT");
+
+    // الإشعار يرسل عند الإنشاء فقط، وليس عند تحديث طلب معلق
+    if (!isUpdated && permit?.id) {
+      try {
+        await NotificationAutoService.notifyTeacherPermissionRequestCreated({
+          app: req.app,
+          teacherPermissionRequestId: permit.id,
+        });
+      } catch (notifyErr) {
+        console.error(
+          "Auto notification error (teacher permission request created):",
+          notifyErr
+        );
+      }
+    }
+
+    return res.status(isUpdated ? 200 : 201).json({
+      permit,
+      updated: isUpdated,
+    });
+  } catch (e) {
+    await client.query("ROLLBACK").catch(() => {});
+
+    console.error("createPermit error:", e);
+
+    return res.status(500).json({ message: "Server error" });
+  } finally {
+    client.release();
+  }
+},
   // ==========================================
   // 🟢 دوال حصص الاحتياط (Substitute Teacher)
   // ==========================================
@@ -307,7 +485,7 @@ return res.json({ permit, updated: isUpdated });
 
     const client = await pool.connect();
     try {
-      const teacherId = await getTeacherIdByUserId(client, userId);
+      const teacherId = await getTeacherIdByUserId(client, userId, req.user?.school_id);
       if (!teacherId) return res.status(404).json({ message: "Teacher not found" });
 
       const result = await client.query(
@@ -331,10 +509,11 @@ return res.json({ permit, updated: isUpdated });
          LEFT JOIN sections sec ON sec.id = tt.section_id
          LEFT JOIN grades gr ON sec.grade_id = gr.id
          LEFT JOIN stages stg ON gr.stage_id = stg.id
-         WHERE ls.substitute_teacher_id = $1 
+         WHERE ls.substitute_teacher_id = $1
+           AND ls.school_id = $2
            AND ls.status = 'pending_teacher' -- نجلب فقط الطلبات التي تنتظر رده
          ORDER BY ls.substitution_date ASC, te.period_id ASC`,
-        [teacherId]
+        [teacherId, req.user?.school_id]
       );
 
       return res.json({ items: result.rows || [] });
@@ -350,6 +529,8 @@ return res.json({ permit, updated: isUpdated });
 // 2. دالة لاستقبال رد المعلم (موافق أو أعتذر)
   async respondToSubstitution(req, res) {
     const userId = req.user?.id;
+    const schoolId = req.user?.school_id;
+    if (!schoolId) return res.status(401).json({ message: "غير مصرح" });
     const subId = parseInt(req.params.id);
     const { response } = req.body; // 'accepted' أو 'rejected'
 
@@ -359,15 +540,18 @@ return res.json({ permit, updated: isUpdated });
 
     const client = await pool.connect();
     try {
-      const teacherId = await getTeacherIdByUserId(client, userId);
+      const teacherId = await getTeacherIdByUserId(client, userId, req.user?.school_id);
       if (!teacherId) return res.status(404).json({ message: "Teacher not found" });
 
       const result = await client.query(
         `UPDATE lesson_substitutions
          SET status = $1
-         WHERE id = $2 AND substitute_teacher_id = $3 AND status = 'pending_teacher'
+         WHERE id = $2
+           AND substitute_teacher_id = $3
+           AND school_id = $4
+           AND status = 'pending_teacher'
          RETURNING *`,
-        [response, subId, teacherId]
+        [response, subId, teacherId, schoolId]
       );
 
       if (result.rowCount === 0) {
@@ -381,22 +565,36 @@ return res.json({ permit, updated: isUpdated });
       const io = req.app.get("io");
       if (io) {
         // نجلب اسم المعلم لكي نعرضه في الإشعار للإدارة
-        const tRes = await client.query(`SELECT full_name FROM teachers WHERE id = $1`, [teacherId]);
+        const tRes = await client.query(
+          `SELECT full_name FROM teachers WHERE id = $1 AND school_id = $2`,
+          [teacherId, schoolId]
+        );
         const teacherName = tRes.rows[0]?.full_name || "المعلم";
 
         if (response === 'rejected') {
           // 🚨 إشارة الرفض: تطلق إنذار وتحدث (عين الصقر)
-          io.emit("substitute_rejected", { teacherName });
-          io.emit("refresh_eagle_eye"); 
+          io.to(`school_${schoolId}`).emit("substitute_rejected", { teacherName });
+          io.to(`school_${schoolId}`).emit("refresh_eagle_eye");
         } else if (response === 'accepted') {
           // ✅ إشارة القبول: تطلق إشعار نجاح للإدارة
-          io.emit("substitute_accepted", { teacherName });
+          io.to(`school_${schoolId}`).emit("substitute_accepted", { teacherName });
         }
         
         // 🔄 في كلتا الحالتين، نخبر الإدارة بتحديث قائمة الأذونات لترى التغيير الجديد
-        io.emit("refresh_admin_permits");
+        io.to(`school_${schoolId}`).emit("refresh_admin_permits");
       }
       // =====================================
+
+      try {
+        await WorkflowNotifications.notifySubstitutionResponse({
+          app: req.app,
+          schoolId,
+          substitutionId: subId,
+          status: response,
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (substitution response):", notifyErr);
+      }
 
       return res.json({ message: "تم تسجيل الرد بنجاح", status: response });
     } catch (e) {

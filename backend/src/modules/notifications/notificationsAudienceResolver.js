@@ -102,11 +102,14 @@ async function getAdminUserIds(schoolId) {
   const sql = `
     SELECT DISTINCT u.id
     FROM users u
-    JOIN user_roles ur ON ur.user_id = u.id
-    JOIN roles r ON r.id = ur.role_id
+    JOIN user_roles ur ON ur.user_id = u.id AND ur.school_id = u.school_id
+    JOIN roles r ON r.id = ur.role_id AND r.school_id = u.school_id
     WHERE COALESCE(u.status, 'active') = 'active'
       AND u.school_id = $1
-      AND LOWER(COALESCE(r.name, '')) IN ('admin','administrator','super_admin','superadmin','school_admin')
+      AND (
+        LOWER(COALESCE(r.name, '')) IN ('admin','administrator','super_admin','superadmin','school_admin','school-admin')
+        OR COALESCE(r.name, '') ILIKE '%مدير%'
+      )
   `;
   const result = await pool.query(sql, [schoolId]);
   return uniqInt(result.rows.map((r) => r.id));
@@ -209,7 +212,7 @@ async function getUserIdsByEnrollmentScope({
     ? `
     SELECT DISTINCT g.user_id
     FROM student_enrollments se
-    JOIN student_guardians sg ON sg.student_id = se.student_id
+    JOIN student_guardians sg ON sg.student_id = se.student_id AND sg.school_id = $1
     JOIN guardians g ON g.id = sg.guardian_id
     ${whereSql}
       AND g.user_id IS NOT NULL
@@ -290,8 +293,8 @@ async function getTeacherUserIdsByTeachingScope({
       SELECT DISTINCT t.user_id
       FROM section_subject_teachers sst
       JOIN teachers t ON t.id = sst.teacher_id
-      JOIN sections sec_sst ON sec_sst.id = sst.section_id
-      JOIN grades g_sst ON g_sst.id = sec_sst.grade_id
+      JOIN sections sec_sst ON sec_sst.id = sst.section_id AND sec_sst.school_id = $1
+      JOIN grades g_sst ON g_sst.id = sec_sst.grade_id AND g_sst.school_id = $1
       ${whereSst}
         AND t.user_id IS NOT NULL
         AND COALESCE(t.is_active, true) = true
@@ -301,8 +304,8 @@ async function getTeacherUserIdsByTeachingScope({
       SELECT DISTINCT t.user_id
       FROM section_advisors sa
       JOIN teachers t ON t.id = sa.teacher_id
-      JOIN sections sec_sa ON sec_sa.id = sa.section_id
-      JOIN grades g_sa ON g_sa.id = sec_sa.grade_id
+      JOIN sections sec_sa ON sec_sa.id = sa.section_id AND sec_sa.school_id = $1
+      JOIN grades g_sa ON g_sa.id = sec_sa.grade_id AND g_sa.school_id = $1
       ${whereSa}
         AND t.user_id IS NOT NULL
         AND COALESCE(t.is_active, true) = true
@@ -351,6 +354,7 @@ async function getGuardianUserIdsByStudentIds(studentIds = [], schoolId) {
     FROM student_guardians sg
     JOIN guardians g ON g.id = sg.guardian_id
     WHERE sg.student_id = ANY($1::int[])
+      AND sg.school_id = $2
       AND g.school_id = $2
       AND g.user_id IS NOT NULL
   `;
@@ -403,7 +407,12 @@ async function getPreviewSampleRecipients(userIds = [], limit = 20, schoolId) {
           FROM user_roles ur
           JOIN roles r ON r.id = ur.role_id
           WHERE ur.user_id = i.user_id
-            AND LOWER(COALESCE(r.name, '')) IN ('admin','administrator','super_admin','superadmin', 'school_admin')
+            AND ur.school_id = $2
+            AND r.school_id = $2
+            AND (
+              LOWER(COALESCE(r.name, '')) IN ('admin','administrator','super_admin','superadmin','school_admin','school-admin')
+              OR COALESCE(r.name, '') ILIKE '%مدير%'
+            )
         ) THEN 'admin'
         WHEN EXISTS (SELECT 1 FROM teachers t WHERE t.user_id = i.user_id AND t.school_id = $2) THEN 'teacher'
         WHEN EXISTS (SELECT 1 FROM guardians g WHERE g.user_id = i.user_id AND g.school_id = $2) THEN 'guardian'

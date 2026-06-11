@@ -2,6 +2,7 @@
 import { pool } from "../config/db.js";
 import { computeInstallmentStatus } from "../utils/feesInstallments.js";
 import { logAudit } from "../utils/auditLogger.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function normalizeStatus(status) {
   const value = String(status || "pending").trim().toLowerCase();
@@ -268,6 +269,16 @@ export const FeeAdjustmentRequestsController = {
         [schoolId, studentId, contractId, amount, reason, userId]
       );
 
+      try {
+        await WorkflowNotifications.notifyFeeAdjustmentRequestCreated({
+          app: req.app,
+          schoolId,
+          requestId: result.rows[0].id,
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (fee adjustment request created):", notifyErr);
+      }
+
       return res.status(201).json({
         success: true,
         message: "تم إرسال طلب تعديل الرسوم إلى المدير",
@@ -453,6 +464,17 @@ export const FeeAdjustmentRequestsController = {
 
       await client.query("COMMIT");
 
+      try {
+        await WorkflowNotifications.notifyFeeAdjustmentRequestDecision({
+          app: req.app,
+          schoolId,
+          requestId,
+          status: "approved",
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (fee adjustment approved):", notifyErr);
+      }
+
       const io = req.app?.get?.("io");
 
       if (io) {
@@ -569,6 +591,17 @@ export const FeeAdjustmentRequestsController = {
       });
 
       await client.query("COMMIT");
+
+      try {
+        await WorkflowNotifications.notifyFeeAdjustmentRequestDecision({
+          app: req.app,
+          schoolId,
+          requestId,
+          status: "rejected",
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (fee adjustment rejected):", notifyErr);
+      }
 
       const io = req.app?.get?.("io");
 

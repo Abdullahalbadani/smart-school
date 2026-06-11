@@ -1,105 +1,144 @@
+// src/utils/feesCron.js
 import cron from "node-cron";
 import { pool } from "../config/db.js";
+import { createSystemNotification } from "../modules/notifications/notificationCreateService.js";
 
-// هذه الدالة ستبحث عن الأقساط وترسل الإشعارات لكل المدارس بشكل معزول
-async function checkAndSendFeesNotifications(io) {
+function formatAmount(value) {
+  return Number(value || 0).toLocaleString("ar-EG");
+}
+
+function buildInstallmentReminder(row) {
+  const daysDiff = Number(row.days_diff);
+  const installmentNo = row.installment_no;
+  const studentName = row.student_name || `طالب #${row.student_id}`;
+  const remaining = formatAmount(row.remaining_amount);
+
+  if (daysDiff === 3) {
+    return {
+      priority: "normal",
+      title: "تذكير باقتراب موعد قسط دراسي",
+      body: `نود تذكيركم بأن القسط رقم ${installmentNo} للطالب ${studentName} بمبلغ ${remaining} يستحق الدفع بعد 3 أيام.`,
+    };
+  }
+
+  if (daysDiff === 0) {
+    return {
+      priority: "important",
+      title: "موعد استحقاق قسط دراسي",
+      body: `اليوم هو موعد سداد القسط رقم ${installmentNo} للطالب ${studentName}. يرجى السداد لتجنب تراكم الرسوم.`,
+    };
+  }
+
+  if (daysDiff === -3) {
+    return {
+      priority: "important",
+      title: "تنبيه: تأخر في سداد رسوم دراسية",
+      body: `تجاوز موعد سداد القسط رقم ${installmentNo} للطالب ${studentName} بثلاثة أيام. نرجو المبادرة بالسداد.`,
+    };
+  }
+
+  if (daysDiff === -7) {
+    return {
+      priority: "urgent",
+      title: "تحذير مهم: تأخر السداد لأكثر من أسبوع",
+      body: `تأخر سداد القسط رقم ${installmentNo} للطالب ${studentName} لمدة أسبوع. يرجى مراجعة إدارة المدرسة في أقرب وقت.`,
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Sends guardian fee reminders for all schools while preserving tenant isolation.
+ * Exported for a controlled smoke test without waiting for the cron schedule.
+ */
+export async function checkAndSendFeesNotifications(app) {
   try {
-    console.log("[CRON] Starting daily fees check for all schools...");
+    console.log("[CRON] Starting daily fees notification check...");
 
-    // استعلام ذكي يجلب الأقساط غير المدفوعة لكل المدارس
-    // ويربط كل قسط بالسنة الدراسية النشطة الخاصة بمدرسته
-    const query = `
-      SELECT 
-        fi.id AS installment_id, fi.installment_no, fi.due_date, fi.amount, fi.paid_amount, 
-        (fi.amount - COALESCE(fi.paid_amount, 0)) AS remaining_amount,
-        (fi.due_date - CURRENT_DATE) AS days_diff,
-        s.id AS student_id, s.full_name AS student_name,
-        g.user_id AS parent_user_id,
-        fc.school_id -- 👈 جلب معرف المدرسة لتوجيه الإشعار بشكل صحيح
-      FROM fee_installments fi
-      JOIN fee_contracts fc ON fi.contract_id = fc.id
-      JOIN academic_years ay ON fc.academic_year_id = ay.id AND ay.is_active = true -- 👈 جلب السنة النشطة الخاصة بكل مدرسة فقط
-      JOIN students s ON fc.student_id = s.id
-      JOIN student_guardians sg ON s.id = sg.student_id AND sg.is_primary = true
-      JOIN guardians g ON sg.guardian_id = g.id
-      WHERE fi.status IN ('unpaid', 'partial')
-        AND (fi.due_date - CURRENT_DATE) IN (3, 0, -3, -7)
-    `;
+    const { rows } = await pool.query(
+      `SELECT
+         fi.id AS installment_id,
+         fi.installment_no,
+         fi.due_date,
+         fi.amount,
+         fi.paid_amount,
+         (fi.amount - COALESCE(fi.paid_amount, 0)) AS remaining_amount,
+         (fi.due_date - CURRENT_DATE) AS days_diff,
+         s.id AS student_id,
+         s.full_name AS student_name,
+         g.user_id AS parent_user_id,
+         fc.school_id
+       FROM fee_installments fi
+       JOIN fee_contracts fc
+         ON fc.id = fi.contract_id
+        AND fc.school_id = fi.school_id
+       JOIN academic_years ay
+         ON ay.id = fc.academic_year_id
+        AND ay.school_id = fc.school_id
+        AND ay.is_active = true
+       JOIN students s
+         ON s.id = fc.student_id
+        AND s.school_id = fc.school_id
+       JOIN student_guardians sg
+         ON sg.student_id = s.id
+        AND sg.school_id = s.school_id
+        AND sg.is_primary = true
+       JOIN guardians g
+         ON g.id = sg.guardian_id
+        AND g.school_id = sg.school_id
+       WHERE fi.status IN ('unpaid', 'partial')
+         AND g.user_id IS NOT NULL
+         AND (fi.due_date - CURRENT_DATE) IN (3, 0, -3, -7)`,
+      []
+    );
 
-    const { rows } = await pool.query(query);
-
-    if (rows.length === 0) {
-      console.log("[CRON] No fees notifications needed today.");
-      return;
-    }
+    let sentCount = 0;
+    let skippedCount = 0;
 
     for (const row of rows) {
-      let title = "";
-      let body = "";
-      let priority = "normal";
+      const template = buildInstallmentReminder(row);
+      if (!template) continue;
 
-      // تحديد نص الرسالة بناءً على حالة الأيام
-      if (row.days_diff === 3) {
-        title = "تذكير باقتراب موعد قسط دراسي";
-        body = `نود تذكيركم بأن القسط رقم ${row.installment_no} للطالب ${row.student_name} بمبلغ ${row.remaining_amount.toLocaleString()} يستحق الدفع بعد 3 أيام.`;
-      } else if (row.days_diff === 0) {
-        title = "موعد استحقاق قسط دراسي";
-        body = `اليوم هو موعد سداد القسط رقم ${row.installment_no} للطالب ${row.student_name}. يرجى السداد لتجنب تراكم الرسوم.`;
-        priority = "high";
-      } else if (row.days_diff === -3) {
-        title = "تنبيه: تأخر في سداد رسوم دراسية";
-        body = `لقد تجاوزتم موعد سداد القسط رقم ${row.installment_no} للطالب ${row.student_name} بـ 3 أيام. نرجو المبادرة بالسداد.`;
-        priority = "high";
-      } else if (row.days_diff === -7) {
-        title = "تحذير هام: تأخر السداد لأكثر من أسبوع";
-        body = `نلفت انتباهكم لتأخر سداد القسط رقم ${row.installment_no} للطالب ${row.student_name} لمدة أسبوع. يرجى مراجعة إدارة المدرسة بأقرب وقت.`;
-        priority = "critical";
-      }
+      const result = await createSystemNotification({
+        app,
+        schoolId: row.school_id,
+        category: "finance",
+        priority: template.priority,
+        title: template.title,
+        body: template.body,
+        relatedType: "fee_installment",
+        relatedId: row.installment_id,
+        meta: {
+          related_label: `قسط رقم ${row.installment_no}`,
+          installment_id: Number(row.installment_id),
+          installment_no: Number(row.installment_no),
+          student_id: Number(row.student_id),
+          student_name: row.student_name,
+          remaining_amount: Number(row.remaining_amount || 0),
+          due_date: row.due_date,
+          days_diff: Number(row.days_diff),
+        },
+        recipientUserIds: [row.parent_user_id],
+        // Prevent duplicate reminders if the process restarts and the job is re-run the same day.
+        dedupeWindowSeconds: 23 * 60 * 60,
+      });
 
-      // 1. إدخال الإشعار في قاعدة البيانات مع ربطه بالمدرسة (school_id)
-      const nRes = await pool.query(
-        `INSERT INTO notifications 
-          (school_id, sender_user_id, sender_display_name, title, body, source, category, priority, related_type, related_id) 
-         VALUES ($1, NULL, 'النظام المالي', $2, $3, 'system', 'finance', $4, 'fee_installment', $5) 
-         RETURNING id, created_at`,
-        [row.school_id, title, body, priority, row.installment_id] // 👈 تمرير school_id كأول متغير
-      );
-
-      const notifId = nRes.rows[0].id;
-
-      // 2. ربط الإشعار بولي الأمر
-      await pool.query(
-        `INSERT INTO notification_recipients (notification_id, recipient_user_id, is_read) 
-         VALUES ($1, $2, false)`,
-        [notifId, row.parent_user_id]
-      );
-
-      // 3. إرسال الإشعار اللحظي (إذا كان ولي الأمر متصلاً الآن)
-      if (io) {
-        io.to(`user_${row.parent_user_id}`).emit("notification:new", {
-          id: notifId,
-          school_id: row.school_id, // 👈 إضافة المدرسة في الـ Socket.IO للشفافية
-          title,
-          body,
-          category: "finance",
-          priority,
-          source: "system",
-          created_at: nRes.rows[0].created_at
-        });
-      }
+      if (result.skipped) skippedCount += 1;
+      else sentCount += 1;
     }
 
-    console.log(`[CRON] Processed ${rows.length} fees notifications across multiple schools.`);
+    console.log(
+      `[CRON] Fees notifications completed. Sent=${sentCount}, skipped=${skippedCount}, candidates=${rows.length}`
+    );
   } catch (error) {
-    console.error("[CRON] Error in fees cron job:", error);
+    console.error("[CRON] Error in fees notifications job:", error);
   }
 }
 
-// تشغيل المهمة يومياً الساعة 8:00 صباحاً
-export function startFeesCronJob(io) {
-  // التعبير '0 8 * * *' يعني: الدقيقة 0، الساعة 8 صباحاً، كل يوم
+export function startFeesCronJob(app) {
   cron.schedule("0 8 * * *", () => {
-    checkAndSendFeesNotifications(io);
+    checkAndSendFeesNotifications(app);
   });
   console.log("Fees Cron Job Scheduled: Runs daily at 08:00 AM");
 }

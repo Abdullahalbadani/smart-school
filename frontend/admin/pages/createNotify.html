@@ -1,76 +1,52 @@
 <section id="adminNotificationSendPage" class="page-section" dir="rtl">
   <div class="page-head">
     <div>
+      <span class="page-kicker">مركز التواصل المدرسي</span>
       <h2>إنشاء إشعار</h2>
-      <p>إرسال إشعارات يدوية مع استهداف مرن (الكل / صف / شعبة / طالب / ولي أمر / معلم / أكثر من شرط).</p>
+      <p>اكتب الرسالة، حدّد المستلمين، ثم راجع المعاينة وأرسل.</p>
     </div>
   </div>
 
-  <!-- =========================
-       1) نموذج إنشاء الإشعار
-  ========================== -->
   <div class="card-box">
-    <form id="notificationSendForm" class="form-grid" novalidate>
-      <!-- نسخة البنية (للتوافق عند تعديل الباك إند لاحقًا) -->
+    <form id="notificationSendForm" class="send-form" novalidate>
       <input type="hidden" id="notifPayloadVersion" value="2" />
 
-      <!-- =========================
-           A) بيانات الإشعار الأساسية
-      ========================== -->
-      <div class="section-block full">
+      <section class="section-block">
         <div class="section-block-head">
-          <h3>بيانات الإشعار</h3>
-          <p>اكتب عنوان ومحتوى الإشعار وحدد الفئة والأولوية.</p>
+          <div class="step-badge">1</div>
+          <div>
+            <h3>بيانات الرسالة</h3>
+            <p>اكتب عنوانًا واضحًا ورسالة قصيرة ومباشرة.</p>
+          </div>
         </div>
 
-        <div class="section-block-body form-grid">
+        <div class="form-grid">
           <div class="field full">
             <label for="notifTitle">عنوان الإشعار <span class="req">*</span></label>
-            <input
-              id="notifTitle"
-              name="title"
-              type="text"
-              maxlength="250"
-              placeholder="مثال: تعميم بخصوص الاختبار الشهري"
-              autocomplete="off"
-            />
-            <small class="field-hint">يفضل عنوان واضح ومختصر.</small>
+            <input id="notifTitle" name="title" type="text" maxlength="250" placeholder="مثال: تنبيه بخصوص الاختبار الشهري" autocomplete="off" />
           </div>
 
           <div class="field full">
             <label for="notifBody">محتوى الإشعار <span class="req">*</span></label>
-            <textarea
-              id="notifBody"
-              name="body"
-              rows="6"
-              placeholder="اكتب نص الإشعار هنا..."
-            ></textarea>
-            <small class="field-hint">يمكنك كتابة التفاصيل كاملة، وسيتم إرسالها للمستلمين المحددين فقط.</small>
+            <textarea id="notifBody" name="body" rows="5" placeholder="اكتب نص الإشعار هنا..."></textarea>
           </div>
 
           <div class="field">
-            <label for="notifCategory">الفئة</label>
+            <label for="notifCategory">نوع الإشعار</label>
             <select id="notifCategory" name="category">
-              <option value="general" selected>عام (general)</option>
-              <option value="announcement">إعلان (announcement)</option>
-              <option value="admin">إداري (admin)</option>
-              <option value="attendance">الحضور (attendance)</option>
-              <option value="permissions">الاستئذانات / الطلبات (permissions)</option>
-              <option value="system">نظام (system)</option>
-              <option value="custom">أخرى (مخصصة)</option>
+              <option value="general" selected>عام</option>
+              <option value="announcement">إعلان</option>
+              <option value="admin">إداري</option>
+              <option value="attendance">الحضور</option>
+              <option value="permissions">الاستئذانات والطلبات</option>
+              <option value="system">النظام</option>
+              <option value="custom">نوع مخصص</option>
             </select>
           </div>
 
           <div class="field hidden" id="notifCategoryCustomWrap">
-            <label for="notifCategoryCustom">اسم الفئة المخصصة</label>
-            <input
-              id="notifCategoryCustom"
-              name="category_custom"
-              type="text"
-              maxlength="100"
-              placeholder="مثال: exams"
-              autocomplete="off"
-            />
+            <label for="notifCategoryCustom">اسم النوع المخصص</label>
+            <input id="notifCategoryCustom" name="category_custom" type="text" maxlength="100" placeholder="مثال: الاختبارات" autocomplete="off" />
           </div>
 
           <div class="field">
@@ -82,535 +58,283 @@
             </select>
           </div>
 
-          <div class="field">
-            <label for="notifDedupeSeconds">منع التكرار (ثوانٍ)</label>
-            <input
-              id="notifDedupeSeconds"
-              name="dedupe_seconds"
-              type="number"
-              min="0"
-              value="0"
-              placeholder="0"
-            />
-            <small class="field-hint">0 = بدون منع تكرار. مثال: 300 = منع التكرار خلال 5 دقائق.</small>
-          </div>
+          <details class="advanced-settings full">
+            <summary>إعدادات إضافية <small>اختيارية</small></summary>
+            <div class="advanced-settings-grid">
+              <div class="field">
+                <label for="notifDedupeSeconds">منع التكرار</label>
+                <input id="notifDedupeSeconds" name="dedupe_seconds" type="number" min="0" value="0" placeholder="0" />
+                <small class="field-hint">مثال: 300 لمنع إرسال الرسالة نفسها خلال 5 دقائق.</small>
+              </div>
 
-          <div class="field">
-            <label for="notifAllowRealtime">الإرسال اللحظي (Realtime)</label>
-            <select id="notifAllowRealtime" name="allow_realtime">
-              <option value="1" selected>نعم (إذا كان المستخدم متصلًا)</option>
-              <option value="0">لا (حفظ فقط)</option>
-            </select>
-          </div>
+              <div class="field">
+                <label for="notifAllowRealtime">الإظهار اللحظي</label>
+                <select id="notifAllowRealtime" name="allow_realtime">
+                  <option value="1" selected>نعم، يظهر فورًا</option>
+                  <option value="0">لا، حفظ فقط</option>
+                </select>
+              </div>
 
-          <div class="field">
-            <label for="notifPreviewLimit">حد المعاينة (عدد الأسماء المعروضة)</label>
-            <input
-              id="notifPreviewLimit"
-              name="preview_limit"
-              type="number"
-              min="5"
-              max="100"
-              value="20"
-            />
-          </div>
+              <div class="field">
+                <label for="notifPreviewLimit">عدد الأسماء في المعاينة</label>
+                <input id="notifPreviewLimit" name="preview_limit" type="number" min="5" max="100" value="20" />
+              </div>
+            </div>
+          </details>
         </div>
-      </div>
+      </section>
 
-      <!-- =========================
-           B) الاستهداف (Target Builder)
-      ========================== -->
-      <div class="section-block full">
-        <div class="section-block-head">
+      <section class="section-block recipients-section">
+        <div class="section-block-head recipients-head">
+          <div class="step-badge">2</div>
           <div>
-            <h3>الاستهداف (Target Builder)</h3>
-            <p>أضف شرطًا واحدًا أو عدة شروط. سيتم جمع المستلمين وإزالة التكرار تلقائيًا.</p>
+            <h3>المستلمون</h3>
+            <p>اختر الجهة التي ستصل إليها الرسالة. يمكنك إضافة أكثر من جهة عند الحاجة.</p>
           </div>
-
           <div class="section-block-actions">
-            <button type="button" id="addTargetRuleBtn" class="btn btn-outline">+ إضافة شرط</button>
-            <button type="button" id="clearTargetRulesBtn" class="btn btn-light">مسح كل الشروط</button>
+            <button type="button" id="addTargetRuleBtn" class="btn btn-outline">إضافة مستلمين آخرين</button>
+            <button type="button" id="clearTargetRulesBtn" class="btn btn-light">مسح الاختيارات</button>
           </div>
         </div>
 
-        <!-- أدوات إضافة سريعة -->
-        <div class="quick-add-row">
-          <label for="targetQuickAddType">إضافة سريعة:</label>
-          <select id="targetQuickAddType">
-            <option value="">اختر نوع الاستهداف...</option>
-            <option value="ALL_SCHOOL">المدرسة كاملة</option>
-            <option value="ROLE_GROUPS">حسب الأدوار</option>
-            <option value="GRADE">صف محدد</option>
-            <option value="SECTION">شعبة / فصل محدد</option>
-            <option value="ALL_SECTIONS_OF_GRADE">كل شعب صف معيّن</option>
-            <option value="STUDENT">طالب محدد</option>
-            <option value="GUARDIAN_OF_STUDENT">ولي أمر طالب</option>
-            <option value="TEACHER">معلم محدد</option>
-            <option value="ALL_TEACHERS">جميع المعلمين</option>
-            <option value="TEACHERS_OF_SECTION">معلمو شعبة / فصل</option>
-            <option value="ACADEMIC_SCOPE">نطاق أكاديمي متقدم</option>
-            <option value="USERS">مستخدمون محددون (user_id)</option>
-          </select>
-          <button type="button" id="quickAddTargetRuleBtn" class="btn btn-outline">إضافة</button>
-        </div>
+        <div id="targetRulesContainer" class="target-rules-container"></div>
 
-        <!-- الحاوية الديناميكية لبطاقات الاستهداف -->
-        <div id="targetRulesContainer" class="target-rules-container">
-          <!-- سيتم حقن البطاقات عبر JS -->
-        </div>
-
-        <!-- ملخص الاستهداف -->
         <div class="target-summary-box">
-          <div class="target-summary-head">
-            <h4>ملخص الاستهداف</h4>
-            <small>ملخص سريع قبل المعاينة والإرسال</small>
+          <div>
+            <h4>ملخص المستلمين</h4>
+            <p id="targetSummaryText">لم تحدد المستلمين بعد.</p>
           </div>
-
-          <div id="targetSummaryText" class="target-summary-text">
-            لم تتم إضافة أي شروط استهداف بعد.
-          </div>
-
-          <div id="targetSummaryChips" class="target-summary-chips">
-            <!-- شرائح ملخص (اختياري عبر JS) -->
-          </div>
+          <div id="targetSummaryChips" class="target-summary-chips"></div>
         </div>
+      </section>
 
-        <div class="info-note">
-          <strong>ملاحظة مهمة:</strong>
-          التحقق النهائي من المستلمين والصلاحيات يتم في الخلفية (Server-side)، والواجهة هنا للترتيب والتسهيل فقط.
-        </div>
-      </div>
-
-      <!-- =========================
-           C) أدوات المعاينة والإرسال
-      ========================== -->
-      <div class="section-block full">
+      <section class="section-block send-section">
         <div class="section-block-head">
-          <h3>المعاينة والإرسال</h3>
-          <p>قم بمعاينة المستلمين أولًا، ثم أرسل الإشعار.</p>
-        </div>
-
-        <div class="section-block-body">
-          <div class="actions-row full">
-            <button type="button" id="previewRecipientsBtn" class="btn btn-outline">
-              معاينة المستلمين
-            </button>
-
-            <button type="submit" id="sendNotificationBtn" class="btn btn-primary">
-              إرسال الإشعار
-            </button>
-
-            <button type="button" id="resetNotificationFormBtn" class="btn btn-light">
-              إعادة تعيين النموذج
-            </button>
+          <div class="step-badge">3</div>
+          <div>
+            <h3>المعاينة والإرسال</h3>
+            <p>راجع المستلمين أولًا، ثم أرسل الإشعار.</p>
           </div>
         </div>
-      </div>
+
+        <div class="actions-row send-actions-row">
+          <button type="button" id="previewRecipientsBtn" class="btn btn-outline">معاينة المستلمين</button>
+          <button type="submit" id="sendNotificationBtn" class="btn btn-primary">إرسال الإشعار</button>
+          <button type="button" id="resetNotificationFormBtn" class="btn btn-light">مسح النموذج</button>
+        </div>
+      </section>
     </form>
   </div>
 
-  <!-- =========================
-       2) نتائج المعاينة / الإرسال
-  ========================== -->
-  <div class="card-box">
-    <div class="section-block-head">
+  <div class="card-box results-card">
+    <div class="section-block-head results-head">
       <div>
-        <h3>نتيجة المعاينة / الإرسال</h3>
-        <p>يعرض حالة العملية وملخص المستلمين وعينة منهم.</p>
+        <h3>نتيجة المعاينة</h3>
+        <p>يظهر هنا عدد المستلمين وعينة من الأسماء قبل الإرسال.</p>
       </div>
-      <div class="section-block-actions">
-        <button type="button" id="clearSendPageStatusBtn" class="btn btn-light">مسح النتائج</button>
-      </div>
+      <button type="button" id="clearSendPageStatusBtn" class="btn btn-light">مسح النتائج</button>
     </div>
 
     <div id="sendPageStatusBox" class="status-box">جاهز.</div>
 
-    <!-- ملخص أرقام المعاينة -->
     <div id="sendPagePreviewSummary" class="preview-summary-grid hidden">
-      <div class="mini-stat">
-        <div class="mini-stat-label">إجمالي المستلمين</div>
-        <div class="mini-stat-value" id="previewTotalRecipientsValue">0</div>
-      </div>
-      <div class="mini-stat">
-        <div class="mini-stat-label">الإدارة</div>
-        <div class="mini-stat-value" id="previewAdminsCountValue">0</div>
-      </div>
-      <div class="mini-stat">
-        <div class="mini-stat-label">المعلمون</div>
-        <div class="mini-stat-value" id="previewTeachersCountValue">0</div>
-      </div>
-      <div class="mini-stat">
-        <div class="mini-stat-label">أولياء الأمور</div>
-        <div class="mini-stat-value" id="previewGuardiansCountValue">0</div>
-      </div>
-      <div class="mini-stat">
-        <div class="mini-stat-label">الطلاب</div>
-        <div class="mini-stat-value" id="previewStudentsCountValue">0</div>
-      </div>
-      <div class="mini-stat">
-        <div class="mini-stat-label">مكرر تمت إزالته</div>
-        <div class="mini-stat-value" id="previewDedupedCountValue">0</div>
-      </div>
+      <div class="mini-stat"><span>الإجمالي</span><strong id="previewTotalRecipientsValue">0</strong></div>
+      <div class="mini-stat"><span>الإدارة</span><strong id="previewAdminsCountValue">0</strong></div>
+      <div class="mini-stat"><span>المعلمون</span><strong id="previewTeachersCountValue">0</strong></div>
+      <div class="mini-stat"><span>أولياء الأمور</span><strong id="previewGuardiansCountValue">0</strong></div>
+      <div class="mini-stat"><span>الطلاب</span><strong id="previewStudentsCountValue">0</strong></div>
+      <div class="mini-stat"><span>تم حذف المكرر</span><strong id="previewDedupedCountValue">0</strong></div>
     </div>
 
-    <!-- تحذيرات المعاينة -->
     <div id="sendPageWarningsBox" class="warnings-box hidden"></div>
+    <div id="sendPagePreviewBox" class="preview-box"></div>
 
-    <!-- قائمة معاينة المستلمين -->
-    <div id="sendPagePreviewBox" class="preview-box">
-      <!-- ستظهر هنا نتائج المعاينة / عينات المستلمين -->
-    </div>
-
-    <!-- سجل مختصر للعملية -->
-    <div id="sendPageResultMetaBox" class="result-meta-box hidden">
-      <div class="result-meta-row">
-        <span>معرّف العملية:</span>
-        <code id="resultRequestIdValue">-</code>
-      </div>
-      <div class="result-meta-row">
-        <span>عدد السجلات المُنشأة:</span>
-        <strong id="resultCreatedRowsValue">0</strong>
-      </div>
-      <div class="result-meta-row">
-        <span>عدد الإرسال اللحظي الناجح:</span>
-        <strong id="resultRealtimeSentValue">0</strong>
-      </div>
-    </div>
   </div>
 
-  <!-- =========================
-       3) قالب بطاقة شرط الاستهداف (Template)
-       ملاحظة: بدون IDs داخل القالب لتفادي تكرار الـ IDs عند النسخ
-  ========================== -->
   <template id="notificationTargetRuleTemplate">
-    <div class="target-rule-card" data-rule-index="">
-      <div class="target-rule-card-head">
-        <div class="target-rule-title-wrap">
-          <h4 class="target-rule-title">شرط استهداف</h4>
-          <small class="target-rule-subtitle">اختر النوع ثم عبّئ الحقول المطلوبة</small>
+    <article class="target-rule-card" data-rule-index="">
+      <header class="target-rule-card-head">
+        <div>
+          <h4 class="target-rule-title">المستلمون</h4>
+          <small class="target-rule-subtitle">اختر الفئة المستهدفة</small>
         </div>
-
-        <div class="target-rule-card-actions">
-          <button type="button" class="btn btn-light btn-sm js-duplicate-rule">نسخ</button>
-          <button type="button" class="btn btn-danger btn-sm js-remove-rule">حذف</button>
-        </div>
-      </div>
+        <button type="button" class="btn btn-danger btn-sm js-remove-rule">حذف</button>
+      </header>
 
       <div class="target-rule-card-body">
-        <!-- نوع الاستهداف -->
-        <div class="field">
-          <label>نوع الاستهداف</label>
+        <div class="field full">
+          <label>إرسال الإشعار إلى</label>
           <select class="js-target-type" data-field="type">
-            <option value="">اختر...</option>
-            <option value="ALL_SCHOOL">المدرسة كاملة</option>
-            <option value="ROLE_GROUPS">حسب الأدوار</option>
-            <option value="GRADE">صف محدد</option>
-            <option value="SECTION">شعبة / فصل محدد</option>
-            <option value="ALL_SECTIONS_OF_GRADE">كل شعب صف معيّن</option>
-            <option value="STUDENT">طالب محدد</option>
-            <option value="GUARDIAN_OF_STUDENT">ولي أمر طالب محدد</option>
-            <option value="TEACHER">معلم محدد</option>
-            <option value="ALL_TEACHERS">جميع المعلمين</option>
-            <option value="TEACHERS_OF_SECTION">معلمو شعبة / فصل</option>
-            <option value="ACADEMIC_SCOPE">نطاق أكاديمي متقدم</option>
-            <option value="USERS">مستخدمون محددون (user_id)</option>
+            <option value="">اختر الفئة المستهدفة...</option>
+            <optgroup label="اختيارات عامة">
+              <option value="ALL_SCHOOL">المدرسة كاملة</option>
+              <option value="ROLE_GROUPS">فئات محددة: الإدارة أو المعلمون أو الطلاب أو أولياء الأمور</option>
+              <option value="ALL_TEACHERS">جميع المعلمين</option>
+            </optgroup>
+            <optgroup label="اختيارات أكاديمية">
+              <option value="GRADE">صف محدد</option>
+              <option value="SECTION">شعبة أو فصل محدد</option>
+              <option value="ALL_SECTIONS_OF_GRADE">جميع شعب صف محدد</option>
+              <option value="TEACHERS_OF_SECTION">معلمو شعبة محددة</option>
+            </optgroup>
+            <optgroup label="اختيار شخص محدد">
+              <option value="STUDENT">طالب محدد</option>
+              <option value="GUARDIAN_OF_STUDENT">ولي أمر طالب محدد</option>
+              <option value="TEACHER">معلم محدد</option>
+            </optgroup>
+            <optgroup label="خيارات متقدمة">
+              <option value="ACADEMIC_SCOPE">نطاق أكاديمي متقدم</option>
+              <option value="USERS">حسابات مستخدمين محددة</option>
+            </optgroup>
           </select>
         </div>
 
-        <!-- اسم وصفي اختياري للشرط -->
-        <div class="field">
-          <label>وصف الشرط (اختياري)</label>
-          <input
-            type="text"
-            class="js-rule-label"
-            data-field="label"
-            maxlength="120"
-            placeholder="مثال: الصف الأول - أولياء الأمور فقط"
-          />
-        </div>
-
-        <!-- =========================
-             لوحات الحقول حسب نوع الاستهداف
-             ملاحظة: كلها مخفية افتراضيًا ويظهر JS اللوحة المناسبة
-        ========================== -->
-
-        <!-- 1) ALL_SCHOOL -->
         <div class="rule-fields-panel hidden" data-rule-fields="ALL_SCHOOL">
+          <p class="panel-note">اختر الفئات التي تريد تضمينها.</p>
           <div class="checks-grid">
-            <label><input type="checkbox" class="js-field" data-field="include_admins" checked /> تضمين الإدارة</label>
-            <label><input type="checkbox" class="js-field" data-field="include_teachers" checked /> تضمين المعلمين</label>
-            <label><input type="checkbox" class="js-field" data-field="include_guardians" checked /> تضمين أولياء الأمور</label>
-            <label><input type="checkbox" class="js-field" data-field="include_students" checked /> تضمين الطلاب</label>
+            <label><input type="checkbox" class="js-field" data-field="include_admins" checked /> الإدارة</label>
+            <label><input type="checkbox" class="js-field" data-field="include_teachers" checked /> المعلمون</label>
+            <label><input type="checkbox" class="js-field" data-field="include_guardians" checked /> أولياء الأمور</label>
+            <label><input type="checkbox" class="js-field" data-field="include_students" checked /> الطلاب</label>
           </div>
-          <small class="field-hint">يتم استهداف المدرسة كاملة مع إمكانية استثناء بعض الفئات.</small>
         </div>
 
-        <!-- 2) ROLE_GROUPS -->
         <div class="rule-fields-panel hidden" data-rule-fields="ROLE_GROUPS">
+          <p class="panel-note">اختر فئة واحدة أو أكثر.</p>
           <div class="checks-grid">
             <label><input type="checkbox" class="js-role-check" value="admins" /> الإدارة</label>
             <label><input type="checkbox" class="js-role-check" value="teachers" /> المعلمون</label>
             <label><input type="checkbox" class="js-role-check" value="guardians" /> أولياء الأمور</label>
             <label><input type="checkbox" class="js-role-check" value="students" /> الطلاب</label>
           </div>
-          <small class="field-hint">يمكن اختيار أكثر من دور في نفس الشرط.</small>
         </div>
 
-        <!-- 3) GRADE -->
         <div class="rule-fields-panel hidden" data-rule-fields="GRADE">
-          <div class="scope-grid">
-            <div class="field">
-              <label>السنة الدراسية (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="academic_year_id" placeholder="فارغ = السنة النشطة" />
-            </div>
-
-            <div class="field">
-              <label>الترم (اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="term" placeholder="مثال: 1" />
-            </div>
-
-            <div class="field">
-              <label>المرحلة (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="stage_id" placeholder="مثال: 2" />
-            </div>
-
-            <div class="field">
-              <label>الصف (ID مطلوب غالبًا)</label>
-              <input type="number" min="1" class="js-field" data-field="grade_id" placeholder="مثال: 1" />
-            </div>
+          <div class="field full">
+            <label>الصف</label>
+            <input type="number" min="1" class="js-field" data-field="grade_id" />
           </div>
-
           <div class="checks-grid">
-            <label><input type="checkbox" class="js-field" data-field="include_teachers" /> معلمو الصف</label>
+            <label><input type="checkbox" class="js-field" data-field="include_teachers" /> المعلمون</label>
             <label><input type="checkbox" class="js-field" data-field="include_guardians" checked /> أولياء الأمور</label>
             <label><input type="checkbox" class="js-field" data-field="include_students" checked /> الطلاب</label>
           </div>
         </div>
 
-        <!-- 4) SECTION -->
         <div class="rule-fields-panel hidden" data-rule-fields="SECTION">
-          <div class="scope-grid">
-            <div class="field">
-              <label>السنة الدراسية (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="academic_year_id" placeholder="فارغ = السنة النشطة" />
-            </div>
-
-            <div class="field">
-              <label>الترم (اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="term" placeholder="مثال: 1" />
-            </div>
-
-            <div class="field">
-              <label>الصف (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="grade_id" />
-            </div>
-
-            <div class="field">
-              <label>الشعبة / الفصل (ID مطلوب غالبًا)</label>
-              <input type="number" min="1" class="js-field" data-field="section_id" placeholder="مثال: 12" />
-            </div>
+          <div class="field full">
+            <label>الشعبة أو الفصل</label>
+            <input type="number" min="1" class="js-field" data-field="section_id" />
           </div>
-
           <div class="checks-grid">
-            <label><input type="checkbox" class="js-field" data-field="include_teachers" checked /> معلمو الشعبة</label>
+            <label><input type="checkbox" class="js-field" data-field="include_teachers" checked /> المعلمون</label>
             <label><input type="checkbox" class="js-field" data-field="include_guardians" checked /> أولياء الأمور</label>
             <label><input type="checkbox" class="js-field" data-field="include_students" checked /> الطلاب</label>
           </div>
         </div>
 
-        <!-- 5) ALL_SECTIONS_OF_GRADE -->
         <div class="rule-fields-panel hidden" data-rule-fields="ALL_SECTIONS_OF_GRADE">
-          <div class="scope-grid">
-            <div class="field">
-              <label>السنة الدراسية (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="academic_year_id" placeholder="فارغ = السنة النشطة" />
-            </div>
-
-            <div class="field">
-              <label>الترم (اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="term" />
-            </div>
-
-            <div class="field">
-              <label>المرحلة (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="stage_id" />
-            </div>
-
-            <div class="field">
-              <label>الصف (ID مطلوب)</label>
-              <input type="number" min="1" class="js-field" data-field="grade_id" placeholder="مثال: 1" />
-            </div>
+          <div class="field full">
+            <label>الصف</label>
+            <input type="number" min="1" class="js-field" data-field="grade_id" />
           </div>
-
           <div class="checks-grid">
-            <label><input type="checkbox" class="js-field" data-field="include_teachers" checked /> معلمو الصف</label>
+            <label><input type="checkbox" class="js-field" data-field="include_teachers" checked /> المعلمون</label>
             <label><input type="checkbox" class="js-field" data-field="include_guardians" checked /> أولياء الأمور</label>
             <label><input type="checkbox" class="js-field" data-field="include_students" checked /> الطلاب</label>
           </div>
         </div>
 
-        <!-- 6) STUDENT -->
         <div class="rule-fields-panel hidden" data-rule-fields="STUDENT">
-          <div class="scope-grid">
-            <div class="field">
-              <label>الطالب (student_id)</label>
-              <input type="number" min="1" class="js-field" data-field="student_id" placeholder="مثال: 155" />
-            </div>
-
-            <div class="field">
-              <label>تضمين ولي الأمر أيضًا؟</label>
-              <select class="js-field" data-field="include_guardians_also">
-                <option value="0" selected>لا</option>
-                <option value="1">نعم</option>
-              </select>
-            </div>
+          <div class="field full">
+            <label>الطالب</label>
+            <input type="number" min="1" class="js-field" data-field="student_id" />
           </div>
-
-          <small class="field-hint">هذا الشرط يستهدف الطالب نفسه. يمكن تفعيل إضافة ولي الأمر من نفس الشرط.</small>
+          <div class="field compact-field">
+            <label>إرسال نسخة إلى ولي الأمر</label>
+            <select class="js-field" data-field="include_guardians_also">
+              <option value="0" selected>لا</option>
+              <option value="1">نعم</option>
+            </select>
+          </div>
         </div>
 
-        <!-- 7) GUARDIAN_OF_STUDENT -->
         <div class="rule-fields-panel hidden" data-rule-fields="GUARDIAN_OF_STUDENT">
-          <div class="scope-grid">
-            <div class="field">
-              <label>الطالب (student_id)</label>
-              <input type="number" min="1" class="js-field" data-field="student_id" placeholder="مثال: 155" />
-            </div>
-
-            <div class="field">
-              <label>نوع ولي الأمر (اختياري)</label>
-              <select class="js-field" data-field="guardian_relation">
-                <option value="">الكل</option>
-                <option value="father">الأب</option>
-                <option value="mother">الأم</option>
-                <option value="guardian">ولي أمر</option>
-              </select>
-            </div>
+          <div class="field full">
+            <label>الطالب</label>
+            <input type="number" min="1" class="js-field" data-field="student_id" />
+          </div>
+          <div class="field compact-field">
+            <label>صلة القرابة</label>
+            <select class="js-field" data-field="guardian_relation">
+              <option value="">جميع أولياء الأمر</option>
+              <option value="father">الأب</option>
+              <option value="mother">الأم</option>
+              <option value="guardian">ولي الأمر</option>
+            </select>
           </div>
         </div>
 
-        <!-- 8) TEACHER -->
         <div class="rule-fields-panel hidden" data-rule-fields="TEACHER">
-          <div class="scope-grid">
-            <div class="field">
-              <label>المعلم (teacher_id)</label>
-              <input type="number" min="1" class="js-field" data-field="teacher_id" placeholder="مثال: 42" />
-            </div>
+          <div class="field full">
+            <label>المعلم</label>
+            <input type="number" min="1" class="js-field" data-field="teacher_id" />
           </div>
         </div>
 
-        <!-- 9) ALL_TEACHERS -->
         <div class="rule-fields-panel hidden" data-rule-fields="ALL_TEACHERS">
-          <div class="scope-grid">
-            <div class="field">
-              <label>السنة الدراسية (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="academic_year_id" placeholder="اختياري" />
-            </div>
-
-            <div class="field">
-              <label>الترم (اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="term" placeholder="اختياري" />
-            </div>
-          </div>
-          <small class="field-hint">يمكن استخدامه لإرسال إشعار لجميع المعلمين مباشرة.</small>
+          <p class="panel-note success-note">سيصل الإشعار إلى جميع المعلمين النشطين في المدرسة.</p>
         </div>
 
-        <!-- 10) TEACHERS_OF_SECTION -->
         <div class="rule-fields-panel hidden" data-rule-fields="TEACHERS_OF_SECTION">
-          <div class="scope-grid">
-            <div class="field">
-              <label>السنة الدراسية (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="academic_year_id" placeholder="فارغ = السنة النشطة" />
-            </div>
-
-            <div class="field">
-              <label>الترم (اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="term" placeholder="مثال: 1" />
-            </div>
-
-            <div class="field">
-              <label>الشعبة / الفصل (section_id)</label>
-              <input type="number" min="1" class="js-field" data-field="section_id" placeholder="مثال: 12" />
-            </div>
+          <div class="field full">
+            <label>الشعبة أو الفصل</label>
+            <input type="number" min="1" class="js-field" data-field="section_id" />
           </div>
         </div>
 
-        <!-- 11) ACADEMIC_SCOPE (متقدم) -->
         <div class="rule-fields-panel hidden" data-rule-fields="ACADEMIC_SCOPE">
+          <p class="panel-note">استخدم هذا الخيار فقط عند الحاجة إلى تصفية دقيقة.</p>
           <div class="scope-grid">
-            <div class="field">
-              <label>السنة الدراسية (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="academic_year_id" placeholder="فارغ = السنة النشطة" />
-            </div>
-
-            <div class="field">
-              <label>الترم (اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="term" placeholder="مثال: 1" />
-            </div>
-
-            <div class="field">
-              <label>المرحلة (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="stage_id" />
-            </div>
-
-            <div class="field">
-              <label>الصف (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="grade_id" />
-            </div>
-
-            <div class="field">
-              <label>الشعبة / الفصل (ID اختياري)</label>
-              <input type="number" min="1" class="js-field" data-field="section_id" />
-            </div>
+            <div class="field"><label>السنة الدراسية</label><input type="number" min="1" class="js-field" data-field="academic_year_id" /></div>
+            <div class="field"><label>الفصل الدراسي</label><input type="number" min="1" class="js-field" data-field="term" /></div>
+            <div class="field"><label>المرحلة</label><input type="number" min="1" class="js-field" data-field="stage_id" /></div>
+            <div class="field"><label>الصف</label><input type="number" min="1" class="js-field" data-field="grade_id" /></div>
+            <div class="field"><label>الشعبة أو الفصل</label><input type="number" min="1" class="js-field" data-field="section_id" /></div>
           </div>
-
           <div class="checks-grid">
-            <label><input type="checkbox" class="js-field" data-field="include_admins" /> تضمين الإدارة</label>
+            <label><input type="checkbox" class="js-field" data-field="include_admins" /> الإدارة</label>
             <label><input type="checkbox" class="js-field" data-field="include_teachers" checked /> المعلمون</label>
             <label><input type="checkbox" class="js-field" data-field="include_guardians" checked /> أولياء الأمور</label>
             <label><input type="checkbox" class="js-field" data-field="include_students" /> الطلاب</label>
           </div>
-
-          <small class="field-hint">وضع متقدم مرن للتصفية حسب النطاق الأكاديمي.</small>
         </div>
 
-        <!-- 12) USERS -->
         <div class="rule-fields-panel hidden" data-rule-fields="USERS">
           <div class="field full">
-            <label>مستخدمون محددون (user_id)</label>
-            <textarea
-              rows="3"
-              class="js-field"
-              data-field="user_ids_text"
-              placeholder="مثال: 2,5,18,21 أو كل رقم في سطر"
-            ></textarea>
-            <small class="field-hint">يُقبل الفواصل أو الأسطر الجديدة، وسيتم تنظيف التكرار لاحقًا.</small>
+            <label>أرقام الحسابات</label>
+            <textarea rows="3" class="js-field" data-field="user_ids_text" placeholder="مثال: 2, 5, 18"></textarea>
+            <small class="field-hint">خيار متقدم للدعم الفني فقط.</small>
           </div>
         </div>
       </div>
-    </div>
+    </article>
   </template>
 
-  <!-- =========================
-       4) قالب عنصر عرض مستلم في المعاينة (اختياري للـ JS)
-  ========================== -->
   <template id="notificationPreviewRecipientItemTemplate">
     <div class="preview-recipient-item">
       <div class="preview-recipient-main">
         <div class="preview-recipient-name">اسم المستلم</div>
-        <div class="preview-recipient-meta">الدور / user_id / تفاصيل إضافية</div>
+        <div class="preview-recipient-meta"></div>
       </div>
-      <div class="preview-recipient-tag">role</div>
+      <div class="preview-recipient-tag"></div>
     </div>
   </template>
 
-  <!-- =========================
-       5) قالب رسالة تنبيه/تحذير
-  ========================== -->
   <template id="notificationMessageItemTemplate">
     <div class="message-item">
       <div class="message-item-title">تنبيه</div>
-      <div class="message-item-body">نص الرسالة</div>
+      <div class="message-item-body"></div>
     </div>
   </template>
 </section>

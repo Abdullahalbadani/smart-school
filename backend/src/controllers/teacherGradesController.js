@@ -1,6 +1,7 @@
 // src/controllers/teacherGradesController.js
 import { pool } from "../config/db.js";
 import { logAudit } from "../utils/auditLogger.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function pickUserId(req) {
   return req.user?.id ?? req.user?.user_id ?? req.user?.userId ?? null;
@@ -937,6 +938,16 @@ const existsQ = await pool.query(
       `,
       [schoolId, assessmentId, userId, reason]
     );
+
+    try {
+      await WorkflowNotifications.notifyAssessmentReopenRequestCreated({
+        app: req.app,
+        schoolId,
+        requestId: rows[0].id,
+      });
+    } catch (notifyErr) {
+      console.error("Notification error (assessment reopen request created):", notifyErr);
+    }
 
     return res.status(201).json({
       id: rows[0].id,

@@ -13,14 +13,57 @@ export async function getAdminUserIds({ schoolId }) {
   const sql = `
     SELECT DISTINCT u.id
     FROM users u
-    JOIN user_roles ur ON ur.user_id = u.id
-    JOIN roles r ON r.id = ur.role_id
+    JOIN user_roles ur ON ur.user_id = u.id AND ur.school_id = u.school_id
+    JOIN roles r ON r.id = ur.role_id AND r.school_id = u.school_id
     WHERE u.status = 'active'
       AND u.school_id = $1
-      AND LOWER(COALESCE(r.name, '')) IN ('admin', 'administrator', 'super_admin', 'superadmin', 'school_admin')
+      AND (
+        LOWER(COALESCE(r.name, '')) IN ('admin', 'administrator', 'super_admin', 'superadmin', 'school_admin', 'school-admin')
+        OR COALESCE(r.name, '') ILIKE '%مدير%'
+      )
   `;
   const result = await pool.query(sql, [schoolId]);
   return uniqIds(result.rows.map((r) => r.id));
+}
+
+
+export async function getUserIdsByPermissionCodes({ schoolId, codes = [] } = {}) {
+  const cleanCodes = [...new Set((Array.isArray(codes) ? codes : [])
+    .map((code) => String(code || "").trim())
+    .filter(Boolean))];
+
+  if (!schoolId || !cleanCodes.length) return [];
+
+  const sql = `
+    SELECT DISTINCT u.id
+    FROM users u
+    JOIN user_roles ur
+      ON ur.user_id = u.id
+     AND ur.school_id = u.school_id
+    JOIN roles r
+      ON r.id = ur.role_id
+     AND r.school_id = u.school_id
+    JOIN role_permissions rp
+      ON rp.role_id = r.id
+     AND rp.school_id = u.school_id
+    JOIN permissions p
+      ON p.id = rp.permission_id
+    WHERE u.school_id = $1
+      AND COALESCE(u.status, 'active') = 'active'
+      AND p.code = ANY($2::text[])
+  `;
+
+  const result = await pool.query(sql, [schoolId, cleanCodes]);
+  return uniqIds(result.rows.map((row) => row.id));
+}
+
+export async function getStudentAudienceUserIds({ studentId, schoolId, includeStudent = true } = {}) {
+  const [guardianUserIds, studentUserId] = await Promise.all([
+    getGuardianUserIdsByStudentId({ studentId, schoolId }),
+    includeStudent ? getStudentUserId({ studentId, schoolId }) : Promise.resolve(null),
+  ]);
+
+  return mergeUserIds(guardianUserIds, studentUserId ? [studentUserId] : []);
 }
 
 export async function getStudentUserId({ studentId, schoolId }) {
@@ -43,6 +86,7 @@ export async function getGuardianUserIdsByStudentId({ studentId, schoolId }) {
     FROM student_guardians sg
     JOIN guardians g ON g.id = sg.guardian_id
     WHERE sg.student_id = $1
+      AND sg.school_id = $2
       AND g.school_id = $2
       AND g.user_id IS NOT NULL
   `;
@@ -70,6 +114,7 @@ export async function getTeacherUserIdsByPermissionRequestRecipients({ permissio
     FROM permission_request_recipients prr
     JOIN teachers t ON t.id = prr.teacher_id
     WHERE prr.request_id = $1
+      AND prr.school_id = $2
       AND t.school_id = $2
       AND t.user_id IS NOT NULL
   `;
@@ -93,8 +138,9 @@ export async function getTeacherUserIdsByStudentCurrentEnrollment({ studentId, s
     JOIN section_subject_teachers sst
       ON sst.section_id = le.section_id
      AND sst.academic_year_id = le.academic_year_id
+     AND sst.school_id = le.school_id
      AND COALESCE(sst.status, 'active') = 'active'
-    JOIN teachers t ON t.id = sst.teacher_id
+    JOIN teachers t ON t.id = sst.teacher_id AND t.school_id = le.school_id
     WHERE t.user_id IS NOT NULL AND t.school_id = $2
   `;
   const result = await pool.query(sql, [studentId, schoolId]);
@@ -111,8 +157,8 @@ export function mergeUserIds(...lists) {
 export async function resolveRecipientsForStudentAttendance({
   studentId,
   schoolId,
-  includeAdmins = true,
-  includeStudent = false,
+  includeAdmins = false,
+  includeStudent = true,
 }) {
   const [guardianUserIds, adminUserIds, studentUserId] = await Promise.all([
     getGuardianUserIdsByStudentId({ studentId, schoolId }),
@@ -169,6 +215,12 @@ export async function resolveRecipientsForPermissionRequestCreated({
  * مستلمين طلب تصريح/استئذان معلم (الإدارة) - محمي بالمدرسة
  */
 export async function resolveRecipientsForTeacherPermissionRequest({ schoolId, includeAdmins = true } = {}) {
-  const adminUserIds = includeAdmins ? await getAdminUserIds({ schoolId }) : [];
-  return mergeUserIds(adminUserIds);
+  const [adminUserIds, authorizedUserIds] = await Promise.all([
+    includeAdmins ? getAdminUserIds({ schoolId }) : Promise.resolve([]),
+    getUserIdsByPermissionCodes({
+      schoolId,
+      codes: ["teacher_permits.manage", "attendance.manage", "timetables.manage"],
+    }),
+  ]);
+  return mergeUserIds(adminUserIds, authorizedUserIds);
 }

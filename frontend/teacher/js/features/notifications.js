@@ -16,6 +16,73 @@
       .replaceAll("'", "&#039;");
   }
 
+
+  async function openProtectedNotificationAttachment(url, download = false) {
+    const res = await fetch(url, {
+      headers: { ...tokenHeader() },
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("تعذر فتح المرفق");
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    if (download) a.download = "";
+    else a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+  }
+
+  function renderNotificationAttachments(item, bodyElementId = "nt-detail-body") {
+    document.getElementById("nt-detail-attachments-runtime")?.remove();
+    const bodyEl = $(bodyElementId);
+    const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+    if (!bodyEl || !attachments.length) return;
+
+    const wrap = document.createElement("section");
+    wrap.id = "nt-detail-attachments-runtime";
+    wrap.style.marginTop = "12px";
+    wrap.style.paddingTop = "10px";
+    wrap.style.borderTop = "1px dashed rgba(148,163,184,.35)";
+    wrap.innerHTML = `
+      <strong style="display:block;margin-bottom:8px;">المرفقات</strong>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${attachments.map((a) => {
+          const label = escapeHtml(a.label || a.name || "فتح المرفق");
+          if (a.kind === "link" && a.url) {
+            return `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer" class="nt-pill">🔗 ${label}</a>`;
+          }
+          if (!a.view_url) return "";
+          return `<button type="button" class="nt-pill nt-runtime-attachment" data-view-url="${escapeHtml(a.view_url)}" data-download-url="${escapeHtml(a.download_url || a.view_url)}">📎 ${label}</button>`;
+        }).join("")}
+      </div>
+    `;
+    bodyEl.insertAdjacentElement("afterend", wrap);
+    wrap.querySelectorAll(".nt-runtime-attachment").forEach((btn) => {
+      btn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          await openProtectedNotificationAttachment(btn.dataset.viewUrl, false);
+        } catch (error) {
+          showToast(error.message || "تعذر فتح المرفق", "error");
+        }
+      });
+      btn.addEventListener("contextmenu", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          await openProtectedNotificationAttachment(btn.dataset.downloadUrl, true);
+        } catch (error) {
+          showToast(error.message || "تعذر تنزيل المرفق", "error");
+        }
+      });
+    });
+  }
+
   function tokenHeader() {
     const token =
       localStorage.getItem("token") ||
@@ -181,6 +248,7 @@
           $("nt-detail-title").textContent = it.title || "—";
           $("nt-detail-sub").textContent = `من: ${sender} • ${created}`;
           $("nt-detail-body").textContent = body || snippet || "—";
+          renderNotificationAttachments(it);
 
           // ✅ تعليم كمقروء عند الفتح
           if (isUnread && it.id) {
@@ -406,37 +474,21 @@ $("notifications-btn")?.addEventListener("click", async () => {
 
   function wireSocket() {
     try {
-      if (!window.io) return;
+      const socket = window.getNotificationSocket?.();
+      if (!socket) return;
 
-      const socket = window.io(BACKEND_ORIGIN, {
-        transports: ["websocket"],
-      });
-
-      // ✅ انضم لغرفة المستخدم (الأفضل) إن كان عندك endpoint /api/teacher/me يرجع id
-      // لو ما عندك، تجاهل (لن يكسر شيء)
-      (async () => {
-        try {
-          const me = await fetch(`${BACKEND_ORIGIN}/api/teacher/me`, {
-            headers: tokenHeader(),
-          }).then((r) => (r.ok ? r.json() : null));
-
-          const userId = me?.id || me?.user_id || me?.userId;
-          if (userId) socket.emit("join_user_room", userId);
-        } catch {}
-      })();
-
-      socket.on("notification:new", () => {
+      const refreshRealtime = () => {
         refreshUnreadCount();
         if (state.tab === "inbox") refreshList().catch(() => {});
-      });
+      };
 
-      socket.on("notification:unreadCount", (count) => setBadge(Number(count) || 0));
-
+      socket.on("notification:new", refreshRealtime);
+      socket.on("notification:unread-count:refresh", refreshRealtime);
       socket.on("notification:receiptUpdated", () => {
         if (state.tab === "outbox") refreshList().catch(() => {});
       });
     } catch {
-      // تجاهل
+      // REST refresh remains available as a fallback.
     }
   }
 // ===== Compose (Send) =====

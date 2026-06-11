@@ -438,8 +438,7 @@ const DEBUG_NOTIF_SEND = false;
     }
 
     selectedBox.innerHTML = `
-      <span><strong>المحدد:</strong> ${escapeHtml(label || `ID #${hiddenValue}`)}</span>
-      <small style="opacity:.8;">(ID: ${escapeHtml(hiddenValue)})</small>
+      <span><strong>تم الاختيار:</strong> ${escapeHtml(label || "العنصر المحدد")}</span>
     `;
   }
 
@@ -518,8 +517,8 @@ const DEBUG_NOTIF_SEND = false;
     const panel = getRulePanel(inputEl);
     if (!panel) return;
 
-    // للطالب/ولي الأمر/المعلم: أضف فلاتر مرحلة/صف/شعبة اختيارية
-    ensureUiScopeFilters(panel);
+    // واجهة الإدارة المبسطة: نبحث بالاسم مباشرة دون إظهار فلاتر إضافية مربكة.
+    // تبقى خدمة البحث قادرة على استخدام أي نطاق أكاديمي إذا أضيف لاحقًا.
 
     inputEl.dataset.lookupEnhanced = "1";
 
@@ -900,7 +899,7 @@ return card;
     const container = getTargetRulesContainer();
     if (!container) return;
     if (!qsa(".target-rule-card", container).length) {
-      addTargetRule("ROLE_GROUPS");
+      addTargetRule("");
     }
   }
 
@@ -908,14 +907,14 @@ return card;
     const cards = qsa(".target-rule-card", getTargetRulesContainer());
     cards.forEach((card, idx) => {
       card.dataset.ruleIndex = String(idx);
-      setText(".target-rule-title", `شرط استهداف #${idx + 1}`, card);
+      setText(".target-rule-title", `المستلمون #${idx + 1}`, card);
 
       const typeVal = qs(".js-target-type", card)?.value || "";
       const subtitle = qs(".target-rule-subtitle", card);
       if (subtitle) {
         subtitle.textContent = typeVal
-          ? `النوع: ${TARGET_TYPE_LABELS[typeVal] || typeVal}`
-          : "اختر النوع ثم عبّئ الحقول المطلوبة";
+          ? `${TARGET_TYPE_LABELS[typeVal] || typeVal}`
+          : "اختر الفئة التي ستصل إليها الرسالة";
       }
     });
   }
@@ -931,20 +930,16 @@ return card;
     const subtitle = qs(".target-rule-subtitle", card);
     if (subtitle) {
       subtitle.textContent = type
-        ? `النوع: ${TARGET_TYPE_LABELS[type] || type}`
-        : "اختر النوع ثم عبّئ الحقول المطلوبة";
+        ? `${TARGET_TYPE_LABELS[type] || type}`
+        : "اختر الفئة التي ستصل إليها الرسالة";
     }
         // تفعيل واجهات الاختيار بالأسماء داخل اللوحة الحالية
     enhanceRuleCardLookups(card);
   }
 
   function applyDefaultValuesForType(card, type) {
+    // لا نختار مستلمين تلقائيًا؛ يجب أن يحدد المدير الفئة بوضوح قبل الإرسال.
     if (!card || !type) return;
-
-    if (type === "ROLE_GROUPS") {
-      qsa('.js-role-check[value="teachers"]', card).forEach((el) => { el.checked = true; });
-      qsa('.js-role-check[value="guardians"]', card).forEach((el) => { el.checked = true; });
-    }
   }
 
   function duplicateTargetRule(sourceCard) {
@@ -1096,81 +1091,28 @@ return card;
   }
 
   function getTargetRuleHumanSummary(rule) {
-    if (!rule || !rule.type) return "شرط غير مكتمل";
+    if (!rule || !rule.type) return "فئة غير مكتملة";
 
     const typeLabel = TARGET_TYPE_LABELS[rule.type] || rule.type;
     const parts = [];
 
-    if (rule.label) parts.push(`"${rule.label}"`);
-
-    switch (rule.type) {
-      case "ALL_SCHOOL": {
-        const included = [];
-        if (rule.include_admins) included.push("الإدارة");
-        if (rule.include_teachers) included.push("المعلمون");
-        if (rule.include_guardians) included.push("أولياء الأمور");
-        if (rule.include_students) included.push("الطلاب");
-        parts.push(included.length ? `الفئات: ${included.join("، ")}` : "بدون فئات محددة");
-        break;
-      }
-
-      case "ROLE_GROUPS":
-        parts.push(Array.isArray(rule.roles) && rule.roles.length
-          ? `الأدوار: ${rule.roles.join(", ")}`
-          : "بدون أدوار");
-        break;
-
-      case "GRADE":
-        parts.push(`grade_id=${rule.grade_id ?? "?"}`);
-        if (rule.stage_id) parts.push(`stage_id=${rule.stage_id}`);
-        if (rule.academic_year_id) parts.push(`year=${rule.academic_year_id}`);
-        if (rule.term) parts.push(`term=${rule.term}`);
-        break;
-
-      case "SECTION":
-      case "TEACHERS_OF_SECTION":
-        parts.push(`section_id=${rule.section_id ?? "?"}`);
-        if (rule.grade_id) parts.push(`grade_id=${rule.grade_id}`);
-        if (rule.academic_year_id) parts.push(`year=${rule.academic_year_id}`);
-        if (rule.term) parts.push(`term=${rule.term}`);
-        break;
-
-      case "ALL_SECTIONS_OF_GRADE":
-        parts.push(`grade_id=${rule.grade_id ?? "?"}`);
-        if (rule.academic_year_id) parts.push(`year=${rule.academic_year_id}`);
-        if (rule.term) parts.push(`term=${rule.term}`);
-        break;
-
-      case "STUDENT":
-      case "GUARDIAN_OF_STUDENT":
-        parts.push(`student_id=${rule.student_id ?? "?"}`);
-        if (rule.guardian_relation) parts.push(`relation=${rule.guardian_relation}`);
-        if (rule.include_guardians_also) parts.push("مع ولي الأمر");
-        break;
-
-      case "TEACHER":
-        parts.push(`teacher_id=${rule.teacher_id ?? "?"}`);
-        break;
-
-      case "ALL_TEACHERS":
-        if (rule.academic_year_id) parts.push(`year=${rule.academic_year_id}`);
-        if (rule.term) parts.push(`term=${rule.term}`);
-        break;
-
-      case "ACADEMIC_SCOPE":
-        if (rule.academic_year_id) parts.push(`year=${rule.academic_year_id}`);
-        if (rule.term) parts.push(`term=${rule.term}`);
-        if (rule.stage_id) parts.push(`stage_id=${rule.stage_id}`);
-        if (rule.grade_id) parts.push(`grade_id=${rule.grade_id}`);
-        if (rule.section_id) parts.push(`section_id=${rule.section_id}`);
-        break;
-
-      case "USERS":
-        parts.push(`user_ids=${Array.isArray(rule.user_ids) ? rule.user_ids.length : 0}`);
-        break;
+    if (rule.type === "ROLE_GROUPS" && Array.isArray(rule.roles) && rule.roles.length) {
+      const labels = { admins: "الإدارة", teachers: "المعلمون", guardians: "أولياء الأمور", students: "الطلاب" };
+      parts.push(rule.roles.map((role) => labels[role] || role).join("، "));
     }
 
-    return `${typeLabel}${parts.length ? " — " + parts.join(" | ") : ""}`;
+    if (rule.type === "ALL_SCHOOL") {
+      const included = [];
+      if (rule.include_admins) included.push("الإدارة");
+      if (rule.include_teachers) included.push("المعلمون");
+      if (rule.include_guardians) included.push("أولياء الأمور");
+      if (rule.include_students) included.push("الطلاب");
+      if (included.length) parts.push(included.join("، "));
+    }
+
+    if (rule.type === "STUDENT" && rule.include_guardians_also) parts.push("مع ولي الأمر");
+
+    return parts.length ? `${typeLabel} — ${parts.join(" — ")}` : typeLabel;
   }
 
   function updateTargetSummaryUI() {
@@ -1181,12 +1123,14 @@ return card;
     if (!textBox || !chipsBox) return;
 
     if (!targets.length) {
-      textBox.textContent = "لم تتم إضافة أي شروط استهداف بعد.";
+      textBox.textContent = "لم تحدد المستلمين بعد.";
       chipsBox.innerHTML = "";
       return;
     }
 
-    textBox.textContent = `تمت إضافة ${targets.length} شرط/شروط استهداف. سيتم دمج النتائج وإزالة التكرار عند المعاينة/الإرسال.`;
+    textBox.textContent = targets.length === 1
+      ? "تم تحديد فئة واحدة. راجعها ثم اعرض المعاينة قبل الإرسال."
+      : `تم تحديد ${targets.length} فئات. سيتم دمج المستلمين وحذف التكرار تلقائيًا.`;
 
     chipsBox.innerHTML = targets.map((rule, idx) => {
       return `<span class="chip target-chip" title="${escapeHtml(getTargetRuleHumanSummary(rule))}">
@@ -1227,47 +1171,47 @@ return card;
           break;
 
         case "GRADE":
-          if (!t.grade_id) errors.push(`شرط #${n} (صف محدد): grade_id مطلوب.`);
+          if (!t.grade_id) errors.push(`الفئة #${n}: اختر الصف المطلوب.`);
           if (!(t.include_teachers || t.include_guardians || t.include_students)) {
             errors.push(`شرط #${n} (صف محدد): اختر فئة مستهدفة واحدة على الأقل (معلمون/أولياء أمور/طلاب).`);
           }
           break;
 
         case "SECTION":
-          if (!t.section_id) errors.push(`شرط #${n} (شعبة/فصل): section_id مطلوب.`);
+          if (!t.section_id) errors.push(`الفئة #${n}: اختر الشعبة أو الفصل المطلوب.`);
           if (!(t.include_teachers || t.include_guardians || t.include_students)) {
             errors.push(`شرط #${n} (شعبة/فصل): اختر فئة مستهدفة واحدة على الأقل.`);
           }
           break;
 
         case "ALL_SECTIONS_OF_GRADE":
-          if (!t.grade_id) errors.push(`شرط #${n} (كل شعب صف): grade_id مطلوب.`);
+          if (!t.grade_id) errors.push(`الفئة #${n}: اختر الصف المطلوب.`);
           if (!(t.include_teachers || t.include_guardians || t.include_students)) {
             errors.push(`شرط #${n} (كل شعب صف): اختر فئة مستهدفة واحدة على الأقل.`);
           }
           break;
 
         case "STUDENT":
-          if (!t.student_id) errors.push(`شرط #${n} (طالب محدد): student_id مطلوب.`);
+          if (!t.student_id) errors.push(`الفئة #${n}: اختر الطالب المطلوب.`);
           break;
 
         case "GUARDIAN_OF_STUDENT":
-          if (!t.student_id) errors.push(`شرط #${n} (ولي أمر طالب): student_id مطلوب.`);
+          if (!t.student_id) errors.push(`الفئة #${n}: اختر الطالب أولًا.`);
           break;
 
         case "TEACHER":
-          if (!t.teacher_id) errors.push(`شرط #${n} (معلم محدد): teacher_id مطلوب.`);
+          if (!t.teacher_id) errors.push(`الفئة #${n}: اختر المعلم المطلوب.`);
           break;
 
         case "TEACHERS_OF_SECTION":
-          if (!t.section_id) errors.push(`شرط #${n} (معلمو شعبة/فصل): section_id مطلوب.`);
+          if (!t.section_id) errors.push(`الفئة #${n}: اختر الشعبة أو الفصل المطلوب.`);
           break;
 
         case "ACADEMIC_SCOPE": {
           const anyScope = !!(t.academic_year_id || t.term || t.stage_id || t.grade_id || t.section_id);
           const anyIncluded = !!(t.include_admins || t.include_teachers || t.include_guardians || t.include_students);
           if (!anyScope) {
-            errors.push(`شرط #${n} (نطاق أكاديمي متقدم): أدخل معيار نطاق واحدًا على الأقل (stage/grade/section/term/year).`);
+            errors.push(`الفئة #${n}: حدد معيارًا أكاديميًا واحدًا على الأقل.`);
           }
           if (!anyIncluded) {
             errors.push(`شرط #${n} (نطاق أكاديمي متقدم): اختر فئة واحدة على الأقل.`);
@@ -1277,7 +1221,7 @@ return card;
 
         case "USERS":
           if (!Array.isArray(t.user_ids) || !t.user_ids.length) {
-            errors.push(`شرط #${n} (مستخدمون محددون): أدخل user_id واحدًا على الأقل.`);
+            errors.push(`الفئة #${n}: أدخل رقم حساب واحدًا على الأقل.`);
           }
           break;
 
@@ -1436,92 +1380,59 @@ return card;
     const data = getPreviewDataEnvelope(preview);
     const sample = extractSampleRecipients(data);
 
-    const summaryLines = [];
-    const bd = pickBreakdown(data);
-
-    if (data?.mode || bd?.mode) {
-      summaryLines.push(`<div><strong>الوضع:</strong> ${escapeHtml(data?.mode || bd?.mode)}</div>`);
-    }
-
-    if (data?.academic_year_id || bd?.academic_year_id) {
-      summaryLines.push(`<div><strong>السنة الدراسية المستخدمة:</strong> ${escapeHtml(data?.academic_year_id || bd?.academic_year_id)}</div>`);
-    }
-
-    if (Array.isArray(data?.recipient_user_ids)) {
-      summaryLines.push(`<div><strong>عدد user_ids (حسب الاستجابة):</strong> ${escapeHtml(data.recipient_user_ids.length)}</div>`);
-    }
-
     const headHtml = `
       <div class="preview-card">
-        ${summaryLines.length ? summaryLines.join("") : `<div>تمت المعاينة بنجاح.</div>`}
+        <strong>تمت المعاينة بنجاح.</strong>
+        <span>راجع الأسماء الظاهرة قبل الإرسال.</span>
       </div>
     `;
 
     if (!Array.isArray(sample) || !sample.length) {
       box.innerHTML = headHtml + `
-        <div class="preview-empty">
-          لا توجد عيّنة مستلمين في الاستجابة (أو الباكند لم يُرجع sample بعد).
-        </div>
+        <div class="preview-empty">لا توجد أسماء لعرضها في المعاينة.</div>
       `;
       return;
     }
 
+    const roleLabels = {
+      admin: "الإدارة", administrator: "الإدارة", school_admin: "إدارة المدرسة",
+      teacher: "معلم", teachers: "معلم", student: "طالب", students: "طالب",
+      guardian: "ولي أمر", guardians: "ولي أمر", parent: "ولي أمر", employee: "موظف"
+    };
+
     const tpl = qs("#notificationPreviewRecipientItemTemplate");
     let listHtml = "";
 
-    if (tpl) {
-      sample.forEach((item) => {
+    sample.forEach((item) => {
+      const name = item.full_name || item.name || item.display_name || item.username || "مستخدم";
+      const roleKey = item.role_key || item.role || item.user_type || "";
+      const role = roleLabels[String(roleKey).toLowerCase()] || roleKey || "مستخدم";
+      const metaParts = [];
+      if (item.grade_name) metaParts.push(item.grade_name);
+      if (item.section_name) metaParts.push(item.section_name);
+      if (item.stage_name) metaParts.push(item.stage_name);
+
+      if (tpl) {
         const wrapper = document.createElement("div");
         wrapper.appendChild(tpl.content.cloneNode(true));
-
-        const name =
-          item.full_name ||
-          item.name ||
-          item.display_name ||
-          item.username ||
-          "مستخدم";
-
-        const role =
-          item.role_key ||
-          item.role ||
-          item.user_type ||
-          "—";
-
-        const metaParts = [];
-        if (item.user_id) metaParts.push(`user_id: ${item.user_id}`);
-        if (item.student_id) metaParts.push(`student_id: ${item.student_id}`);
-        if (item.teacher_id) metaParts.push(`teacher_id: ${item.teacher_id}`);
-        if (item.guardian_id) metaParts.push(`guardian_id: ${item.guardian_id}`);
-        if (item.section_id) metaParts.push(`section_id: ${item.section_id}`);
-        if (item.grade_id) metaParts.push(`grade_id: ${item.grade_id}`);
-
         setText(".preview-recipient-name", name, wrapper);
-        setText(".preview-recipient-meta", metaParts.join(" | ") || "—", wrapper);
+        setText(".preview-recipient-meta", metaParts.join(" — "), wrapper);
         setText(".preview-recipient-tag", role, wrapper);
-
         listHtml += wrapper.innerHTML;
-      });
-    } else {
-      listHtml = sample.map((item) => {
-        const name = item.full_name || item.name || item.display_name || item.username || "مستخدم";
-        const role = item.role_key || item.role || item.user_type || "—";
-        return `
+      } else {
+        listHtml += `
           <div class="preview-recipient-item">
             <div class="preview-recipient-main">
               <div class="preview-recipient-name">${escapeHtml(name)}</div>
-              <div class="preview-recipient-meta">user_id: ${escapeHtml(item.user_id ?? "—")}</div>
+              <div class="preview-recipient-meta">${escapeHtml(metaParts.join(" — "))}</div>
             </div>
             <div class="preview-recipient-tag">${escapeHtml(role)}</div>
           </div>
         `;
-      }).join("");
-    }
+      }
+    });
 
-    box.innerHTML = headHtml + `
-      <div class="preview-recipient-list">
-        ${listHtml}
-      </div>
-    `;
+    box.innerHTML = headHtml + `<div class="preview-recipient-list">${listHtml}</div>`;
   }
 
   function renderPreview(preview) {
@@ -1706,11 +1617,11 @@ return card;
   function handleQuickAddRule() {
     const type = qs("#targetQuickAddType")?.value || "";
     if (!type) {
-      setStatus("اختر نوع الاستهداف من الإضافة السريعة أولًا.", "warning");
+      setStatus("اختر فئة المستلمين أولًا.", "warning");
       return;
     }
     addTargetRule(type);
-    setStatus(`تمت إضافة شرط: ${TARGET_TYPE_LABELS[type] || type}`, "success");
+    setStatus(`تمت إضافة فئة: ${TARGET_TYPE_LABELS[type] || type}`, "success");
   }
 
   /* =========================
@@ -1734,8 +1645,9 @@ return card;
     qs("#addTargetRuleBtn", root)?.addEventListener("click", () => addTargetRule());
     qs("#clearTargetRulesBtn", root)?.addEventListener("click", () => {
       clearAllTargetRules();
+      ensureAtLeastOneRule();
       updateTargetSummaryUI();
-      setStatus("تم مسح جميع شروط الاستهداف.", "info");
+      setStatus("تم مسح جميع اختيارات المستلمين.", "info");
     });
 
     qs("#quickAddTargetRuleBtn", root)?.addEventListener("click", handleQuickAddRule);

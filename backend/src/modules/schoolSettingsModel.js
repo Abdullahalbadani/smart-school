@@ -844,24 +844,56 @@ export async function getFinanceSettings(schoolId) {
 }
 
 // جلب حالة البوابات
+// جلب حالة بوابات الدخول
 export async function getPortalsSettings(schoolId) {
   const r = await pool.query(
-    `SELECT allow_parent_portal, allow_teacher_portal FROM school_settings WHERE school_id = $1`,
+    `
+    SELECT
+      allow_teacher_portal,
+      allow_parent_portal,
+      allow_student_portal
+    FROM school_settings
+    WHERE school_id = $1
+    `,
     [schoolId]
   );
-  return r.rows[0] || null;
+
+  return (
+    r.rows[0] || {
+      allow_teacher_portal: true,
+      allow_parent_portal: true,
+      allow_student_portal: true,
+    }
+  );
 }
 
-// تحديث حالة البوابات
+// تحديث حالة بوابات الدخول
 export async function updatePortalsSettings(schoolId, data) {
   const r = await pool.query(
-    `UPDATE school_settings SET 
-        allow_teacher_portal = $2,
-        allow_parent_portal = $3,
-        updated_at = NOW()
-     WHERE school_id = $1
-     RETURNING allow_teacher_portal, allow_parent_portal`,
-    [schoolId, data.teacher_portal, data.parent_portal]
+    `
+    UPDATE school_settings
+    SET
+      allow_teacher_portal = COALESCE($2, allow_teacher_portal),
+      allow_parent_portal = COALESCE($3, allow_parent_portal),
+      allow_student_portal = COALESCE($4, allow_student_portal),
+      updated_at = NOW()
+    WHERE school_id = $1
+    RETURNING
+      allow_teacher_portal,
+      allow_parent_portal,
+      allow_student_portal
+    `,
+    [
+      schoolId,
+      data.teacher_portal,
+      data.parent_portal,
+      data.student_portal,
+    ]
   );
+
+  if (!r.rows[0]) {
+    throw new Error("إعدادات المدرسة غير موجودة");
+  }
+
   return r.rows[0];
 }

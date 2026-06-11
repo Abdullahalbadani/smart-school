@@ -2,7 +2,7 @@
   "use strict";
 
   const API_BASE = String(window.API_BASE || "/api").replace(/\/+$/, "");
-  const REPORTS_UI_VERSION = "3.0.0";
+  const REPORTS_UI_VERSION = "6.0.0";
 
   const CONFIGS = {
     students: {
@@ -124,6 +124,285 @@
         return `العام الدراسي: ${data?.academic_year || "—"} • سيتم إدراج ${data?.total ?? 0} سجلًا في الكشف`;
       },
     },
+
+    attendanceStudents: {
+      api: `${API_BASE}/admin/school-reports/attendance/students`,
+      dialogTitle: "إعداد كشف حضور وغياب الطلاب",
+      dialogAria: "إعداد كشف حضور وغياب الطلاب",
+      entityLabel: "الطلاب",
+      previewFallback: "كشف حضور وغياب الطلاب",
+      fallbackFileName: "students-attendance-report.pdf",
+      note: "البحث السريع داخل شاشة تقارير الحضور مخصص للعرض فقط، ولا يؤثر على الكشف المدرسي الرسمي.",
+      requireStatuses: false,
+      statuses: [],
+      columns: [
+        ["student_name", "اسم الطالب"],
+        ["student_code", "الكود"],
+        ["grade_section", "الصف / الشعبة"],
+        ["total_sessions", "إجمالي الحصص"],
+        ["present_count", "حاضر"],
+        ["total_absent", "غياب"],
+        ["total_late", "تأخير"],
+        ["total_excused", "بعذر"],
+        ["late_minutes_total", "دقائق التأخير"],
+        ["attendance_percent", "نسبة الحضور"],
+      ],
+      presets: {
+        short: [
+          "student_name",
+          "student_code",
+          "grade_section",
+          "total_sessions",
+          "present_count",
+          "total_absent",
+          "total_late",
+          "total_excused",
+          "attendance_percent",
+        ],
+        detailed: [
+          "student_name",
+          "student_code",
+          "grade_section",
+          "total_sessions",
+          "present_count",
+          "total_absent",
+          "total_late",
+          "total_excused",
+          "late_minutes_total",
+          "attendance_percent",
+        ],
+      },
+      makeExtraPayload(filters) {
+        return {
+          year_id: filters.year_id || null,
+          term_id: filters.term_id || null,
+          from: filters.from || null,
+          to: filters.to || null,
+          stage_id: filters.stage_id || null,
+          grade_id: filters.grade_id || null,
+          section_id: filters.section_id || null,
+          method: filters.method || null,
+          sort: filters.sort || "name_asc",
+        };
+      },
+      previewInfo(data) {
+        return `العام الدراسي: ${data?.academic_year || "—"} • سيتم إدراج ${data?.total ?? 0} طالبًا في الكشف`;
+      },
+    },
+
+    attendanceTeachers: {
+      api: `${API_BASE}/admin/school-reports/attendance/teachers`,
+      dialogTitle: "إعداد كشف حضور وغياب المعلمين",
+      dialogAria: "إعداد كشف حضور وغياب المعلمين",
+      entityLabel: "المعلمين",
+      previewFallback: "كشف حضور وغياب المعلمين",
+      fallbackFileName: "teachers-attendance-report.pdf",
+      note: "البحث السريع داخل شاشة تقارير الحضور مخصص للعرض فقط، ولا يؤثر على الكشف المدرسي الرسمي.",
+      requireStatuses: false,
+      statuses: [],
+      columns: [
+        ["teacher_name", "اسم المعلم"],
+        ["total_days", "إجمالي الأيام"],
+        ["present_days", "حاضر"],
+        ["total_absent", "غائب"],
+        ["late_days", "متأخر"],
+        ["method", "طريقة التسجيل"],
+        ["presence_percent", "نسبة الالتزام"],
+      ],
+      presets: {
+        short: [
+          "teacher_name",
+          "total_days",
+          "present_days",
+          "total_absent",
+          "late_days",
+          "presence_percent",
+        ],
+        detailed: [
+          "teacher_name",
+          "total_days",
+          "present_days",
+          "total_absent",
+          "late_days",
+          "method",
+          "presence_percent",
+        ],
+      },
+      makeExtraPayload(filters) {
+        return {
+          year_id: filters.year_id || null,
+          month: filters.month || null,
+          from: filters.from || null,
+          to: filters.to || null,
+          teacher_id: filters.teacher_id || null,
+          method: filters.method || null,
+          sort: filters.sort || "name_asc",
+        };
+      },
+      previewInfo(data) {
+        return `العام الدراسي: ${data?.academic_year || "—"} • سيتم إدراج ${data?.total ?? 0} معلمًا في الكشف`;
+      },
+    },
+
+    feesCollections: {
+      api: `${API_BASE}/admin/school-reports/fees/collections`,
+      dialogTitle: "إعداد كشف تحصيل الرسوم",
+      dialogAria: "إعداد كشف تحصيل الرسوم",
+      entityLabel: "عمليات التحصيل",
+      previewFallback: "كشف تحصيل الرسوم المدرسية",
+      fallbackFileName: "fees-collections-report.pdf",
+      note: "يُنشأ الكشف من جميع عمليات التحصيل المطابقة للسنة والصف والشعبة والفترة وطريقة الدفع المحددة في الشاشة.",
+      requireStatuses: false,
+      statuses: [],
+      columns: [
+        ["paid_at", "التاريخ"],
+        ["student_name", "اسم الطالب"],
+        ["student_code", "رقم القيد"],
+        ["grade_name", "الصف"],
+        ["section_name", "الشعبة"],
+        ["amount", "المبلغ"],
+        ["method", "طريقة الدفع"],
+        ["provider", "الجهة"],
+        ["reference", "المرجع"],
+        ["receipt_no", "رقم الإيصال"],
+      ],
+      presets: {
+        short: [
+          "paid_at",
+          "student_name",
+          "student_code",
+          "grade_name",
+          "section_name",
+          "amount",
+          "method",
+          "receipt_no",
+        ],
+        detailed: [
+          "paid_at",
+          "student_name",
+          "student_code",
+          "grade_name",
+          "section_name",
+          "amount",
+          "method",
+          "provider",
+          "reference",
+          "receipt_no",
+        ],
+      },
+      makeExtraPayload(filters) {
+        return {
+          year_id: filters.year_id || null,
+          grade_id: filters.grade_id || null,
+          section_id: filters.section_id || null,
+          from: filters.from || null,
+          to: filters.to || null,
+          method: filters.method || null,
+        };
+      },
+      previewInfo(data) {
+        return `العام الدراسي: ${data?.academic_year || "—"} • سيتم إدراج ${data?.total ?? 0} عملية تحصيل في الكشف`;
+      },
+    },
+
+    feesOutstanding: {
+      api: `${API_BASE}/admin/school-reports/fees/outstanding`,
+      dialogTitle: "إعداد كشف متأخرات الرسوم",
+      dialogAria: "إعداد كشف متأخرات الرسوم",
+      entityLabel: "الطلاب المتأخرين",
+      previewFallback: "كشف الطلاب المتأخرين في سداد الرسوم",
+      fallbackFileName: "fees-outstanding-report.pdf",
+      note: "يُنشأ الكشف من جميع الطلاب الذين لديهم مبالغ متبقية ضمن السنة والصف والشعبة المحددة في الشاشة.",
+      requireStatuses: false,
+      statuses: [],
+      columns: [
+        ["student_name", "اسم الطالب"],
+        ["student_code", "رقم القيد"],
+        ["grade_name", "الصف"],
+        ["section_name", "الشعبة"],
+        ["annual_amount", "الإجمالي السنوي"],
+        ["paid_total", "المدفوع"],
+        ["remaining", "المتبقي"],
+        ["next_due_date", "موعد القسط القادم"],
+      ],
+      presets: {
+        short: [
+          "student_name",
+          "student_code",
+          "grade_name",
+          "section_name",
+          "annual_amount",
+          "paid_total",
+          "remaining",
+        ],
+        detailed: [
+          "student_name",
+          "student_code",
+          "grade_name",
+          "section_name",
+          "annual_amount",
+          "paid_total",
+          "remaining",
+          "next_due_date",
+        ],
+      },
+      makeExtraPayload(filters) {
+        return {
+          year_id: filters.year_id || null,
+          grade_id: filters.grade_id || null,
+          section_id: filters.section_id || null,
+        };
+      },
+      previewInfo(data) {
+        return `العام الدراسي: ${data?.academic_year || "—"} • سيتم إدراج ${data?.total ?? 0} طالبًا في الكشف`;
+      },
+    },
+
+    monthlyWorks: {
+      api: `${API_BASE}/admin/control/monthly-works/report`,
+      dialogTitle: "إعداد كشف الأعمال الشهرية",
+      dialogAria: "إعداد كشف الأعمال الشهرية",
+      entityLabel: "الطلاب",
+      previewFallback: "كشف مراجعة درجات الأعمال الشهرية",
+      fallbackFileName: "monthly-works-report.pdf",
+      note: "يُنشأ الكشف من الاختبار الشهري المعروض حاليًا في شاشة الكنترول، ويُذكر داخل الملف ما إذا كان الكشف معتمدًا أو ما يزال قيد المراجعة.",
+      requireStatuses: false,
+      statuses: [],
+      columns: [
+        ["student_code", "كود الطالب"],
+        ["roll_number", "رقم القيد"],
+        ["student_name", "اسم الطالب"],
+        ["score", "الدرجة"],
+        ["attendance_status", "حالة الحضور"],
+        ["excuse_reason", "العذر"],
+        ["status_label", "حالة الطالب"],
+        ["publication_label", "حالة النشر"],
+        ["note", "ملاحظة"],
+      ],
+      presets: {
+        short: ["roll_number", "student_name", "score", "status_label"],
+        detailed: [
+          "student_code",
+          "roll_number",
+          "student_name",
+          "score",
+          "attendance_status",
+          "excuse_reason",
+          "status_label",
+          "publication_label",
+          "note",
+        ],
+      },
+      makeExtraPayload(filters) {
+        return {
+          assessment_id: filters.assessment_id || null,
+        };
+      },
+      previewInfo(data) {
+        return `العام الدراسي: ${data?.academic_year || "—"} • سيتم إدراج ${data?.total ?? 0} طالبًا في الكشف`;
+      },
+    },
+
   };
 
   function getToken() {
@@ -252,7 +531,7 @@
     const previewInfo = overlay.querySelector("[data-report-preview-info]");
     const payload = makePayload(overlay, config, filters);
 
-    if (!payload.statuses.length) {
+    if (config.requireStatuses !== false && !payload.statuses.length) {
       previewTitle.textContent = "اختر حالة واحدة على الأقل";
       previewInfo.textContent = "لن يتم إنشاء كشف قبل تحديد البيانات المراد إدراجها.";
       return;
@@ -287,6 +566,29 @@
               ([value, label]) => `
                 <label class="school-report-option">
                   <input type="radio" name="schoolReportScope" value="${escapeHtml(value)}" ${value === selected ? "checked" : ""} />
+                  ${escapeHtml(label)}
+                </label>
+              `
+            )
+            .join("")}
+        </div>
+      </section>
+    `;
+  }
+
+  function createStatusesSection(config) {
+    if (!config.statuses?.length) return "";
+
+    return `
+      <section class="school-report-section">
+        <h4>${escapeHtml(config.statusesTitle || "الحالات المراد إدراجها")}</h4>
+        <div class="school-report-options">
+          <label class="school-report-option"><input type="checkbox" id="schoolReportAllStatuses" /> جميع الحالات</label>
+          ${config.statuses
+            .map(
+              ([value, label], index) => `
+                <label class="school-report-option">
+                  <input type="checkbox" name="schoolReportStatus" value="${escapeHtml(value)}" ${index === 0 ? "checked" : ""} />
                   ${escapeHtml(label)}
                 </label>
               `
@@ -335,22 +637,7 @@
 
             ${createScopeSection(config, filters)}
 
-            <section class="school-report-section">
-              <h4>${escapeHtml(config.statusesTitle)}</h4>
-              <div class="school-report-options">
-                <label class="school-report-option"><input type="checkbox" id="schoolReportAllStatuses" /> جميع الحالات</label>
-                ${config.statuses
-                  .map(
-                    ([value, label], index) => `
-                      <label class="school-report-option">
-                        <input type="checkbox" name="schoolReportStatus" value="${escapeHtml(value)}" ${index === 0 ? "checked" : ""} />
-                        ${escapeHtml(label)}
-                      </label>
-                    `
-                  )
-                  .join("")}
-              </div>
-            </section>
+            ${createStatusesSection(config)}
 
             <section class="school-report-section school-report-section--full">
               <h4>الأعمدة التي ستظهر داخل الكشف</h4>
@@ -417,7 +704,7 @@
 
     submit.addEventListener("click", async () => {
       const payload = makePayload(overlay, config, filters);
-      if (!payload.statuses.length) return showError("اختر حالة واحدة على الأقل للبيانات المراد إدراجها.");
+      if (config.requireStatuses !== false && !payload.statuses.length) return showError("اختر حالة واحدة على الأقل للبيانات المراد إدراجها.");
       if (!payload.columns.length) return showError("اختر عمودًا واحدًا على الأقل ليظهر داخل الكشف.");
 
       let printWindow = null;
@@ -477,6 +764,21 @@
     },
     openStaffReport(options) {
       return openReport("staff", options);
+    },
+    openAttendanceStudentsReport(options) {
+      return openReport("attendanceStudents", options);
+    },
+    openAttendanceTeachersReport(options) {
+      return openReport("attendanceTeachers", options);
+    },
+    openFeesCollectionsReport(options) {
+      return openReport("feesCollections", options);
+    },
+    openFeesOutstandingReport(options) {
+      return openReport("feesOutstanding", options);
+    },
+    openMonthlyWorksReport(options) {
+      return openReport("monthlyWorks", options);
     },
   };
 })();

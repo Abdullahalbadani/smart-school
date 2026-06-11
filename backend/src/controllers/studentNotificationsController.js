@@ -1,5 +1,8 @@
 // backend/src/controllers/studentNotificationsController.js
 import { pool } from "../config/db.js";
+import { createNotification } from "../modules/notifications/notificationCreateService.js";
+import { getAdminUserIds as getNotificationAdminUserIds } from "../modules/notifications/notificationTargetsResolvers.js";
+import { getAttachmentsForNotificationIds } from "../modules/notifications/notificationsAttachmentsService.js";
 
 /**
  * نظام إشعارات الطلاب المحصن (SaaS-Ready)
@@ -106,27 +109,31 @@ async function listAllowedTeacherUsers({ academic_year_id, section_id, schoolId,
   }
 }
 
-// ✅ جلب مدراء نفس المدرسة حصراً
-async function getAdminUserIds(schoolId) {
-  const sql = `
-    SELECT DISTINCT u.id
-    FROM users u
-    JOIN user_roles ur ON ur.user_id = u.id
-    JOIN roles r ON r.id = ur.role_id
-    WHERE u.school_id = $1
-      AND LOWER(r.name) IN ('admin','administrator','super_admin','school_admin')
-      AND COALESCE(u.status,'active') = 'active'
-  `;
-  const { rows } = await pool.query(sql, [schoolId]);
-  return rows.map(r => Number(r.id));
+async function sendManualNotification({ req, schoolId, senderUserId, senderDisplayName, title, body, recipientUserIds, meta }) {
+  const result = await createNotification({
+    app: req.app,
+    schoolId,
+    source: "manual",
+    category: "general",
+    priority: "normal",
+    title,
+    body,
+    senderUserId,
+    senderDisplayName,
+    meta,
+    recipientUserIds,
+  });
+
+  return {
+    notification_id: result.request_id,
+    recipients: result.recipients_created || 0,
+  };
 }
 
-async function emitToUsers(req, userIds) {
-  const io = req.app.get("io");
-  if (!io) return;
-  for (const uid of userIds) {
-    io.to(`user_${uid}`).emit("notification:new");
-  }
+function emitUnreadRefresh(req) {
+  const userId = req.user?.id;
+  const io = req.app?.get?.("io");
+  if (io && userId) io.to(`user_${userId}`).emit("notification:unread-count:refresh");
 }
 
 // ======================= HANDLERS =======================
@@ -188,7 +195,16 @@ export async function listInbox(req, res) {
     `;
 
     const { rows } = await pool.query(sql, params);
-    return res.json({ items: rows });
+    const attachmentsMap = await getAttachmentsForNotificationIds(
+      rows.map((row) => Number(row.notification_id)),
+      schoolId
+    );
+    return res.json({
+      items: rows.map((row) => ({
+        ...row,
+        attachments: attachmentsMap.get(Number(row.notification_id)) || [],
+      })),
+    });
   } catch (e) {
     console.error("listInbox error:", e);
     return res.status(500).json({ message: "خطأ في الخادم" });
@@ -214,6 +230,7 @@ export async function markOneRead(req, res) {
     `;
     const { rowCount } = await pool.query(q, [id, userId, schoolId]);
 
+    emitUnreadRefresh(req);
     return res.status(200).json({ ok: true, updated: rowCount });
   } catch (e) {
     console.error("markOneRead error:", e);
@@ -235,6 +252,7 @@ export async function markAllRead(req, res) {
         AND COALESCE(is_read,false)=false
     `;
     const { rowCount } = await pool.query(q, [userId, schoolId]);
+    emitUnreadRefresh(req);
     return res.json({ ok: true, updated: rowCount });
   } catch (e) {
     console.error("markAllRead error:", e);
@@ -358,36 +376,21 @@ export async function sendAdmins(req, res) {
     if (!title || !body) return res.status(400).json({ message: "العنوان والنص مطلوبان" });
 
     const senderName = await getSenderName(userId, schoolId);
-    const adminIds = await getAdminUserIds(schoolId);
+    const adminIds = await getNotificationAdminUserIds({ schoolId });
     if (!adminIds.length) return res.status(400).json({ message: "لا يوجد حسابات إدارة لهذه المدرسة" });
 
-    const meta = { ui_source: "student_portal", to: "admins", school_id: schoolId };
+    const out = await sendManualNotification({
+      req,
+      schoolId,
+      senderUserId: userId,
+      senderDisplayName: senderName,
+      title,
+      body,
+      recipientUserIds: adminIds,
+      meta: { ui_source: "student_portal", to: "admins", school_id: schoolId },
+    });
 
-    const insN = await pool.query(
-      `
-      INSERT INTO notifications
-        (source, category, priority, title, body, sender_user_id, school_id, sender_display_name, meta, created_at)
-      VALUES
-        ('manual','general','normal',$1,$2,$3,$4,$5,$6::jsonb,NOW())
-      RETURNING id
-      `,
-      [title, body, userId, schoolId, senderName, JSON.stringify(meta)]
-    );
-
-    const notificationId = insN.rows[0].id;
-
-    await pool.query(
-      `
-      INSERT INTO notification_recipients (notification_id, school_id, recipient_user_id, is_read, created_at)
-      SELECT $1, $3, x, false, NOW()
-      FROM UNNEST($2::int[]) AS x
-      `,
-      [notificationId, adminIds, schoolId]
-    );
-
-    await emitToUsers(req, adminIds);
-
-    return res.json({ ok: true, notification_id: notificationId, recipients: adminIds.length });
+    return res.json({ ok: true, ...out });
   } catch (e) {
     console.error("sendAdmins error:", e);
     return res.status(500).json({ message: "خطأ في الخادم" });
@@ -401,7 +404,9 @@ export async function sendTeachers(req, res) {
     const title = String(req.body?.title || "").trim();
     const body = String(req.body?.body || "").trim();
     const mode = String(req.body?.mode || "selected");
-    const teacher_user_ids = Array.isArray(req.body?.teacher_user_ids) ? req.body.teacher_user_ids : [];
+    const teacherUserIds = Array.isArray(req.body?.teacher_user_ids)
+      ? req.body.teacher_user_ids
+      : [];
 
     if (!title || !body) return res.status(400).json({ message: "العنوان والنص مطلوبان" });
 
@@ -416,50 +421,31 @@ export async function sendTeachers(req, res) {
       schoolId,
       q: "",
     });
-
-    const allowedSet = new Set(allowed.map(x => Number(x.teacher_user_id)));
+    const allowedSet = new Set(allowed.map((item) => Number(item.teacher_user_id)));
 
     let targets = [];
-    if (mode === "all") {
-      targets = [...allowedSet];
-    } else {
-      targets = teacher_user_ids.map(Number).filter(id => allowedSet.has(id));
-    }
+    if (mode === "all") targets = [...allowedSet];
+    else targets = teacherUserIds.map(Number).filter((id) => allowedSet.has(id));
 
-    targets = targets.filter(id => id && id !== userId);
-
+    targets = targets.filter((id) => id && id !== userId);
     if (!targets.length) return res.status(400).json({ message: "لا يوجد مستلمين صالحين" });
 
     const senderName = await getSenderName(userId, schoolId);
-    const meta = { ui_source: "student_portal", to: "teachers", mode, school_id: schoolId };
+    const out = await sendManualNotification({
+      req,
+      schoolId,
+      senderUserId: userId,
+      senderDisplayName: senderName,
+      title,
+      body,
+      recipientUserIds: targets,
+      meta: { ui_source: "student_portal", to: "teachers", mode, school_id: schoolId },
+    });
 
-    const insN = await pool.query(
-      `
-      INSERT INTO notifications
-        (source, category, priority, title, body, sender_user_id, school_id, sender_display_name, meta, created_at)
-      VALUES
-        ('manual','general','normal',$1,$2,$3,$4,$5,$6::jsonb,NOW())
-      RETURNING id
-      `,
-      [title, body, userId, schoolId, senderName, JSON.stringify(meta)]
-    );
-
-    const notificationId = insN.rows[0].id;
-
-    await pool.query(
-      `
-      INSERT INTO notification_recipients (notification_id, school_id, recipient_user_id, is_read, created_at)
-      SELECT $1, $3, x, false, NOW()
-      FROM UNNEST($2::int[]) AS x
-      `,
-      [notificationId, targets, schoolId]
-    );
-
-    await emitToUsers(req, targets);
-
-    return res.json({ ok: true, notification_id: notificationId, recipients: targets.length });
+    return res.json({ ok: true, ...out });
   } catch (e) {
     console.error("sendTeachers error:", e);
     return res.status(500).json({ message: "خطأ في الخادم" });
   }
 }
+

@@ -1,5 +1,6 @@
 // backend/src/controllers/notificationsAdminController.js
 import { pool } from "../config/db.js";
+import fs from "fs";
 import {
   previewManualRecipients,
   sendManualNotification,
@@ -17,6 +18,7 @@ import {
   lookupGuardians,
 } from "../modules/notifications/notificationsAudienceLookupService.js";
 import { createAttachmentsForNotification } from "../modules/notifications/notificationsAttachmentsService.js";
+import { emitRealtimeToUsers } from "../modules/notifications/notificationCreateService.js";
 
 /**
  * جلب اسم المرسل مع التأكد من انتمائه لنفس المدرسة
@@ -35,6 +37,31 @@ async function getSenderDisplayName(userId, schoolId) {
 function toPositiveIntOrDefault(value, defaultValue) {
   const n = Number(value);
   return Number.isInteger(n) && n >= 0 ? n : defaultValue;
+}
+
+function cleanupUploadedFiles(files = []) {
+  for (const file of files || []) {
+    try {
+      if (file?.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+    } catch (error) {
+      console.warn("cleanupUploadedFiles warning:", error.message);
+    }
+  }
+}
+
+
+async function rollbackManualNotification({ notificationId, schoolId, senderUserId }) {
+  if (!notificationId || !schoolId || !senderUserId) return;
+
+  // notification_recipients and notification_attachments are deleted by FK CASCADE.
+  await pool.query(
+    `DELETE FROM notifications
+     WHERE id = $1
+       AND school_id = $2
+       AND source = 'manual'
+       AND sender_user_id = $3`,
+    [notificationId, schoolId, senderUserId]
+  );
 }
 
 function resolveErrorStatus(err, fallback = 400) {
@@ -106,33 +133,61 @@ export async function sendManual(req, res) {
       senderDisplayName,
       schoolId, // 👈 حقن رقم المدرسة
       payload: req.body || {},
+      deferRealtime: true,
     });
 
-    // ب) ✅ معالجة المرفقات (ملفات + روابط) إذا نجح الإرسال
+    // ب) معالجة المرفقات قبل Socket. إذا فشل حفظ أي مرفق نحذف الإشعار
+    // اليدوي الذي أنشئناه حتى لا يبقى إشعار ناقص أو مضلل للمستلمين.
     if (result.request_id && !result.skipped) {
-      const files = req.files || []; // الملفات المرفوعة عبر multer
+      const files = req.files || [];
       let links = [];
 
       try {
         if (req.body.links) {
-          links =
-            typeof req.body.links === "string"
-              ? JSON.parse(req.body.links)
-              : req.body.links;
+          try {
+            links =
+              typeof req.body.links === "string"
+                ? JSON.parse(req.body.links)
+                : req.body.links;
+          } catch {
+            throw new Error("صيغة روابط المرفقات غير صحيحة");
+          }
         }
-      } catch (e) {
-        console.warn("فشل في تحليل روابط المرفقات:", e);
+
+        if (!Array.isArray(links)) {
+          throw new Error("صيغة روابط المرفقات غير صحيحة");
+        }
+
+        if (files.length > 0 || links.length > 0) {
+          await createAttachmentsForNotification({
+            notificationId: result.request_id,
+            files,
+            links,
+            schoolId,
+          });
+        }
+      } catch (attachmentError) {
+        await rollbackManualNotification({
+          notificationId: result.request_id,
+          schoolId,
+          senderUserId,
+        });
+        throw attachmentError;
       }
 
-      if (files.length > 0 || links.length > 0) {
-        await createAttachmentsForNotification({
-          notificationId: result.request_id,
-          files,
-          links,
-          schoolId,
-        });
+      if (result.should_emit_realtime) {
+        const realtime = emitRealtimeToUsers(
+          req.app,
+          result.send_result?.recipients || [],
+          result.send_result?.notification,
+          { allowRealtime: true }
+        );
+        result.realtime_sent = realtime.sent_users;
+        if (result.send_result) result.send_result.realtime = realtime;
       }
     }
+
+    if (result?.skipped) cleanupUploadedFiles(req.files || []);
 
     const statusCode = result?.skipped ? 200 : 201;
 
@@ -144,6 +199,7 @@ export async function sendManual(req, res) {
       data: result,
     });
   } catch (err) {
+    cleanupUploadedFiles(req.files || []);
     console.error("sendManual notification error:", err);
     return res.status(resolveErrorStatus(err, 400)).json({
       ok: false,

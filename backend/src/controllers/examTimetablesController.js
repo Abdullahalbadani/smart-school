@@ -1,5 +1,6 @@
 // src/controllers/examTimetablesController.js
 import { pool } from "../config/db.js";
+import WorkflowNotifications from "../modules/notifications/workflowNotificationService.js";
 
 function toInt(v) {
   const n = Number(v);
@@ -652,6 +653,17 @@ export const ExamTimetablesController = {
       [timetableId, schoolId]
     );
 
+    try {
+      await WorkflowNotifications.notifyExamTimetablePublication({
+        app: req.app,
+        schoolId,
+        timetableId,
+        published: true,
+      });
+    } catch (notifyErr) {
+      console.error("Notification error (exam timetable published):", notifyErr);
+    }
+
     return res.json({ message: "تم نشر جدول الاختبارات" });
   } catch (e) {
     console.error("exam publish error:", e);
@@ -674,6 +686,18 @@ export const ExamTimetablesController = {
         "UPDATE exam_timetables SET status='draft', updated_at=now() WHERE id=$1 AND school_id=$2",
         [timetableId, schoolId]
       );
+
+      try {
+        await WorkflowNotifications.notifyExamTimetablePublication({
+          app: req.app,
+          schoolId,
+          timetableId,
+          published: false,
+        });
+      } catch (notifyErr) {
+        console.error("Notification error (exam timetable unpublished):", notifyErr);
+      }
+
       return res.json({ message: "تم إرجاع جدول الاختبارات إلى مسودة" });
     } catch (e) {
       console.error("exam unpublish error:", e);

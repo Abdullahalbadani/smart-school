@@ -232,9 +232,7 @@ const PAGE_FILE_MAP = {
   monthlyWork: "monthlyWork",
   monthlyReports: "monthlyReports",
   termWork: "termWork",
-  termReports: "termReports",
   termResults: "termResults",
-  yearResults: "yearResults",
   createNotify: "createNotify",
   notifyLog: "notifyLog",
   inbox: "inbox",
@@ -245,9 +243,6 @@ const PAGE_FILE_MAP = {
   feesReports: "feesReports",
   studentData: "studentData",
   staffData: "staffData",
-  termGrades: "termGrades",
-  finalGrades: "finalGrades",
-  studentStats: "studentStats",
   settingschool: "settingschool",
   feesSettings: "feesSettings",
 };
@@ -610,9 +605,6 @@ async function fetchMenuPermissions() {
         feesSettings: "اعدادات الرسوم",
         studentData: "بيانات الطلاب",
         staffData: "بيانات الموظفين",
-        termGrades: "تقارير الدرجات الفصلية",
-        finalGrades: "تقارير الدرجات النهائية",
-        studentStats: "إحصائيات الطلاب",
         settingschool: "إعدادات المدرسة",
         "rbac-users": "المستخدمون",
         "rbac-roles": "الأدوار",
@@ -1249,8 +1241,9 @@ document.addEventListener("DOMContentLoaded", () => {
   window.refreshEagleEye(); 
 
   // ⚡ استقبال السحر الحي في الإدارة (Real-Time)
-  if (typeof io !== "undefined") {
-const adminSocket = io(window.API_ORIGIN || window.location.origin);    
+  if (typeof window.getNotificationSocket === "function") {
+    const adminSocket = window.getNotificationSocket();
+    if (!adminSocket) return;
     adminSocket.on("connect", () => {
       console.log("🟢 [Socket] الإدارة متصلة بالسيرفر الحي وتستمع لإشعارات المعلمين!");
     });

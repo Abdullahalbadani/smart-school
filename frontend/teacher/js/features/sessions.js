@@ -71,9 +71,7 @@ function findFinishedSessionInLog(dateVal, periodId, scope) {
 }
 
 
-  const byId = (id) =>
-    typeof window.$ === "function" ? window.$(id) : document.getElementById(id);
-
+    const byId = (id) => document.getElementById(String(id || ""));
   // Safe string replace (avoid replaceAll compatibility issues)
   const replaceAllSafe = (str, search, replacement) => {
     const s = String(str ?? "");
@@ -1484,37 +1482,55 @@ return d === daySchool;
   /* =========================
      Public init (مُحصّن ضد ترتيب تحميل الملفات)
   ========================= */
-  async function waitForTeachingScopes(maxTries = 60, delayMs = 100) {
+    async function waitForTeachingScopes(maxTries = 100, delayMs = 100) {
     for (let i = 0; i < maxTries; i++) {
       const TS = window.TeachingScopes;
       if (TS?.initTeachingPicker) return TS;
       await sleep(delayMs);
     }
+
     return null;
   }
 
-window.TeacherSessions = {
-  init() {
-    // ✅ Guard: لا نسمح بتسجيل مستمعين/تهيئة أكثر من مرة
-    if (window.TeacherSessions.__inited) return;
-    window.TeacherSessions.__inited = true;
+  window.TeacherSessions = {
+    init() {
+      if (window.TeacherSessions.__ready) return;
+      if (window.TeacherSessions.__initializing) return;
 
-    // patchTeachingScopesFilter();
+      window.TeacherSessions.__initializing = true;
 
-    (async () => {
-      const TS = window.TeachingScopes || (await waitForTeachingScopes());
-      if (!TS) {
-        console.warn("TeachingScopes not ready; TeacherSessions init skipped.");
-        return;
-      }
+      (async () => {
+        const TS = window.TeachingScopes || (await waitForTeachingScopes());
 
-      patchTeachingScopesFilter();
-      initAttendanceDB();
-      initLessonsDB();
-      initLessonsTabsAndReport();
-    })().catch((e) => console.warn("TeacherSessions.init failed:", e));
-  },
-};
+        if (!TS?.initTeachingPicker) {
+          console.warn("TeachingScopes not ready; TeacherSessions init skipped.");
+          return;
+        }
+
+        patchTeachingScopesFilter();
+
+        // قد يتم تحميل عناصر المودال بعد تحميل ملف JavaScript بقليل.
+        // نعيد المحاولة بدل تعطيل الوظيفة نهائيًا.
+        for (let i = 0; i < 50; i++) {
+          initAttendanceDB();
+
+          if (initLessonsDB()) {
+            initLessonsTabsAndReport();
+            window.TeacherSessions.__ready = true;
+            return;
+          }
+
+          await sleep(100);
+        }
+
+        console.warn("TeacherSessions: lessons UI is not ready.");
+      })()
+        .catch((e) => console.warn("TeacherSessions.init failed:", e))
+        .finally(() => {
+          window.TeacherSessions.__initializing = false;
+        });
+    },
+  };
 
 
   /* =========================
@@ -1726,18 +1742,19 @@ window.clearQrCodeFully = stopAndClearAttendanceQr;
 
 
 
-  function initAttendanceDB() {
-  // ✅ Guard
-  if (initAttendanceDB.__done) return;
-  initAttendanceDB.__done = true;
+   function initAttendanceDB() {
+    if (initAttendanceDB.__done) return true;
 
-  const TS = window.TeachingScopes;
-  if (!TS?.initTeachingPicker) return;
-// ✅ ضمان تحميل أسباب الغياب قبل أي عرض
-ensureAttendanceMetaOnce(TS).catch(() => {});
+    const TS = window.TeachingScopes;
+    if (!TS?.initTeachingPicker) return false;
 
-  const tbody = byId("att-table-body");
-  if (!tbody) return;
+    const tbody = byId("att-table-body");
+    if (!tbody) return false;
+
+    initAttendanceDB.__done = true;
+
+    // ✅ ضمان تحميل أسباب الغياب قبل أي عرض
+    ensureAttendanceMetaOnce(TS).catch(() => {});
 
   // === Tabs + Views ===
 // === Tabs + Views ===
@@ -2119,19 +2136,27 @@ let __lastHistoryRows = [];
   const permTo = byId("perm-to");
   const permSearch = byId("perm-search");
 
+  const permForm = byId("perm-form");
   const permShowBtn = byId("perm-show");
+  const permTodayBtn = byId("perm-today");
+  const permHistoryToggleBtn = byId("perm-toggle-history");
+  const permHistoryApplyBtn = byId("perm-apply-history");
+  const permHistoryBox = byId("perm-history-box");
+  const permModeLabel = byId("perm-mode-label");
+
   const permExportBtn = byId("perm-export-csv");
   const permPrintBtn = byId("perm-print");
-
   const permSummary = byId("perm-summary");
   const permList = byId("perm-list");
   const permEmpty = byId("perm-empty");
 
   let __lastPermRows = [];
+  let __permMode = "today"; // today | history
 
   // لو الواجهة/العناصر غير موجودة لا نكسر
   if (!permList && !permEmpty && !permShowBtn && !permExportBtn && !permPrintBtn) {
     window.loadPermitsList = async () => [];
+    window.loadTodayPermits = async () => [];
     return;
   }
 
@@ -2142,25 +2167,22 @@ let __lastHistoryRows = [];
     return Array.isArray(rows) ? rows : [];
   }
 
- function __normPermStatus(s) {
-  const raw = String(s ?? "").trim();
-  const v = raw.toLowerCase();
+  function __normPermStatus(s) {
+    const raw = String(s ?? "").trim();
+    const v = raw.toLowerCase();
 
-  if (!raw) return "";
+    if (!raw) return "";
 
-  // english-ish
-  if (v.includes("pend") || v.includes("wait") || v.includes("review")) return "pending";
-  if (v.includes("approv") || v.includes("accept") || v.includes("allow")) return "approved";
-  if (v.includes("reject") || v.includes("deny") || v.includes("refus")) return "rejected";
+    if (v.includes("pend") || v.includes("wait") || v.includes("review")) return "pending";
+    if (v.includes("approv") || v.includes("accept") || v.includes("allow")) return "approved";
+    if (v.includes("reject") || v.includes("deny") || v.includes("refus")) return "rejected";
 
-  // عربي (مهم)
-  if (/بانتظار|قيد|مراجعة|معلّق|معلق/.test(raw)) return "pending";
-  if (/مقبول|تم\s*قبول|معتمد|موافق/.test(raw)) return "approved";
-  if (/مرفوض|تم\s*رفض|غير\s*موافق/.test(raw)) return "rejected";
+    if (/بانتظار|قيد|مراجعة|معلّق|معلق/.test(raw)) return "pending";
+    if (/مقبول|تم\s*قبول|معتمد|موافق/.test(raw)) return "approved";
+    if (/مرفوض|تم\s*رفض|غير\s*موافق/.test(raw)) return "rejected";
 
-  return v;
-}
-
+    return v;
+  }
 
   function __normPermTypeLocal(t) {
     const v = String(t ?? "").trim().toLowerCase();
@@ -2168,6 +2190,65 @@ let __lastHistoryRows = [];
     if (v.includes("late") || v.includes("تأخر") || v.includes("تاخر")) return "late";
     if (v.includes("leave") || v.includes("خروج") || v.includes("استئذان")) return "leave";
     return "absence";
+  }
+
+  function __statusLabel(status) {
+    return status === "approved"
+      ? "مقبول"
+      : status === "rejected"
+      ? "مرفوض"
+      : status === "pending"
+      ? "معلّق"
+      : status || "—";
+  }
+
+  function __typeLabel(type) {
+    return type === "late" ? "تأخر" : type === "leave" ? "استئذان / خروج" : "غياب";
+  }
+
+  function __setPermitsMode(mode) {
+    __permMode = mode === "history" ? "history" : "today";
+
+    const today = todayISO();
+    if (__permMode === "today") {
+      if (permFrom) permFrom.value = today;
+      if (permTo) permTo.value = today;
+      if (permHistoryBox) permHistoryBox.hidden = true;
+      if (permModeLabel) permModeLabel.textContent = `أذونات اليوم — ${today}`;
+      if (permHistoryToggleBtn) {
+        const label = permHistoryToggleBtn.querySelector("span");
+        if (label) label.textContent = "عرض أذونات سابقة";
+      }
+      return;
+    }
+
+    if (permHistoryBox) permHistoryBox.hidden = false;
+    if (permModeLabel) permModeLabel.textContent = "أذونات حسب الفترة";
+    if (permHistoryToggleBtn) {
+      const label = permHistoryToggleBtn.querySelector("span");
+      if (label) label.textContent = "إخفاء فلترة السابق";
+    }
+  }
+
+  function __getSelectedDates() {
+    const today = todayISO();
+
+    if (__permMode === "today") {
+      return { from: today, to: today };
+    }
+
+    const from = String(permFrom?.value || "").slice(0, 10);
+    const to = String(permTo?.value || "").slice(0, 10);
+
+    if (!from || !to) {
+      throw new Error("حدد تاريخ البداية والنهاية لعرض الأذونات السابقة.");
+    }
+
+    if (from > to) {
+      throw new Error("تاريخ البداية يجب أن يكون قبل تاريخ النهاية.");
+    }
+
+    return { from, to };
   }
 
   async function fetchPermitsListFromServer(filters) {
@@ -2182,20 +2263,18 @@ let __lastHistoryRows = [];
       qs.set("teacher_id", String(myTid));
     }
 
-    // ✅ Filters
     const st = String(filters?.status || "").trim();
     const ty = String(filters?.type || "").trim();
     const from = String(filters?.from || "").slice(0, 10);
     const to = String(filters?.to || "").slice(0, 10);
     const search = String(filters?.search || "").trim();
 
-    if (st) qs.set("status", st);              // pending/approved/rejected أو حسب الباك-إند
-    if (ty) qs.set("type", ty);                // absence/late/leave
+    if (st) qs.set("status", st);
+    if (ty) qs.set("type", ty);
     if (from) qs.set("from", from);
     if (to) qs.set("to", to);
     if (search) qs.set("search", search);
 
-    // ✅ جرّب عدة مسارات (أضف/غيّر حسب باك-إندك)
     const paths = [
       `/teacher/attendance/permits?${qs.toString()}`,
       `/teacher/attendance/excuses?${qs.toString()}`,
@@ -2213,51 +2292,60 @@ let __lastHistoryRows = [];
         lastErr = e;
       }
     }
+
     throw lastErr || new Error("مسار الأذونات غير موجود في السيرفر");
   }
-function __getPermStatusRaw(x) {
-  return (
-    x?.status ??
-    x?.request_status ??
-    x?.state ??
-    x?.approval_status ??
-    x?.admin_status ??
-    x?.decision_status ??
-    x?.decision ??
-    x?.admin_decision ??
-    ""
-  );
-}
 
-function __dedupPermits(rows) {
-  const map = new Map();
-  (Array.isArray(rows) ? rows : []).forEach((x) => {
-    const id = x?.id ?? x?.permit_id ?? x?.request_id ?? null;
-    const key = id
-      ? "id:" + String(id)
-      : [
-          x?.student_id ?? x?.studentId ?? "",
-          __normPermTypeLocal(x?.type ?? x?.permit_type ?? x?.request_type ?? x?.kind),
-          String(x?.from_date ?? x?.date_from ?? x?.from ?? x?.date ?? "").slice(0, 10),
-          String(x?.to_date ?? x?.date_to ?? x?.to ?? "").slice(0, 10),
-          __normPermStatus(__getPermStatusRaw(x)),
-        ].join("|");
+  function __getPermStatusRaw(x) {
+    return (
+      x?.status ??
+      x?.request_status ??
+      x?.state ??
+      x?.approval_status ??
+      x?.admin_status ??
+      x?.decision_status ??
+      x?.decision ??
+      x?.admin_decision ??
+      ""
+    );
+  }
 
-    if (!map.has(key)) map.set(key, x);
-  });
-  return Array.from(map.values());
-}
+  function __dedupPermits(rows) {
+    const map = new Map();
+    (Array.isArray(rows) ? rows : []).forEach((x) => {
+      const id = x?.id ?? x?.permit_id ?? x?.request_id ?? null;
+      const key = id
+        ? "id:" + String(id)
+        : [
+            x?.student_id ?? x?.studentId ?? "",
+            __normPermTypeLocal(x?.type ?? x?.permit_type ?? x?.request_type ?? x?.kind),
+            String(x?.from_date ?? x?.date_from ?? x?.from ?? x?.date ?? "").slice(0, 10),
+            String(x?.to_date ?? x?.date_to ?? x?.to ?? "").slice(0, 10),
+            __normPermStatus(__getPermStatusRaw(x)),
+          ].join("|");
 
-  function renderPermitsList(rows) {
-  const list = __dedupPermits(rows);
-__lastPermRows = list;
+      if (!map.has(key)) map.set(key, x);
+    });
+    return Array.from(map.values());
+  }
 
+  function renderPermitsList(rows, filters = {}) {
+    const list = __dedupPermits(rows);
+    __lastPermRows = list;
 
-    if (permSummary) permSummary.textContent = list.length ? `عدد الطلبات: ${list.length}` : "—";
+    const from = String(filters.from || "").slice(0, 10);
+    const to = String(filters.to || "").slice(0, 10);
+    const rangeLabel =
+      __permMode === "today"
+        ? `أذونات اليوم (${from || todayISO()})`
+        : `الأذونات من ${from || "—"} إلى ${to || "—"}`;
 
-    // badge: عدد المعلّق
+    if (permSummary) {
+      permSummary.textContent = `${rangeLabel} — عدد الطلبات: ${list.length}`;
+    }
+
     const pendingCount = list.filter(
-      (x) => __normPermStatus(x.status ?? x.request_status ?? x.state) === "pending"
+      (x) => __normPermStatus(__getPermStatusRaw(x)) === "pending"
     ).length;
 
     if (permBadge) {
@@ -2270,77 +2358,111 @@ __lastPermRows = list;
     if (!list.length) {
       permList.innerHTML = "";
       permEmpty.style.display = "block";
+      permEmpty.textContent =
+        __permMode === "today"
+          ? "لا توجد أذونات لليوم الحالي."
+          : "لا توجد أذونات مطابقة للفترة والفلاتر المحددة.";
       return;
     }
+
     permEmpty.style.display = "none";
 
     permList.innerHTML = list
       .map((x) => {
-const st = __normPermStatus(__getPermStatusRaw(x));
-        const ty = __normPermTypeLocal(x.type ?? x.permit_type ?? x.request_type ?? x.kind);
-
+        const status = __normPermStatus(__getPermStatusRaw(x));
+        const type = __normPermTypeLocal(x.type ?? x.permit_type ?? x.request_type ?? x.kind);
         const studentName = x.student_name ?? x.studentName ?? "—";
         const studentCode = x.student_code ?? x.studentCode ?? "";
-
         const fromD = String(x.from_date ?? x.date_from ?? x.from ?? x.date ?? "").slice(0, 10);
         const toD = String(x.to_date ?? x.date_to ?? x.to ?? "").slice(0, 10);
-
-        const labelSt =
-          st === "approved"
-            ? "مقبول"
-            : st === "rejected"
-            ? "مرفوض"
-            : st === "pending"
-            ? "معلّق"
-            : st || "—";
-
-        const labelTy = ty === "late" ? "تأخر" : ty === "leave" ? "استئذان/خروج" : "غياب";
-
         const note = x.note ?? x.details ?? x.message ?? x.description ?? "";
+        const reason = x.reason_name ?? x.reasonName ?? "";
+        const lateMinutes = Number(x.late_minutes ?? x.delay_minutes ?? 0) || 0;
+        const dateLabel = toD && toD !== fromD ? `${fromD || "—"} ← ${toD}` : fromD || "—";
 
         return `
-          <div class="muted-box" style="display:flex;flex-direction:column;gap:.35rem;">
-            <div style="display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;justify-content:space-between;">
-              <div>
+          <article class="permit-card">
+            <div class="permit-card-head">
+              <div class="permit-student">
                 <strong>${esc(studentName)}</strong>
-                ${studentCode ? `<span class="att-chip" style="margin-inline-start:.35rem;">${esc(studentCode)}</span>` : ``}
+                ${studentCode ? `<span class="att-chip">${esc(studentCode)}</span>` : ``}
               </div>
-              <div style="display:flex;gap:.35rem;flex-wrap:wrap;">
-                <span class="att-chip">${esc(labelTy)}</span>
-                <span class="att-chip">${esc(labelSt)}</span>
+
+              <div class="permit-badges">
+                <span class="att-chip permit-type">${esc(__typeLabel(type))}</span>
+                <span class="att-chip permit-status permit-status--${esc(status || "unknown")}">${esc(__statusLabel(status))}</span>
               </div>
             </div>
 
-            <div class="muted" style="display:flex;gap:.6rem;flex-wrap:wrap;">
-              ${fromD ? `<span>من: ${esc(fromD)}</span>` : ``}
-              ${toD ? `<span>إلى: ${esc(toD)}</span>` : ``}
+            <div class="permit-card-meta">
+              <span><i class="ri-calendar-line"></i> ${esc(dateLabel)}</span>
+              ${reason ? `<span><i class="ri-information-line"></i> ${esc(reason)}</span>` : ``}
+              ${lateMinutes ? `<span><i class="ri-time-line"></i> ${esc(lateMinutes)} دقيقة</span>` : ``}
             </div>
 
-            ${note ? `<div>${esc(note)}</div>` : `<div class="muted">—</div>`}
-          </div>
+            <div class="permit-card-note">
+              <strong>الملاحظة:</strong>
+              <span>${note ? esc(note) : "لا توجد ملاحظة."}</span>
+            </div>
+          </article>
         `;
       })
       .join("");
   }
 
-  // ✅ دالة تحميل واحدة + Global للتاب
   window.loadPermitsList = async function loadPermitsList() {
+    const dates = __getSelectedDates();
     const filters = {
       status: String(permStatus?.value || "").trim(),
       type: String(permType?.value || "").trim(),
-      from: String(permFrom?.value || "").slice(0, 10),
-      to: String(permTo?.value || "").slice(0, 10),
+      from: dates.from,
+      to: dates.to,
       search: String(permSearch?.value || "").trim(),
     };
 
-    // لو ما حدد المستخدم status: اعرض approved افتراضيًا (تقدر تغيّرها)
-
     const rows = await fetchPermitsListFromServer(filters);
-    renderPermitsList(rows);
+    renderPermitsList(rows, filters);
     return rows;
   };
 
-  permShowBtn?.addEventListener("click", () => {
+  window.loadTodayPermits = async function loadTodayPermits() {
+    __setPermitsMode("today");
+    return window.loadPermitsList();
+  };
+
+  permForm?.addEventListener("submit", (event) => {
+    event.preventDefault();
+    window.loadPermitsList?.().catch((e) => toast("فشل تحميل الأذونات: " + (e.message || "")));
+  });
+
+  permTodayBtn?.addEventListener("click", () => {
+    window.loadTodayPermits?.().catch((e) => toast("فشل تحميل أذونات اليوم: " + (e.message || "")));
+  });
+
+  permHistoryToggleBtn?.addEventListener("click", () => {
+    if (__permMode === "history" && permHistoryBox && !permHistoryBox.hidden) {
+      __setPermitsMode("today");
+      window.loadPermitsList?.().catch((e) => toast("فشل تحميل أذونات اليوم: " + (e.message || "")));
+      return;
+    }
+
+    __setPermitsMode("history");
+    if (permFrom && !permFrom.value) permFrom.value = todayISO();
+    if (permTo && !permTo.value) permTo.value = todayISO();
+    permFrom?.focus?.();
+  });
+
+  permHistoryApplyBtn?.addEventListener("click", () => {
+    __setPermitsMode("history");
+    window.loadPermitsList?.().catch((e) => toast("فشل تحميل الأذونات السابقة: " + (e.message || "")));
+  });
+
+  permFrom?.addEventListener("change", () => __setPermitsMode("history"));
+  permTo?.addEventListener("change", () => __setPermitsMode("history"));
+
+  permSearch?.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
     window.loadPermitsList?.().catch((e) => toast("فشل تحميل الأذونات: " + (e.message || "")));
   });
 
@@ -2357,7 +2479,7 @@ const st = __normPermStatus(__getPermStatusRaw(x));
             x.student_name ?? x.studentName ?? "",
             x.student_code ?? x.studentCode ?? "",
             __normPermTypeLocal(x.type ?? x.permit_type ?? x.request_type ?? x.kind),
-            __normPermStatus(x.status ?? x.request_status ?? x.state),
+            __normPermStatus(__getPermStatusRaw(x)),
             String(x.from_date ?? x.date_from ?? x.from ?? x.date ?? "").slice(0, 10),
             String(x.to_date ?? x.date_to ?? x.to ?? "").slice(0, 10),
             x.note ?? x.details ?? x.message ?? x.description ?? "",
@@ -2369,11 +2491,12 @@ const st = __normPermStatus(__getPermStatusRaw(x));
     downloadText(`permits_${Date.now()}.csv`, csv);
   });
 
-permPrintBtn?.addEventListener("click", () => {
-  try { setAttendanceTab("perms"); } catch {}
-  try { window.print(); } catch { toast("تعذر فتح الطباعة."); }
-});
+  permPrintBtn?.addEventListener("click", () => {
+    try { setAttendanceTab("perms"); } catch {}
+    try { window.print(); } catch { toast("تعذر فتح الطباعة."); }
+  });
 
+  __setPermitsMode("today");
 })();
 
   // === Report ===
@@ -2557,9 +2680,9 @@ if (w === "scan") {
 
 
  tabTake?.addEventListener("click", () => setAttendanceTab("take"));
-tabPerms?.addEventListener("click", async () => {                 // ✅
+tabPerms?.addEventListener("click", async () => {
   if (!(await setAttendanceTab("perms"))) return;
-window.loadPermitsList?.().catch((e) => toast("فشل تحميل الأذونات: " + (e.message || "")));
+  window.loadTodayPermits?.().catch((e) => toast("فشل تحميل أذونات اليوم: " + (e.message || "")));
 });
 tabHist?.addEventListener("click", async () => { await setAttendanceTab("history"); });
 tabRep?.addEventListener("click", async () => { await setAttendanceTab("report"); });
@@ -3965,12 +4088,11 @@ historyPrintBtn?.addEventListener("click", () => {
   /* =========================
      Lessons (Session start/end + auto-end) + anti-double end
   ========================= */
-  function initLessonsDB() {
-    if (initLessonsDB.__done) return;
-initLessonsDB.__done = true;
+   function initLessonsDB() {
+    if (initLessonsDB.__done) return true;
 
     const TS = window.TeachingScopes;
-    if (!TS?.initTeachingPicker) return;
+    if (!TS?.initTeachingPicker) return false;
 
     const lessonSelect = byId("ls-lesson");
     const noteInput = byId("ls-note");
@@ -4038,10 +4160,10 @@ if (openAttBtn && openAttBtn.dataset.boundOpenAtt !== "1") {
   });
 }
 
-    if (!lessonSelect || !startBtn || !endBtn) return;
+       if (!lessonSelect || !startBtn || !endBtn) return false;
 
+    initLessonsDB.__done = true;
     TS.initTeachingPicker("ls");
-
     if (dateInput && !dateInput.value)
       dateInput.value = typeof TS.todayISO === "function" ? TS.todayISO() : todayISO();
 // ✅ تصحيح: جعل التاريخ قابلاً للتعديل
@@ -4686,13 +4808,14 @@ if (isLocked) {
       }
     });
 
-    endBtn.addEventListener("click", async () => {
+      endBtn.addEventListener("click", async () => {
       if (!ACTIVE_SESSION_ID) return toast("لا توجد حصة جارية لإنهائها.");
       if (!__CAN_LS_END) return toast("لا تملك صلاحية إنهاء الحصة.");
 
       await endSession({ auto: false });
     });
-    
+
+    return true;
   }
 
   /* =========================

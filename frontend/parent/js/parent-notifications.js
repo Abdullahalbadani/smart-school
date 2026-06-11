@@ -197,6 +197,73 @@ function formatArabicDateTime(input) {
       .replaceAll("'", "&#039;");
   }
 
+
+  async function openProtectedNotificationAttachment(url, download = false) {
+    const res = await fetch(url, {
+      headers: { ...tokenHeader() },
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("تعذر فتح المرفق");
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    if (download) a.download = "";
+    else a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+  }
+
+  function renderNotificationAttachments(item, bodyElementId = "nt-detail-body") {
+    document.getElementById("nt-detail-attachments-runtime")?.remove();
+    const bodyEl = $(bodyElementId);
+    const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+    if (!bodyEl || !attachments.length) return;
+
+    const wrap = document.createElement("section");
+    wrap.id = "nt-detail-attachments-runtime";
+    wrap.style.marginTop = "12px";
+    wrap.style.paddingTop = "10px";
+    wrap.style.borderTop = "1px dashed rgba(148,163,184,.35)";
+    wrap.innerHTML = `
+      <strong style="display:block;margin-bottom:8px;">المرفقات</strong>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${attachments.map((a) => {
+          const label = escapeHtml(a.label || a.name || "فتح المرفق");
+          if (a.kind === "link" && a.url) {
+            return `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer" class="nt-pill">🔗 ${label}</a>`;
+          }
+          if (!a.view_url) return "";
+          return `<button type="button" class="nt-pill nt-runtime-attachment" data-view-url="${escapeHtml(a.view_url)}" data-download-url="${escapeHtml(a.download_url || a.view_url)}">📎 ${label}</button>`;
+        }).join("")}
+      </div>
+    `;
+    bodyEl.insertAdjacentElement("afterend", wrap);
+    wrap.querySelectorAll(".nt-runtime-attachment").forEach((btn) => {
+      btn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          await openProtectedNotificationAttachment(btn.dataset.viewUrl, false);
+        } catch (error) {
+          showToast(error.message || "تعذر فتح المرفق", "error");
+        }
+      });
+      btn.addEventListener("contextmenu", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          await openProtectedNotificationAttachment(btn.dataset.downloadUrl, true);
+        } catch (error) {
+          showToast(error.message || "تعذر تنزيل المرفق", "error");
+        }
+      });
+    });
+  }
+
   function renderInbox(items) {
     const list = $("nt-inbox-list");
     const empty = $("nt-inbox-empty");
@@ -241,6 +308,7 @@ const sender =
         // ✅ نفس التنسيق الواضح داخل التفاصيل
         $("nt-detail-sub").innerHTML = `من: ${escapeHtml(sender)} • ${ltrSpan(escapeHtml(createdPretty))}`;
         $("nt-detail-body").textContent = body || "—";
+        renderNotificationAttachments(it);
 
         if (unread && it.id) {
           await api(`${API_BASE}/inbox/${it.id}/read`, { method: "PATCH" });
@@ -694,10 +762,28 @@ $("nt-te-search")?.addEventListener("input", () => {
     $("nt-send-all-teachers")?.addEventListener("click", () => sendAllTeachers().catch((e) => showToast(`خطأ: ${e.message}`)));
   }
 
+  function wireSocket() {
+    try {
+      const socket = window.getNotificationSocket?.();
+      if (!socket) return;
+
+      const refreshRealtime = () => {
+        refreshUnreadCount().catch(() => {});
+        if (state.tab === "inbox") refreshList().catch(() => {});
+      };
+
+      socket.on("notification:new", refreshRealtime);
+      socket.on("notification:unread-count:refresh", refreshRealtime);
+    } catch {
+      // REST refresh remains available as a fallback.
+    }
+  }
+
   async function init() {
     wireEvents();
     setBadge(0);
     refreshUnreadCount().catch(() => {});
+    wireSocket();
   }
 
   if (document.readyState === "loading") {

@@ -4,6 +4,15 @@
 
   const $ = (id) => document.getElementById(id);
 
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
   function token() {
     return localStorage.getItem("token") || localStorage.getItem("accessToken") || "";
   }
@@ -127,6 +136,73 @@
     return !(it.read_at || it.readAt || it.is_read || it.isRead);
   }
 
+
+  async function openProtectedNotificationAttachment(url, download = false) {
+    const res = await fetch(url, {
+      headers: { ...tokenHeader() },
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("تعذر فتح المرفق");
+    const blob = await res.blob();
+    const objectUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = objectUrl;
+    if (download) a.download = "";
+    else a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+  }
+
+  function renderNotificationAttachments(item, bodyElementId = "st-nt-detail-body") {
+    document.getElementById("st-nt-detail-attachments-runtime")?.remove();
+    const bodyEl = $(bodyElementId);
+    const attachments = Array.isArray(item?.attachments) ? item.attachments : [];
+    if (!bodyEl || !attachments.length) return;
+
+    const wrap = document.createElement("section");
+    wrap.id = "st-nt-detail-attachments-runtime";
+    wrap.style.marginTop = "12px";
+    wrap.style.paddingTop = "10px";
+    wrap.style.borderTop = "1px dashed rgba(148,163,184,.35)";
+    wrap.innerHTML = `
+      <strong style="display:block;margin-bottom:8px;">المرفقات</strong>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        ${attachments.map((a) => {
+          const label = escapeHtml(a.label || a.name || "فتح المرفق");
+          if (a.kind === "link" && a.url) {
+            return `<a href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer" class="st-nt-pill">🔗 ${label}</a>`;
+          }
+          if (!a.view_url) return "";
+          return `<button type="button" class="st-nt-pill nt-runtime-attachment" data-view-url="${escapeHtml(a.view_url)}" data-download-url="${escapeHtml(a.download_url || a.view_url)}">📎 ${label}</button>`;
+        }).join("")}
+      </div>
+    `;
+    bodyEl.insertAdjacentElement("afterend", wrap);
+    wrap.querySelectorAll(".nt-runtime-attachment").forEach((btn) => {
+      btn.addEventListener("click", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          await openProtectedNotificationAttachment(btn.dataset.viewUrl, false);
+        } catch (error) {
+          showToast(error.message || "تعذر فتح المرفق", "error");
+        }
+      });
+      btn.addEventListener("contextmenu", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        try {
+          await openProtectedNotificationAttachment(btn.dataset.downloadUrl, true);
+        } catch (error) {
+          showToast(error.message || "تعذر تنزيل المرفق", "error");
+        }
+      });
+    });
+  }
+
   function renderInbox(items) {
     const list = $("st-nt-inbox-list");
     const empty = $("st-nt-inbox-empty");
@@ -149,12 +225,12 @@
       div.innerHTML = `
         <div class="st-nt-item-top">
           <div>
-            <div class="st-nt-title">${it.title || "بدون عنوان"}</div>
-            <div class="st-nt-meta">من: ${sender} • ${created}</div>
+            <div class="st-nt-title">${escapeHtml(it.title || "بدون عنوان")}</div>
+            <div class="st-nt-meta">من: ${escapeHtml(sender)} • ${escapeHtml(created)}</div>
           </div>
           ${unread ? `<span class="st-nt-pill"><i class="ri-mail-unread-line"></i>غير مقروء</span>` : ``}
         </div>
-        <div class="st-nt-meta" style="margin-top:.35rem;">${snippet}</div>
+        <div class="st-nt-meta" style="margin-top:.35rem;">${escapeHtml(snippet)}</div>
       `;
 
       div.addEventListener("click", async () => {
@@ -163,6 +239,7 @@
           $("st-nt-detail-title").textContent = it.title || "—";
           $("st-nt-detail-sub").textContent = `من: ${sender} • ${created}`;
           $("st-nt-detail-body").textContent = it.body || "—";
+          renderNotificationAttachments(it);
 
           if (unread && it.id) {
             await api(`${API_BASE}/inbox/${it.id}/read`, { method: "PATCH" });
@@ -199,12 +276,12 @@
       div.innerHTML = `
         <div class="st-nt-item-top">
           <div>
-            <div class="st-nt-title">${it.title || "بدون عنوان"}</div>
-            <div class="st-nt-meta">${created} • المستلمون: ${total}</div>
+            <div class="st-nt-title">${escapeHtml(it.title || "بدون عنوان")}</div>
+            <div class="st-nt-meta">${escapeHtml(created)} • المستلمون: ${escapeHtml(total)}</div>
           </div>
-          <span class="st-nt-pill"><i class="ri-eye-line"></i>قُرئت ${read}/${total}</span>
+          <span class="st-nt-pill"><i class="ri-eye-line"></i>قُرئت ${escapeHtml(read)}/${escapeHtml(total)}</span>
         </div>
-        <div class="st-nt-meta" style="margin-top:.35rem;">${(it.body||"").slice(0,140)}</div>
+        <div class="st-nt-meta" style="margin-top:.35rem;">${escapeHtml((it.body||"").slice(0,140))}</div>
       `;
 
       div.addEventListener("click", async () => {
@@ -215,7 +292,7 @@
           $("st-nt-detail-body").textContent = it.body || "—";
 
           $("st-nt-receipts-box").style.display = "";
-          $("st-nt-receipts-summary").textContent = `قُرئت ${read}/${total}`;
+          $("st-nt-receipts-summary").textContent = `قُرئت ${escapeHtml(read)}/${escapeHtml(total)}`;
 
           const box = $("st-nt-recipients");
           box.innerHTML = `<div class="muted-box">جارِ التحميل...</div>`;
@@ -229,10 +306,10 @@
             row.className = "muted-box";
             row.style.margin = "0";
             row.innerHTML = `
-              <strong>${r.recipient_name || "—"}</strong>
+              <strong>${escapeHtml(r.recipient_name || "—")}</strong>
               <div style="margin-top:.25rem;">
                 ${r.is_read ? "✅ قُرئت" : "⏳ لم تُقرأ"}
-                ${r.read_at ? ` • ${r.read_at}` : ""}
+                ${r.read_at ? ` • ${escapeHtml(r.read_at)}` : ""}
               </div>
             `;
             box.appendChild(row);
@@ -320,8 +397,8 @@
       box.innerHTML = `
         <div style="display:flex;justify-content:space-between;gap:.6rem;align-items:center;">
           <div>
-            <div class="st-nt-title">${t.teacher_name}</div>
-            ${t.subjects?.length ? `<div class="st-nt-meta">مواد: ${t.subjects.join("، ")}</div>` : ``}
+            <div class="st-nt-title">${escapeHtml(t.teacher_name || "—")}</div>
+            ${t.subjects?.length ? `<div class="st-nt-meta">مواد: ${t.subjects.map((subject) => escapeHtml(subject)).join("، ")}</div>` : ``}
           </div>
           <input type="checkbox" data-uid="${uid}" />
         </div>
@@ -435,16 +512,16 @@
 
   function wireSocket() {
     try {
-      if (!window.io) return;
-      const socket = window.io(BACKEND_ORIGIN, { transports: ["websocket"] });
+      const socket = window.getNotificationSocket?.();
+      if (!socket) return;
 
-      const uid = decodeJwtId();
-      if (uid) socket.emit("join_user_room", uid);
-
-      socket.on("notification:new", () => {
+      const refreshRealtime = () => {
         refreshUnreadCount().catch(()=>{});
         if (state.tab === "inbox") refreshList().catch(()=>{});
-      });
+      };
+
+      socket.on("notification:new", refreshRealtime);
+      socket.on("notification:unread-count:refresh", refreshRealtime);
     } catch {}
   }
 

@@ -1,259 +1,568 @@
-/* استيراد خط Tajawal من جوجل للأناقة العربية */
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap');
+/* =========================================================
+   شاشة تسجيل مدرسة جديدة
+   Professional School Registration Screen
+   ========================================================= */
 
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;600;700;800&display=swap');
+
+/* ===================== Theme Variables ===================== */
 :root {
-    --primary-color: #2563eb;       /* أزرق تعليمي احترافي */
-    --secondary-color: #0f172a;     /* كحلي عميق */
-    --accent-color: #10b981;        /* أخضر للنجاح */
-    --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    --card-bg: #ffffff;
-    --text-main: #1e293b;
+    --primary: #2563eb;
+    --primary-dark: #1d4ed8;
+    --primary-soft: rgba(37, 99, 235, 0.10);
+
+    --secondary: #0f172a;
+    --accent: #10b981;
+    --accent-soft: rgba(16, 185, 129, 0.12);
+
+    --page-bg: #eef4ff;
+    --page-gradient:
+        radial-gradient(circle at 8% 12%, rgba(37, 99, 235, 0.14), transparent 28%),
+        radial-gradient(circle at 92% 88%, rgba(16, 185, 129, 0.12), transparent 26%),
+        linear-gradient(135deg, #f8fbff 0%, #eef4ff 55%, #e9f2ff 100%);
+
+    --card-bg: rgba(255, 255, 255, 0.96);
+    --section-bg: rgba(248, 250, 252, 0.74);
+
+    --text-main: #172033;
     --text-muted: #64748b;
-    --input-border: #cbd5e1;
-    --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    --text-soft: #94a3b8;
+
+    --border: #dbe4f0;
+    --border-soft: rgba(203, 213, 225, 0.70);
+    --input-bg: rgba(255, 255, 255, 0.95);
+
+    --shadow-card:
+        0 24px 60px rgba(15, 23, 42, 0.12),
+        0 6px 18px rgba(37, 99, 235, 0.06);
+
+    --shadow-input: 0 8px 18px rgba(15, 23, 42, 0.04);
+    --radius-xl: 28px;
+    --radius-lg: 18px;
+    --radius-md: 13px;
 }
 
+/* يدعم أشهر الطرق المستخدمة لتفعيل الوضع الليلي */
+html[data-theme="dark"],
+body[data-theme="dark"],
+body.dark-mode,
+body.dark {
+    --primary: #60a5fa;
+    --primary-dark: #3b82f6;
+    --primary-soft: rgba(96, 165, 250, 0.15);
+
+    --secondary: #f8fafc;
+    --accent: #34d399;
+    --accent-soft: rgba(52, 211, 153, 0.14);
+
+    --page-bg: #061126;
+    --page-gradient:
+        radial-gradient(circle at 8% 12%, rgba(37, 99, 235, 0.24), transparent 30%),
+        radial-gradient(circle at 92% 88%, rgba(16, 185, 129, 0.12), transparent 27%),
+        linear-gradient(135deg, #061126 0%, #08172e 52%, #0a1d38 100%);
+
+    --card-bg: rgba(10, 25, 49, 0.96);
+    --section-bg: rgba(15, 35, 65, 0.55);
+
+    --text-main: #f8fafc;
+    --text-muted: #a8b5c9;
+    --text-soft: #8290a5;
+
+    --border: rgba(148, 163, 184, 0.23);
+    --border-soft: rgba(148, 163, 184, 0.16);
+    --input-bg: rgba(8, 22, 43, 0.84);
+
+    --shadow-card:
+        0 26px 72px rgba(0, 0, 0, 0.34),
+        0 8px 24px rgba(37, 99, 235, 0.08);
+
+    --shadow-input: 0 8px 20px rgba(0, 0, 0, 0.12);
+}
+
+/* ===================== Reset ===================== */
 * {
     box-sizing: border-box;
     margin: 0;
     padding: 0;
 }
 
+html {
+    scroll-behavior: smooth;
+}
+
 body {
-    font-family: 'Tajawal', sans-serif;
-    background: var(--bg-gradient);
     min-height: 100vh;
+    padding: 42px 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+
+    direction: rtl;
+    font-family: "Tajawal", Arial, sans-serif;
     color: var(--text-main);
-}
+    background: var(--page-bg);
+    background-image: var(--page-gradient);
 
-.register-container {
-    background: var(--card-bg);
-    width: 100%;
-    max-width: 800px;
-    padding: 50px;
-    border-radius: 24px;
-    box-shadow: var(--shadow-lg);
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
-/* حركة جمالية في الخلفية */
+/* زخارف خلفية بسيطة دون ازدحام */
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    pointer-events: none;
+    z-index: 0;
+    border-radius: 50%;
+    border: 1px solid rgba(37, 99, 235, 0.11);
+}
+
+body::before {
+    width: 420px;
+    height: 420px;
+    top: -175px;
+    right: -145px;
+}
+
+body::after {
+    width: 340px;
+    height: 340px;
+    bottom: -160px;
+    left: -120px;
+}
+
+/* ===================== Main Card ===================== */
+.register-container {
+    width: min(100%, 940px);
+    padding: 46px 48px 42px;
+
+    position: relative;
+    z-index: 1;
+    overflow: hidden;
+
+    background: var(--card-bg);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+
+    animation: fadeInUp 0.55s ease-out;
+}
+
+/* شريط علوي أنيق */
 .register-container::before {
     content: "";
     position: absolute;
     top: 0;
     right: 0;
-    width: 100%;
-    height: 8px;
-    background: linear-gradient(to left, var(--primary-color), var(--accent-color));
+    left: 0;
+    height: 7px;
+    background: linear-gradient(
+        90deg,
+        var(--accent) 0%,
+        var(--primary) 48%,
+        #7c3aed 100%
+    );
 }
 
+/* زخرفة خفيفة داخل البطاقة */
+.register-container::after {
+    content: "";
+    position: absolute;
+    width: 230px;
+    height: 230px;
+    top: -125px;
+    left: -100px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgba(37, 99, 235, 0.12) 0%,
+        rgba(37, 99, 235, 0) 72%
+    );
+    pointer-events: none;
+}
+
+/* ===================== Main Title ===================== */
 h1 {
-    font-size: 2rem;
-    font-weight: 700;
+    width: fit-content;
+    margin: 0 auto 42px;
+    padding-bottom: 14px;
+
+    position: relative;
+    color: var(--secondary);
     text-align: center;
-    margin-bottom: 40px;
-    color: var(--secondary-color);
+    font-size: clamp(1.75rem, 3vw, 2.25rem);
+    font-weight: 800;
+    letter-spacing: -0.4px;
 }
 
+h1::after {
+    content: "";
+    width: 74px;
+    height: 4px;
+
+    position: absolute;
+    right: 50%;
+    bottom: 0;
+    transform: translateX(50%);
+
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent), var(--primary));
+}
+
+/* ===================== Sections ===================== */
 .form-section {
-    border: none;
-    margin-bottom: 35px;
-    padding-bottom: 0;
+    margin-bottom: 26px;
+    padding: 20px 20px 22px;
+
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    background: var(--section-bg);
+
+    transition: border-color 0.25s ease, transform 0.25s ease;
 }
 
-.form-section h3 {
-    font-size: 1.1rem;
-    color: var(--primary-color);
-    margin-bottom: 20px;
+.form-section:hover {
+    border-color: rgba(37, 99, 235, 0.28);
+}
+
+.form-section h3,
+.form-section legend {
+    margin-bottom: 18px;
+
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+
+    color: var(--primary);
+    font-size: 1.08rem;
+    font-weight: 800;
 }
 
-/* إضافة خط صغير بجانب العنوان */
-.form-section h3::after {
+.form-section h3::after,
+.form-section legend::after {
     content: "";
-    flex: 1;
     height: 1px;
-    background: #e2e8f0;
+    flex: 1;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(37, 99, 235, 0.22)
+    );
 }
 
+/* ===================== Grid ===================== */
 .grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 17px 18px;
 }
 
 .full-width {
-    grid-column: span 2;
+    grid-column: 1 / -1;
 }
 
-input {
+/* ===================== Labels ===================== */
+label {
+    display: block;
+    margin-bottom: 7px;
+
+    color: var(--text-main);
+    font-size: 0.91rem;
+    font-weight: 700;
+}
+
+/* ===================== Inputs ===================== */
+input,
+select,
+textarea {
     width: 100%;
-    padding: 14px 16px;
-    border: 1.5px solid var(--input-border);
-    border-radius: 12px;
+    min-height: 50px;
+    padding: 13px 15px;
+
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    outline: none;
+
+    color: var(--text-main);
+    background: var(--input-bg);
+    box-shadow: var(--shadow-input);
+
     font-family: inherit;
-    font-size: 0.95rem;
-    transition: all 0.3s ease;
-    background: #fcfcfc;
+    font-size: 0.97rem;
+    font-weight: 500;
+
+    transition:
+        border-color 0.22s ease,
+        box-shadow 0.22s ease,
+        background-color 0.22s ease,
+        transform 0.22s ease;
 }
 
-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    background: #fff;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+textarea {
+    min-height: 112px;
+    resize: vertical;
+    line-height: 1.75;
+}
+
+select {
+    cursor: pointer;
+}
+
+input:hover,
+select:hover,
+textarea:hover {
+    border-color: rgba(37, 99, 235, 0.52);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: var(--primary);
+    background: var(--input-bg);
+    box-shadow: 0 0 0 4px var(--primary-soft);
     transform: translateY(-1px);
 }
 
-input::placeholder {
-    color: var(--text-muted);
-    font-size: 0.9rem;
+input::placeholder,
+textarea::placeholder {
+    color: var(--text-soft);
+    font-size: 0.91rem;
+    font-weight: 500;
 }
 
+/* منع تغيير لون الحقول عند الإكمال التلقائي */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text-main);
+    box-shadow: 0 0 0 1000px var(--input-bg) inset;
+    transition: background-color 9999s ease-in-out 0s;
+}
+
+/* ===================== Optional Validation States ===================== */
+input.is-valid,
+select.is-valid,
+textarea.is-valid {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+input.is-invalid,
+select.is-invalid,
+textarea.is-invalid {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.10);
+}
+
+.form-error {
+    display: block;
+    margin-top: 7px;
+    color: #ef4444;
+    font-size: 0.82rem;
+    font-weight: 700;
+}
+
+/* ===================== Primary Button ===================== */
 button {
     width: 100%;
-    padding: 16px;
-    margin-top: 20px;
-    background: var(--primary-color);
-    color: white;
+    min-height: 54px;
+    margin-top: 10px;
+    padding: 15px 20px;
+
     border: none;
-    border-radius: 12px;
-    font-size: 1.1rem;
-    font-weight: 700;
+    border-radius: 14px;
+
+    color: #ffffff;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.23);
+
+    font-family: inherit;
+    font-size: 1.06rem;
+    font-weight: 800;
+
     cursor: pointer;
-    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    position: relative;
+    overflow: hidden;
+
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        filter 0.25s ease;
+}
+
+/* لمعان بسيط عند المرور */
+button::before {
+    content: "";
+    width: 55%;
+    height: 100%;
+
+    position: absolute;
+    top: 0;
+    right: -75%;
+
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.25),
+        transparent
+    );
+
+    transform: skewX(-18deg);
+    transition: right 0.55s ease;
 }
 
 button:hover {
-    background: #1d4ed8;
-    transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+    transform: translateY(-3px);
+    box-shadow: 0 15px 30px rgba(37, 99, 235, 0.31);
+    filter: brightness(1.04);
+}
+
+button:hover::before {
+    right: 125%;
 }
 
 button:active {
     transform: translateY(0);
 }
 
-/* تحسينات للجوال */
-@media (max-width: 600px) {
-    .register-container {
-        padding: 30px 20px;
-    }
-    
-    .grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .full-width {
-        grid-column: span 1;
-    }
-    
-    h1 {
-        font-size: 1.5rem;
-    }
+button:focus-visible {
+    outline: 3px solid var(--primary-soft);
+    outline-offset: 4px;
 }
 
-/* حركة ظهور تدريجية للنموذج */
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.60;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ===================== Animation ===================== */
 @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(20px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
 
-.register-container {
-    animation: fadeInUp 0.6s ease-out;
-}
-
-/* ===================== Responsive: Tablet ===================== */
-@media (min-width: 768px) and (max-width: 1024px) {
-    .register-container {
-        max-width: 680px;
-        padding: 40px 32px;
+    to {
+        opacity: 1;
+        transform: translateY(0);
     }
 }
 
-/* ===================== Responsive: Mobile ===================== */
+/* ===================== Tablet ===================== */
+@media (min-width: 768px) and (max-width: 1024px) {
+    body {
+        padding: 30px 18px;
+    }
+
+    .register-container {
+        width: min(100%, 820px);
+        padding: 40px 34px 34px;
+    }
+}
+
+/* ===================== Mobile ===================== */
 @media (max-width: 767px) {
     body {
-        padding: 20px 12px;
+        align-items: flex-start;
+        padding: 18px 11px;
+    }
+
+    body::before {
+        width: 260px;
+        height: 260px;
+        top: -120px;
+        right: -110px;
+    }
+
+    body::after {
+        width: 220px;
+        height: 220px;
+        bottom: -100px;
+        left: -90px;
     }
 
     .register-container {
-        max-width: 100%;
-        padding: 28px 18px;
-        border-radius: 20px;
-    }
-
-    .grid {
-        grid-template-columns: 1fr;
-        gap: 14px;
-    }
-
-    .full-width {
-        grid-column: span 1;
+        width: 100%;
+        padding: 30px 17px 24px;
+        border-radius: 21px;
     }
 
     h1 {
-        font-size: 1.5rem;
         margin-bottom: 28px;
+        font-size: 1.55rem;
     }
 
     .form-section {
-        margin-bottom: 24px;
+        margin-bottom: 18px;
+        padding: 16px 14px 17px;
+        border-radius: 15px;
     }
 
-    .form-section h3 {
-        font-size: 1rem;
-    }
-
-    input {
-        min-height: 44px;
-        padding: 12px 14px;
-        font-size: 16px;
-        border-radius: 10px;
-    }
-
-    button {
-        min-height: 48px;
-        font-size: 1rem;
-        padding: 14px;
-        border-radius: 10px;
-    }
-}
-
-/* ===================== Responsive: Small Mobile ===================== */
-@media (max-width: 480px) {
-    body {
-        padding: 12px 8px;
-    }
-
-    .register-container {
-        padding: 22px 14px;
-        border-radius: 16px;
-    }
-
-    h1 {
-        font-size: 1.3rem;
-        margin-bottom: 22px;
+    .form-section h3,
+    .form-section legend {
+        margin-bottom: 14px;
+        font-size: 0.98rem;
     }
 
     .grid {
-        gap: 12px;
+        grid-template-columns: 1fr;
+        gap: 13px;
     }
 
-    input {
+    .full-width {
+        grid-column: auto;
+    }
+
+    input,
+    select,
+    textarea {
+        min-height: 48px;
+        padding: 12px 13px;
+        border-radius: 11px;
         font-size: 16px;
     }
 
     button {
-        font-size: 0.95rem;
+        min-height: 50px;
+        padding: 13px 16px;
+        border-radius: 11px;
+        font-size: 1rem;
+    }
+}
+
+/* ===================== Small Mobile ===================== */
+@media (max-width: 420px) {
+    body {
+        padding: 10px 7px;
+    }
+
+    .register-container {
+        padding: 26px 13px 19px;
+        border-radius: 17px;
+    }
+
+    h1 {
+        font-size: 1.35rem;
+    }
+
+    .form-section {
+        padding: 14px 11px 15px;
+    }
+}
+
+/* منع الحركة لمن يفضل إيقاف المؤثرات */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
     }
 }

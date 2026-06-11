@@ -1,5 +1,6 @@
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
+import { autoActivityLogger } from "../middleware/activityLogger.js";
 import {
   getTermResults,
   calculateTermResults,
@@ -11,6 +12,7 @@ import {
 const router = express.Router();
 
 router.use(authMiddleware);
+router.use(autoActivityLogger);
 
 router.get("/", getTermResults);
 router.post("/calculate", calculateTermResults);

@@ -1,9 +1,17 @@
 // backend/src/controllers/teacherNotificationsController.js
 import { pool } from "../config/db.js";
+import { getAttachmentsForNotificationIds } from "../modules/notifications/notificationsAttachmentsService.js";
 
 // ✅ تعريف حالات القراءة (تم إبقاء المنطق الخاص بك كما هو مع مراعاة الأمان)
 const unreadWhere = `(nr.read_at IS NULL AND NOT COALESCE(nr.is_read, FALSE))`;
 const readWhere = `(nr.read_at IS NOT NULL OR COALESCE(nr.is_read, FALSE))`;
+
+function emitUnreadRefresh(req, userId) {
+  const io = req.app?.get?.("io");
+  if (io && userId) {
+    io.to(`user_${Number(userId)}`).emit("notification:unread-count:refresh");
+  }
+}
 
 // 1. جلب عدد الإشعارات غير المقروءة (محمية بالمدرسة)
 export async function getUnreadCount(req, res, next) {
@@ -67,7 +75,16 @@ export async function listInbox(req, res, next) {
     `;
 
     const { rows } = await pool.query(sql, [userId, schoolId, q]);
-    res.json({ items: rows });
+    const attachmentsMap = await getAttachmentsForNotificationIds(
+      rows.map((row) => Number(row.id)),
+      schoolId
+    );
+    res.json({
+      items: rows.map((row) => ({
+        ...row,
+        attachments: attachmentsMap.get(Number(row.id)) || [],
+      })),
+    });
   } catch (e) {
     next(e);
   }
@@ -89,6 +106,7 @@ export async function markOneRead(req, res, next) {
         AND nr.school_id = $3
     `;
     await pool.query(sql, [userId, notificationId, schoolId]);
+    emitUnreadRefresh(req, userId);
 
     res.status(204).send();
   } catch (e) {
@@ -111,6 +129,7 @@ export async function markAllRead(req, res, next) {
         AND ${unreadWhere}
     `;
     await pool.query(sql, [userId, schoolId]);
+    emitUnreadRefresh(req, userId);
 
     res.status(204).send();
   } catch (e) {

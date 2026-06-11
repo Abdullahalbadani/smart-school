@@ -729,33 +729,115 @@
   <div class="ss-panel-head">
     <div>
       <h3>صلاحيات الدخول لبوابات النظام</h3>
-      <p>تفعيل أو إيقاف وصول المعلمين وأولياء الأمور للنظام مؤقتاً.</p>
+      <p>تفعيل أو إيقاف وصول المعلمين وأولياء الأمور والطلاب للنظام مؤقتًا.</p>
     </div>
+
     <button class="ss-btn ss-btn-primary" id="btnSavePortals">
       <i class="ri-save-3-line"></i> حفظ الصلاحيات
     </button>
   </div>
 
   <div style="padding: 20px; max-width: 600px;">
-    
-    <div style="background: rgba(255,255,255,0.02); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;">
-      
-      <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 15px;">
+    <div
+      style="
+        background: rgba(255,255,255,0.02);
+        padding: 20px;
+        border-radius: 12px;
+        border: 1px solid rgba(255,255,255,0.05);
+        margin-bottom: 20px;
+      "
+    >
+      <!-- بوابة المعلمين -->
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 15px;
+          padding-bottom: 15px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          margin-bottom: 15px;
+        "
+      >
         <div>
-          <h4 style="margin: 0 0 5px 0; color: #fff;"><i class="ri-presentation-line"></i> بوابة المعلمين</h4>
-          <p style="margin: 0; font-size: 13px; color: #888;">السماح للمعلمين بتسجيل الدخول لرصد الدرجات والغياب.</p>
+          <h4 style="margin: 0 0 5px 0; color: #fff;">
+            <i class="ri-presentation-line"></i>
+            بوابة المعلمين
+          </h4>
+
+          <p style="margin: 0; font-size: 13px; color: #888;">
+            السماح للمعلمين بتسجيل الدخول لرصد الدرجات والغياب.
+          </p>
         </div>
-        <div class="ss-toggle is-on" role="switch" aria-checked="true" id="toggleTeacherPortal"></div>
+
+        <div
+          class="ss-toggle is-on"
+          role="switch"
+          aria-checked="true"
+          id="toggleTeacherPortal"
+        ></div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center;">
+      <!-- بوابة أولياء الأمور -->
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 15px;
+          padding-bottom: 15px;
+          border-bottom: 1px solid rgba(255,255,255,0.05);
+          margin-bottom: 15px;
+        "
+      >
         <div>
-          <h4 style="margin: 0 0 5px 0; color: #fff;"><i class="ri-parent-line"></i> بوابة أولياء الأمور</h4>
-          <p style="margin: 0; font-size: 13px; color: #888;">السماح للآباء بالدخول لمتابعة أبنائهم والنتائج المالية.</p>
+          <h4 style="margin: 0 0 5px 0; color: #fff;">
+            <i class="ri-parent-line"></i>
+            بوابة أولياء الأمور
+          </h4>
+
+          <p style="margin: 0; font-size: 13px; color: #888;">
+            السماح للآباء بالدخول لمتابعة أبنائهم والنتائج المالية.
+          </p>
         </div>
-        <div class="ss-toggle is-on" role="switch" aria-checked="true" id="toggleParentPortal"></div>
+
+        <div
+          class="ss-toggle is-on"
+          role="switch"
+          aria-checked="true"
+          id="toggleParentPortal"
+        ></div>
       </div>
 
+      <!-- بوابة الطلاب -->
+      <div
+        style="
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 15px;
+        "
+      >
+        <div>
+          <h4 style="margin: 0 0 5px 0; color: #fff;">
+            <i class="ri-graduation-cap-line"></i>
+            بوابة الطلاب
+          </h4>
+
+          <p style="margin: 0; font-size: 13px; color: #888;">
+            السماح للطلاب بالدخول لمتابعة الدرجات والحضور والإشعارات.
+          </p>
+        </div>
+
+        <div
+          class="ss-toggle is-on"
+          role="switch"
+          aria-checked="true"
+          id="toggleStudentPortal"
+        ></div>
+      </div>
+    </div>
+  </div>
 </section>
 <section class="ss-panel" data-panel="backups">
   <div class="ss-panel-head">

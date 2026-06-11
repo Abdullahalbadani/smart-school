@@ -25,7 +25,11 @@
         logoutBtn.addEventListener("click", () => {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
-          showToast("تم تسجيل الخروج ");
+          localStorage.removeItem("teacher_att_active_ctx");
+          showToast("تم تسجيل الخروج");
+          window.setTimeout(() => {
+            window.location.replace("/frontend/login/login.html");
+          }, 150);
         });
       }
 

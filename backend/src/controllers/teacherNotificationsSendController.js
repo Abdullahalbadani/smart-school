@@ -1,29 +1,41 @@
 // backend/src/controllers/teacherNotificationsSendController.js
 import { pool } from "../config/db.js";
+import { createNotification } from "../modules/notifications/notificationCreateService.js";
+import { getAdminUserIds } from "../modules/notifications/notificationTargetsResolvers.js";
 
-// ==========================================
-// ✅ المساعدات (School Scoped Helpers)
-// ==========================================
+function uniquePositiveIds(values = []) {
+  return [...new Set((Array.isArray(values) ? values : [])
+    .map((value) => Number(value))
+    .filter((value) => Number.isInteger(value) && value > 0))];
+}
 
 async function getTeacherIdByUserId(userId, schoolId) {
-  // التأكد من جلب سجل المعلم الخاص بنفس المدرسة لضمان الأمان
-  const r = await pool.query(
-    `SELECT id FROM teachers WHERE user_id = $1 AND school_id = $2 LIMIT 1`,
+  const { rows } = await pool.query(
+    `SELECT id
+     FROM teachers
+     WHERE user_id = $1
+       AND school_id = $2
+       AND COALESCE(is_active, true) = true
+     LIMIT 1`,
     [userId, schoolId]
   );
-  return r.rows[0]?.id || null;
+  return rows[0]?.id || null;
 }
 
 async function getUserDisplayName(userId, schoolId) {
-  const r = await pool.query(
-    `SELECT name FROM users WHERE id = $1 AND school_id = $2 LIMIT 1`,
+  const { rows } = await pool.query(
+    `SELECT name
+     FROM users
+     WHERE id = $1 AND school_id = $2
+     LIMIT 1`,
     [userId, schoolId]
   );
-  return r.rows[0]?.name || "معلم";
+  return rows[0]?.name || "معلم";
 }
 
-async function createNotificationWithRecipients({
-  schoolId, // 👈 إلزامي لنظام الـ SaaS
+async function sendManualNotification({
+  req,
+  schoolId,
   senderUserId,
   senderDisplayName,
   title,
@@ -31,220 +43,233 @@ async function createNotificationWithRecipients({
   recipientUserIds,
   meta,
 }) {
-  // إدراج الإشعار مع school_id
-  const insN = `
-    INSERT INTO notifications (school_id, source, category, priority, title, body, sender_user_id, sender_display_name, meta)
-    VALUES ($1, 'manual','general','normal',$2,$3,$4,$5,$6)
-    RETURNING id
-  `;
-  const n = await pool.query(insN, [
+  const result = await createNotification({
+    app: req.app,
     schoolId,
+    source: "manual",
+    category: "general",
+    priority: "normal",
     title,
     body,
     senderUserId,
-    senderDisplayName || null,
-    meta ? JSON.stringify(meta) : null,
-  ]);
-  const notificationId = n.rows[0].id;
+    senderDisplayName,
+    meta,
+    recipientUserIds,
+  });
 
-  const uniq = [...new Set((recipientUserIds || []).map(Number))].filter(
-    (x) => Number.isInteger(x) && x > 0
+  return {
+    notificationId: result.request_id,
+    inserted: result.recipients_created || 0,
+  };
+}
+
+async function assertTeacherScope({ teacherId, schoolId, academicYearId, term, sectionId }) {
+  const { rowCount } = await pool.query(
+    `SELECT 1
+     FROM section_subject_teachers
+     WHERE teacher_id = $1
+       AND academic_year_id = $2
+       AND term = $3
+       AND section_id = $4
+       AND school_id = $5
+       AND COALESCE(status, 'active') = 'active'
+     LIMIT 1`,
+    [teacherId, academicYearId, term, sectionId, schoolId]
+  );
+  return rowCount > 0;
+}
+
+async function getAllowedStudentIds({ teacherId, schoolId, academicYearId, term, studentIds }) {
+  const requested = uniquePositiveIds(studentIds);
+  if (!requested.length) return [];
+
+  const { rows } = await pool.query(
+    `SELECT DISTINCT se.student_id
+     FROM student_enrollments se
+     JOIN section_subject_teachers sst
+       ON sst.section_id = se.section_id
+      AND sst.academic_year_id = se.academic_year_id
+      AND sst.term = se.term
+      AND sst.school_id = se.school_id
+      AND COALESCE(sst.status, 'active') = 'active'
+     WHERE se.student_id = ANY($1::int[])
+       AND sst.teacher_id = $2
+       AND se.school_id = $3
+       AND se.academic_year_id = $4
+       AND se.term = $5`,
+    [requested, teacherId, schoolId, academicYearId, term]
   );
 
-  if (!uniq.length) return { notificationId, inserted: 0 };
-
-  // إدراج المستلمين مع school_id لضمان عزل البيانات
-  const values = uniq
-    .map((_, i) => `($1, $2, $${i + 3}, FALSE, NULL)`)
-    .join(",");
-  const params = [notificationId, schoolId, ...uniq];
-
-  const insR = `
-    INSERT INTO notification_recipients (notification_id, school_id, recipient_user_id, is_read, read_at)
-    VALUES ${values}
-  `;
-  await pool.query(insR, params);
-
-  return { notificationId, inserted: uniq.length, recipients: uniq };
+  return uniquePositiveIds(rows.map((row) => row.student_id));
 }
 
-function emitToUsers(req, userIds) {
-  const io = req.app.get("io");
-  (userIds || []).forEach((uid) => {
-    io?.to(`user_${uid}`).emit("notification:new");
+async function assertAllStudentsWithinTeacherScope({
+  teacherId,
+  schoolId,
+  academicYearId,
+  term,
+  studentIds,
+}) {
+  const requested = uniquePositiveIds(studentIds);
+  const allowed = await getAllowedStudentIds({
+    teacherId,
+    schoolId,
+    academicYearId,
+    term,
+    studentIds: requested,
   });
+
+  if (!requested.length || allowed.length !== requested.length) {
+    const error = new Error("بعض الطلاب المحددين ليسوا ضمن نطاق المعلم");
+    error.status = 403;
+    throw error;
+  }
+
+  return allowed;
 }
 
-// ==========================================
-// 1️⃣ نطاقات المعلم (SCOPES)
-// ==========================================
+async function canTeacherAccessStudent({ teacherId, schoolId, studentId }) {
+  const { rowCount } = await pool.query(
+    `SELECT 1
+     FROM student_enrollments se
+     JOIN section_subject_teachers sst
+       ON sst.section_id = se.section_id
+      AND sst.academic_year_id = se.academic_year_id
+      AND sst.term = se.term
+      AND sst.school_id = se.school_id
+      AND COALESCE(sst.status, 'active') = 'active'
+     WHERE se.student_id = $1
+       AND se.school_id = $2
+       AND sst.teacher_id = $3
+     LIMIT 1`,
+    [studentId, schoolId, teacherId]
+  );
+  return rowCount > 0;
+}
+
 export async function getTeacherScopes(req, res, next) {
   try {
     const userId = req.user.id;
     const schoolId = req.user.school_id;
     const teacherId = await getTeacherIdByUserId(userId, schoolId);
+    if (!teacherId) return res.status(404).json({ message: "لم يتم العثور على سجل المعلم في هذه المدرسة" });
 
-    if (!teacherId)
-      return res
-        .status(404)
-        .json({ message: "لم يتم العثور على سجل المعلم في هذه المدرسة" });
-
-    const sql = `
-      SELECT DISTINCT
-        sst.academic_year_id,
-        sst.term,
-        stg.id AS stage_id, stg.name AS stage_name,
-        g.id AS grade_id,  g.name  AS grade_name,
-        sec.id AS section_id, sec.name AS section_name
-      FROM section_subject_teachers sst
-      JOIN sections sec ON sec.id = sst.section_id AND sec.school_id = $2
-      JOIN grades g ON g.id = sec.grade_id AND g.school_id = $2
-      JOIN stages stg ON stg.id = g.stage_id AND stg.school_id = $2
-      WHERE sst.teacher_id = $1
-        AND sst.school_id = $2
-        AND COALESCE(sst.status,'active') = 'active'
-      ORDER BY sst.academic_year_id DESC, sst.term DESC, stg.name, g.name, sec.name
-    `;
-    const { rows } = await pool.query(sql, [teacherId, schoolId]);
-    res.json({ items: rows });
-  } catch (e) {
-    next(e);
+    const { rows } = await pool.query(
+      `SELECT DISTINCT
+         sst.academic_year_id,
+         sst.term,
+         stg.id AS stage_id,
+         stg.name AS stage_name,
+         g.id AS grade_id,
+         g.name AS grade_name,
+         sec.id AS section_id,
+         sec.name AS section_name
+       FROM section_subject_teachers sst
+       JOIN sections sec ON sec.id = sst.section_id AND sec.school_id = $2
+       JOIN grades g ON g.id = sec.grade_id AND g.school_id = $2
+       JOIN stages stg ON stg.id = g.stage_id AND stg.school_id = $2
+       WHERE sst.teacher_id = $1
+         AND sst.school_id = $2
+         AND COALESCE(sst.status, 'active') = 'active'
+       ORDER BY sst.academic_year_id DESC, sst.term DESC, stg.name, g.name, sec.name`,
+      [teacherId, schoolId]
+    );
+    return res.json({ items: rows });
+  } catch (error) {
+    return next(error);
   }
 }
 
-// ==========================================
-// 2️⃣ طلاب الشعبة (STUDENTS in a SCOPE)
-// ==========================================
 export async function listScopeStudents(req, res, next) {
   try {
     const userId = req.user.id;
     const schoolId = req.user.school_id;
     const teacherId = await getTeacherIdByUserId(userId, schoolId);
-    if (!teacherId)
-      return res.status(404).json({ message: "لم يتم العثور على سجل المعلم" });
+    if (!teacherId) return res.status(404).json({ message: "لم يتم العثور على سجل المعلم" });
 
     const academicYearId = Number(req.query.academic_year_id);
     const term = Number(req.query.term);
     const sectionId = Number(req.query.section_id);
     const q = String(req.query.q || "").trim();
-
     if (!academicYearId || !term || !sectionId) {
-      return res
-        .status(400)
-        .json({ message: "academic_year_id و term و section_id مطلوبة" });
+      return res.status(400).json({ message: "academic_year_id و term و section_id مطلوبة" });
     }
 
-    // تحقق النطاق والمدرسة
-    const ok = await pool.query(
-      `SELECT 1 FROM section_subject_teachers WHERE teacher_id = $1 AND academic_year_id = $2 AND term = $3 AND section_id = $4 AND school_id = $5 LIMIT 1`,
-      [teacherId, academicYearId, term, sectionId, schoolId]
-    );
-    if (!ok.rows.length)
-      return res.status(403).json({ message: "هذه الشعبة ليست ضمن نطاقك" });
+    const allowed = await assertTeacherScope({ teacherId, schoolId, academicYearId, term, sectionId });
+    if (!allowed) return res.status(403).json({ message: "هذه الشعبة ليست ضمن نطاقك" });
 
-    const sql = `
-      SELECT
-        st.id AS student_id,
-        st.user_id,
-        st.student_code,
-        st.full_name AS student_name
-      FROM student_enrollments se
-      JOIN students st ON st.id = se.student_id AND st.school_id = $5
-      WHERE se.academic_year_id = $1
-        AND se.term = $2
-        AND se.section_id = $3
-        AND se.school_id = $5
-        AND st.user_id IS NOT NULL
-        AND ($4 = '' OR st.full_name ILIKE '%' || $4 || '%' OR st.student_code ILIKE '%' || $4 || '%')
-      ORDER BY st.full_name ASC
-      LIMIT 400
-    `;
-    const { rows } = await pool.query(sql, [
-      academicYearId,
-      term,
-      sectionId,
-      q,
-      schoolId,
-    ]);
-    res.json({ items: rows });
-  } catch (e) {
-    next(e);
+    const { rows } = await pool.query(
+      `SELECT
+         st.id AS student_id,
+         st.user_id,
+         st.student_code,
+         st.full_name AS student_name
+       FROM student_enrollments se
+       JOIN students st ON st.id = se.student_id AND st.school_id = $5
+       WHERE se.academic_year_id = $1
+         AND se.term = $2
+         AND se.section_id = $3
+         AND se.school_id = $5
+         AND st.user_id IS NOT NULL
+         AND ($4 = '' OR st.full_name ILIKE '%' || $4 || '%' OR st.student_code ILIKE '%' || $4 || '%')
+       ORDER BY st.full_name ASC
+       LIMIT 400`,
+      [academicYearId, term, sectionId, q, schoolId]
+    );
+    return res.json({ items: rows });
+  } catch (error) {
+    return next(error);
   }
 }
 
-// ==========================================
-// 3️⃣ أولياء أمور طالب (Guardians for ONE student)
-// ==========================================
 export async function listStudentGuardians(req, res, next) {
   try {
     const userId = req.user.id;
     const schoolId = req.user.school_id;
     const teacherId = await getTeacherIdByUserId(userId, schoolId);
-    if (!teacherId)
-      return res.status(404).json({ message: "لم يتم العثور على سجل المعلم" });
+    if (!teacherId) return res.status(404).json({ message: "لم يتم العثور على سجل المعلم" });
 
     const studentId = Number(req.params.studentId);
-    if (!studentId)
-      return res.status(400).json({ message: "studentId غير صحيح" });
+    if (!studentId) return res.status(400).json({ message: "studentId غير صحيح" });
 
-    // تحقق أن الطالب يتبع لنفس مدرسة المعلم
-    const ok = await pool.query(
-      `SELECT 1 FROM student_enrollments WHERE student_id = $1 AND school_id = $2 LIMIT 1`,
+    const allowed = await canTeacherAccessStudent({ teacherId, schoolId, studentId });
+    if (!allowed) return res.status(403).json({ message: "الطالب ليس ضمن نطاق المعلم" });
+
+    const { rows } = await pool.query(
+      `SELECT
+         g.id AS guardian_id,
+         g.user_id AS guardian_user_id,
+         COALESCE(g.full_name, u.name, 'ولي أمر') AS guardian_name
+       FROM student_guardians sg
+       JOIN guardians g ON g.id = sg.guardian_id AND g.school_id = $2
+       JOIN users u
+         ON u.id = g.user_id
+        AND u.school_id = $2
+        AND COALESCE(u.status, 'active') = 'active'
+       WHERE sg.student_id = $1 AND sg.school_id = $2
+       ORDER BY guardian_name ASC`,
       [studentId, schoolId]
     );
-    if (!ok.rows.length)
-      return res
-        .status(403)
-        .json({ message: "الطالب ليس ضمن نطاق هذه المدرسة" });
-
-    const sql = `
-      SELECT
-        g.id AS guardian_id,
-        g.user_id AS guardian_user_id,
-        COALESCE(g.full_name, u.name, 'ولي أمر') AS guardian_name
-      FROM student_guardians sg
-      JOIN guardians g ON g.id = sg.guardian_id AND g.school_id = $2
-      JOIN users u ON u.id = g.user_id AND u.school_id = $2
-      WHERE sg.student_id = $1 AND sg.school_id = $2
-      ORDER BY guardian_name ASC
-    `;
-    const { rows } = await pool.query(sql, [studentId, schoolId]);
-    res.json({ items: rows });
-  } catch (e) {
-    next(e);
+    return res.json({ items: rows });
+  } catch (error) {
+    return next(error);
   }
 }
 
-// ==========================================
-// 4️⃣ الإرسال للإدارة (Send to Admins)
-// ==========================================
 export async function sendToAdmins(req, res, next) {
   try {
     const senderUserId = req.user.id;
     const schoolId = req.user.school_id;
     const senderName = await getUserDisplayName(senderUserId, schoolId);
+    const title = String(req.body?.title || "").trim();
+    const body = String(req.body?.body || "").trim();
+    if (!title || !body) return res.status(400).json({ message: "العنوان والنص مطلوبان" });
 
-    const { title, body } = req.body || {};
-    if (!title || !body)
-      return res.status(400).json({ message: "العنوان والنص مطلوبان" });
+    const adminIds = await getAdminUserIds({ schoolId });
+    if (!adminIds.length) return res.status(400).json({ message: "لا توجد حسابات إدارة لهذه المدرسة" });
 
-    // جلب مدراء المدرسة الحالية فقط
-    const admins = await pool.query(
-      `
-      SELECT id FROM users
-      WHERE school_id = $1 
-        AND (LOWER(username) LIKE 'admin%' OR LOWER(email) LIKE '%admin%' OR LOWER(username) LIKE '%admins%')
-    `,
-      [schoolId]
-    );
-    const adminIds = admins.rows.map((r) => r.id);
-
-    if (!adminIds.length)
-      return res
-        .status(400)
-        .json({ message: "لا توجد حسابات إدارة لهذه المدرسة" });
-
-    const out = await createNotificationWithRecipients({
+    const out = await sendManualNotification({
+      req,
       schoolId,
       senderUserId,
       senderDisplayName: senderName,
@@ -253,28 +278,18 @@ export async function sendToAdmins(req, res, next) {
       recipientUserIds: adminIds,
       meta: { ui_source: "teacher_send_admins" },
     });
-
-    emitToUsers(req, out.recipients);
-    res.json({
-      ok: true,
-      notification_id: out.notificationId,
-      recipients: out.inserted,
-    });
-  } catch (e) {
-    next(e);
+    return res.json({ ok: true, notification_id: out.notificationId, recipients: out.inserted });
+  } catch (error) {
+    return next(error);
   }
 }
 
-// ==========================================
-// 5️⃣ الإرسال للطلاب (Send to Students)
-// ==========================================
 export async function sendToStudents(req, res, next) {
   try {
     const senderUserId = req.user.id;
     const schoolId = req.user.school_id;
     const teacherId = await getTeacherIdByUserId(senderUserId, schoolId);
-    if (!teacherId)
-      return res.status(404).json({ message: "لم يتم العثور على سجل المعلم" });
+    if (!teacherId) return res.status(404).json({ message: "لم يتم العثور على سجل المعلم" });
 
     const senderName = await getUserDisplayName(senderUserId, schoolId);
     const {
@@ -287,86 +302,86 @@ export async function sendToStudents(req, res, next) {
       grade_id,
       student_ids = [],
     } = req.body || {};
-
-    if (!title || !body || !academic_year_id || !term)
+    const academicYearId = Number(academic_year_id);
+    const normalizedTerm = Number(term);
+    if (!title || !body || !academicYearId || !normalizedTerm) {
       return res.status(400).json({ message: "جميع الحقول الأساسية مطلوبة" });
-
-    let recipientUserIds = [];
-
-    if (mode === "selected") {
-      if (!Array.isArray(student_ids) || !student_ids.length)
-        return res.status(400).json({ message: "اختر طلابًا أولاً" });
-
-      const q = `
-        SELECT DISTINCT st.user_id FROM students st
-        JOIN student_enrollments se ON se.student_id = st.id AND se.school_id = $5
-        JOIN section_subject_teachers sst ON sst.section_id = se.section_id AND sst.school_id = $5
-        WHERE st.id = ANY($1::int[]) AND st.school_id = $5 AND sst.teacher_id = $2
-          AND se.academic_year_id = $3 AND se.term = $4
-      `;
-      const { rows } = await pool.query(q, [
-        student_ids.map(Number),
-        teacherId,
-        Number(academic_year_id),
-        Number(term),
-        schoolId,
-      ]);
-      recipientUserIds = rows.map((r) => r.user_id);
-    } else if (mode === "section_all") {
-      if (!section_id)
-        return res.status(400).json({ message: "section_id مطلوب" });
-
-      const ok = await pool.query(
-        `SELECT 1 FROM section_subject_teachers WHERE teacher_id=$1 AND academic_year_id=$2 AND term=$3 AND section_id=$4 AND school_id=$5 LIMIT 1`,
-        [
-          teacherId,
-          Number(academic_year_id),
-          Number(term),
-          Number(section_id),
-          schoolId,
-        ]
-      );
-      if (!ok.rows.length)
-        return res.status(403).json({ message: "هذه الشعبة ليست ضمن نطاقك" });
-
-      const q = `
-        SELECT st.user_id FROM student_enrollments se
-        JOIN students st ON st.id = se.student_id AND st.school_id = $4
-        WHERE se.academic_year_id = $1 AND se.term = $2 AND se.section_id = $3 AND se.school_id = $4
-      `;
-      const { rows } = await pool.query(q, [
-        Number(academic_year_id),
-        Number(term),
-        Number(section_id),
-        schoolId,
-      ]);
-      recipientUserIds = rows.map((r) => r.user_id);
-    } else if (mode === "grade_all") {
-      if (!grade_id) return res.status(400).json({ message: "grade_id مطلوب" });
-
-      const q = `
-        SELECT DISTINCT st.user_id FROM student_enrollments se
-        JOIN students st ON st.id = se.student_id AND st.school_id = $5
-        JOIN sections sec ON sec.id = se.section_id AND sec.school_id = $5
-        JOIN section_subject_teachers sst ON sst.section_id = se.section_id AND sst.school_id = $5
-        WHERE se.academic_year_id = $1 AND se.term = $2 AND sec.grade_id = $3 AND sst.teacher_id = $4 AND se.school_id = $5
-      `;
-      const { rows } = await pool.query(q, [
-        Number(academic_year_id),
-        Number(term),
-        Number(grade_id),
-        teacherId,
-        schoolId,
-      ]);
-      recipientUserIds = rows.map((r) => r.user_id);
     }
 
-    if (!recipientUserIds.length)
-      return res
-        .status(400)
-        .json({ message: "لا يوجد مستلمون ضمن النطاق الحالي" });
+    let recipientUserIds = [];
+    if (mode === "selected") {
+      const allowedStudentIds = await assertAllStudentsWithinTeacherScope({
+        teacherId,
+        schoolId,
+        academicYearId,
+        term: normalizedTerm,
+        studentIds: student_ids,
+      });
+      const { rows } = await pool.query(
+        `SELECT user_id FROM students
+         WHERE id = ANY($1::int[])
+           AND school_id = $2
+           AND user_id IS NOT NULL`,
+        [allowedStudentIds, schoolId]
+      );
+      recipientUserIds = rows.map((row) => row.user_id);
+    } else if (mode === "section_all") {
+      const sectionId = Number(section_id);
+      if (!sectionId) return res.status(400).json({ message: "section_id مطلوب" });
+      const allowed = await assertTeacherScope({
+        teacherId,
+        schoolId,
+        academicYearId,
+        term: normalizedTerm,
+        sectionId,
+      });
+      if (!allowed) return res.status(403).json({ message: "هذه الشعبة ليست ضمن نطاقك" });
 
-    const out = await createNotificationWithRecipients({
+      const { rows } = await pool.query(
+        `SELECT st.user_id
+         FROM student_enrollments se
+         JOIN students st ON st.id = se.student_id AND st.school_id = $4
+         WHERE se.academic_year_id = $1
+           AND se.term = $2
+           AND se.section_id = $3
+           AND se.school_id = $4
+           AND st.user_id IS NOT NULL`,
+        [academicYearId, normalizedTerm, sectionId, schoolId]
+      );
+      recipientUserIds = rows.map((row) => row.user_id);
+    } else if (mode === "grade_all") {
+      const gradeId = Number(grade_id);
+      if (!gradeId) return res.status(400).json({ message: "grade_id مطلوب" });
+      const { rows } = await pool.query(
+        `SELECT DISTINCT st.user_id
+         FROM student_enrollments se
+         JOIN students st ON st.id = se.student_id AND st.school_id = $5
+         JOIN sections sec ON sec.id = se.section_id AND sec.school_id = $5
+         JOIN section_subject_teachers sst
+           ON sst.section_id = se.section_id
+          AND sst.academic_year_id = se.academic_year_id
+          AND sst.term = se.term
+          AND sst.school_id = se.school_id
+          AND COALESCE(sst.status, 'active') = 'active'
+         WHERE se.academic_year_id = $1
+           AND se.term = $2
+           AND sec.grade_id = $3
+           AND sst.teacher_id = $4
+           AND se.school_id = $5
+           AND st.user_id IS NOT NULL`,
+        [academicYearId, normalizedTerm, gradeId, teacherId, schoolId]
+      );
+      recipientUserIds = rows.map((row) => row.user_id);
+    } else {
+      return res.status(400).json({ message: "نوع الإرسال غير صالح" });
+    }
+
+    if (!uniquePositiveIds(recipientUserIds).length) {
+      return res.status(400).json({ message: "لا يوجد مستلمون ضمن النطاق الحالي" });
+    }
+
+    const out = await sendManualNotification({
+      req,
       schoolId,
       senderUserId,
       senderDisplayName: senderName,
@@ -376,34 +391,24 @@ export async function sendToStudents(req, res, next) {
       meta: {
         ui_source: "teacher_send_students",
         mode,
-        academic_year_id,
-        term,
-        section_id,
-        grade_id,
+        academic_year_id: academicYearId,
+        term: normalizedTerm,
+        section_id: Number(section_id) || null,
+        grade_id: Number(grade_id) || null,
       },
     });
-
-    emitToUsers(req, out.recipients);
-    res.json({
-      ok: true,
-      notification_id: out.notificationId,
-      recipients: out.inserted,
-    });
-  } catch (e) {
-    next(e);
+    return res.json({ ok: true, notification_id: out.notificationId, recipients: out.inserted });
+  } catch (error) {
+    return next(error);
   }
 }
 
-// ==========================================
-// 6️⃣ الإرسال للأولياء (Send to Guardians)
-// ==========================================
 export async function sendToGuardians(req, res, next) {
   try {
     const senderUserId = req.user.id;
     const schoolId = req.user.school_id;
     const teacherId = await getTeacherIdByUserId(senderUserId, schoolId);
-    if (!teacherId)
-      return res.status(404).json({ message: "لم يتم العثور على سجل المعلم" });
+    if (!teacherId) return res.status(404).json({ message: "لم يتم العثور على سجل المعلم" });
 
     const senderName = await getUserDisplayName(senderUserId, schoolId);
     const {
@@ -414,56 +419,61 @@ export async function sendToGuardians(req, res, next) {
       student_ids = [],
       guardian_user_ids = null,
     } = req.body || {};
-
-    if (!title || !body || !academic_year_id || !term || !student_ids.length)
+    const academicYearId = Number(academic_year_id);
+    const normalizedTerm = Number(term);
+    if (!title || !body || !academicYearId || !normalizedTerm || !student_ids.length) {
       return res.status(400).json({ message: "البيانات الأساسية مطلوبة" });
-
-    // تحقق الطلاب ضمن نطاق المعلم والمدرسة
-    const ok = await pool.query(
-      `SELECT COUNT(*)::int AS c FROM student_enrollments se
-       JOIN section_subject_teachers sst ON sst.section_id = se.section_id AND sst.school_id = se.school_id
-       WHERE se.student_id = ANY($1::int[]) AND sst.teacher_id = $2 AND se.school_id = $3`,
-      [student_ids.map(Number), teacherId, schoolId]
-    );
-    if ((ok.rows[0]?.c ?? 0) <= 0)
-      return res.status(403).json({ message: "طلاب خارج نطاقك" });
-
-    let finalGuardianIds = [];
-    if (Array.isArray(guardian_user_ids) && guardian_user_ids.length) {
-      finalGuardianIds = guardian_user_ids.map(Number).filter((id) => id > 0);
-    } else {
-      const q = `
-        SELECT DISTINCT u.id AS user_id FROM student_guardians sg
-        JOIN guardians g ON g.id = sg.guardian_id AND g.school_id = $2
-        JOIN users u ON u.id = g.user_id AND u.school_id = $2
-        WHERE sg.student_id = ANY($1::int[]) AND sg.school_id = $2
-      `;
-      const { rows } = await pool.query(q, [student_ids.map(Number), schoolId]);
-      finalGuardianIds = rows.map((r) => r.user_id);
     }
 
-    if (!finalGuardianIds.length)
-      return res
-        .status(400)
-        .json({ message: "لا يوجد أولياء أمور لهؤلاء الطلاب" });
+    const allowedStudentIds = await assertAllStudentsWithinTeacherScope({
+      teacherId,
+      schoolId,
+      academicYearId,
+      term: normalizedTerm,
+      studentIds: student_ids,
+    });
 
-    const out = await createNotificationWithRecipients({
+    const { rows } = await pool.query(
+      `SELECT DISTINCT u.id AS user_id
+       FROM student_guardians sg
+       JOIN guardians g ON g.id = sg.guardian_id AND g.school_id = $2
+       JOIN users u
+         ON u.id = g.user_id
+        AND u.school_id = $2
+        AND COALESCE(u.status, 'active') = 'active'
+       WHERE sg.student_id = ANY($1::int[])
+         AND sg.school_id = $2`,
+      [allowedStudentIds, schoolId]
+    );
+
+    const allowedGuardianIds = uniquePositiveIds(rows.map((row) => row.user_id));
+    const requestedGuardianIds = uniquePositiveIds(guardian_user_ids || []);
+    const finalGuardianIds = requestedGuardianIds.length
+      ? allowedGuardianIds.filter((id) => requestedGuardianIds.includes(id))
+      : allowedGuardianIds;
+
+    if (!finalGuardianIds.length) {
+      return res.status(400).json({ message: "لا يوجد أولياء أمور صالحون لهؤلاء الطلاب" });
+    }
+
+    const out = await sendManualNotification({
+      req,
       schoolId,
       senderUserId,
       senderDisplayName: senderName,
       title,
       body,
       recipientUserIds: finalGuardianIds,
-      meta: { ui_source: "teacher_send_guardians" },
+      meta: {
+        ui_source: "teacher_send_guardians",
+        academic_year_id: academicYearId,
+        term: normalizedTerm,
+        student_ids: allowedStudentIds,
+      },
     });
-
-    emitToUsers(req, out.recipients);
-    res.json({
-      ok: true,
-      notification_id: out.notificationId,
-      recipients: out.inserted,
-    });
-  } catch (e) {
-    next(e);
+    return res.json({ ok: true, notification_id: out.notificationId, recipients: out.inserted });
+  } catch (error) {
+    if (error.status) return res.status(error.status).json({ message: error.message });
+    return next(error);
   }
 }

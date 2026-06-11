@@ -116,7 +116,8 @@ const res = await fetch(url, {
     async init() {
       this.qs("#frReload")?.addEventListener("click", () => this.reload());
       this.qs("#frRun")?.addEventListener("click", () => this.run());
-      this.qs("#frExportCsv")?.addEventListener("click", () => this.exportCsv());
+      this.qs("#frExportCsv")?.addEventListener("click", () => this.openSchoolReport("pdf"));
+      this.qs("#frPrint")?.addEventListener("click", () => this.openSchoolReport("print"));
       this.qs("#frBackToPay")?.addEventListener("click", () => {
         if (typeof window.openAdminPage === "function") return window.openAdminPage("feesPay.html");
         location.href = "feesPay.html";
@@ -546,6 +547,32 @@ const res = await fetch(url, {
         this.setState("فشل");
         this.toast(e.message, "error");
       }
+    }
+
+    openSchoolReport(action = "pdf") {
+      const filters = this.getFilters();
+      if (!filters.yearId) return this.toast("اختر السنة الدراسية.", "error");
+
+      const apiMethod =
+        this.state.lastType === "outstanding"
+          ? "openFeesOutstandingReport"
+          : "openFeesCollectionsReport";
+
+      if (typeof window.SchoolReports?.[apiMethod] !== "function") {
+        return this.toast("تعذر تحميل نظام الكشوف الرسمية. أعد تحديث الصفحة.", "error");
+      }
+
+      return window.SchoolReports[apiMethod]({
+        action,
+        filters: {
+          year_id: filters.yearId || null,
+          grade_id: filters.gradeId || null,
+          section_id: filters.classId || null,
+          from: this.state.lastType === "collections" ? (filters.from || null) : null,
+          to: this.state.lastType === "collections" ? (filters.to || null) : null,
+          method: this.state.lastType === "collections" ? (filters.method || null) : null,
+        },
+      });
     }
 
     exportCsv() {

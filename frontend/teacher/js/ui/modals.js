@@ -7,6 +7,7 @@
   // ✅ Guard لمنع إعادة تهيئة TeachingScopes كل مرة نفتح مودال
   let __TEACHING_SCOPES_INITED = false;
   let __TEACHING_SCOPES_KEY = "";
+  let __TEACHING_SCOPES_LOADING = null;
 
   function getTeachingKeySafe() {
     // الأفضل: من TeachingScopes
@@ -37,22 +38,28 @@
   }
 
   function ensureTeachingScopesLoaded() {
-    if (typeof window.__loadTeacherTeachingScopes !== "function") return;
+    if (typeof window.__loadTeacherTeachingScopes !== "function") return Promise.resolve();
 
     const keyNow = getTeachingKeySafe();
-
-    // ✅ لا تعيد التهيئة إذا:
-    // 1) سبق عملنا init
-    // 2) year/term ما تغير
-    // 3) والـ pickers تبدو جاهزة
     const needInit = !__TEACHING_SCOPES_INITED || __TEACHING_SCOPES_KEY !== keyNow || !pickerLooksReady();
 
-    if (!needInit) return;
+    if (!needInit) return Promise.resolve();
+    if (__TEACHING_SCOPES_LOADING) return __TEACHING_SCOPES_LOADING;
 
-    __TEACHING_SCOPES_INITED = true;
     __TEACHING_SCOPES_KEY = keyNow;
+    __TEACHING_SCOPES_LOADING = Promise.resolve(window.__loadTeacherTeachingScopes())
+      .then(() => {
+        __TEACHING_SCOPES_INITED = true;
+      })
+      .catch((error) => {
+        __TEACHING_SCOPES_INITED = false;
+        console.warn("Teacher scopes loading failed:", error);
+      })
+      .finally(() => {
+        __TEACHING_SCOPES_LOADING = null;
+      });
 
-    window.__loadTeacherTeachingScopes();
+    return __TEACHING_SCOPES_LOADING;
   }
 
   function anyModalOpen() {
@@ -61,9 +68,19 @@
 
   function closeModal(modalEl) {
     if (!modalEl) return;
+
+    if (modalEl.contains(document.activeElement)) {
+      document.activeElement?.blur?.();
+    }
+
     modalEl.style.display = "none";
+    modalEl.setAttribute("aria-hidden", "true");
     delete modalEl.dataset.open;
-    if (overlayEl && !anyModalOpen()) overlayEl.style.display = "none";
+
+    if (overlayEl && !anyModalOpen()) {
+      overlayEl.style.display = "none";
+      overlayEl.setAttribute("aria-hidden", "true");
+    }
   }
 
     function openModal(id) {
@@ -83,8 +100,12 @@
     if (!modal) return;
 
     modal.style.display = "flex";
+    modal.setAttribute("aria-hidden", "false");
     modal.dataset.open = "1";
-    if (overlayEl) overlayEl.style.display = "flex";
+    if (overlayEl) {
+      overlayEl.style.display = "flex";
+      overlayEl.setAttribute("aria-hidden", "false");
+    }
 
     // ✅✅ أضف هذا هنا
     if (id === "profile-modal") {

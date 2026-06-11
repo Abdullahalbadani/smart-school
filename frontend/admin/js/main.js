@@ -995,139 +995,435 @@ window.rejectAssessmentReopenRequest = async function (id) {
   // ===============================
 
   // إضافة مستمع لحقل التاريخ عندما يتم تغيير اليوم
-  document.addEventListener('DOMContentLoaded', () => {
-    const dateFilter = document.getElementById('activity-date-filter');
-    if (dateFilter) {
-      // تعيين تاريخ اليوم كافتراضي عند فتح الصفحة
-      const today = new Date().toISOString().split('T')[0];
-      dateFilter.value = today;
-      
-      // جلب البيانات عند تغيير التاريخ
-      dateFilter.addEventListener('change', () => {
-        fetchLiveActivities(dateFilter.value);
-      });
-    }
-  });
+  // ===============================
+  // 2. سجل النشاطات المباشر (تفاصيل كاملة وآمنة)
+  // ===============================
+  // ===============================
+  // 2. سجل النشاطات المباشر - عرض إداري مختصر
+  // ===============================
 
-  // الدالة التي تفتح/تغلق تفاصيل الوقت الدقيق عند النقر
-  window.toggleTime = function(element) {
-    const timeDiv = element.querySelector('.exact-time-display');
-    if (timeDiv.style.display === 'none') {
-      timeDiv.style.display = 'block';
-      element.style.background = 'rgba(37, 99, 235, 0.05)'; // إضاءة خفيفة عند الفتح
-      element.style.borderRadius = '8px';
-      element.style.padding = '8px';
-    } else {
-      timeDiv.style.display = 'none';
-      element.style.background = 'transparent';
-      element.style.padding = '0';
-    }
+  const ACTIVITY_ACTION_LABELS = {
+    VIEW: "عرض",
+    CREATE: "إضافة",
+    UPDATE: "تعديل",
+    DELETE: "حذف",
+    LOGIN: "تسجيل دخول",
+    LOGOUT: "تسجيل خروج",
+    APPROVE: "اعتماد",
+    REJECT: "رفض",
+    PUBLISH: "نشر",
+    UNPUBLISH: "إلغاء نشر",
+    PRINT: "طباعة",
+    EXPORT: "تصدير",
+    IMPORT: "استيراد",
+    ISSUE: "إصدار",
+    CANCEL: "إلغاء",
+    LOCK: "إغلاق",
+    UNLOCK: "إعادة فتح",
+    ACTIVATE: "تفعيل",
+    DEACTIVATE: "تعطيل",
+    RESTORE: "استعادة",
+    DOWNLOAD: "تنزيل",
+    SEND: "إرسال",
+    SUBMIT: "تسليم",
+    TRANSFER: "نقل",
+    DENY: "رفض وصول",
+    RESET: "إعادة تعيين",
+    ACTIVITY: "عملية",
   };
 
-  async function fetchLiveActivities(selectedDate = null) {
-    const container = document.getElementById('live-activity-timeline');
-    if (!container) return;
+  const ACTIVITY_MODULE_LABELS = {
+    Security: "الأمان وتسجيل الدخول",
+    Finance: "الرسوم والمدفوعات",
+    Grades: "الدرجات والنتائج",
+    users: "المستخدمون",
+    roles: "الأدوار والصلاحيات",
+    permissions: "الصلاحيات",
+    students: "الطلاب",
+    guardians: "أولياء الأمور",
+    employees: "الموظفون والمعلمون",
+    schools: "إعدادات المدرسة",
+    "school-settings": "إعدادات المدرسة",
+    "academic-years": "السنوات الدراسية",
+    stages: "المراحل الدراسية",
+    grades: "الصفوف الدراسية",
+    sections: "الشعب الدراسية",
+    subjects: "المواد الدراسية",
+    periods: "الحصص الدراسية",
+    curriculum: "الخطة الدراسية",
+    "assign-teachers": "توزيع المعلمين",
+    attendance: "الحضور والغياب",
+    assessments: "الاختبارات والتقييمات",
+    results: "النتائج الدراسية",
+    fees: "الرسوم والمدفوعات",
+    "fee-rules": "قواعد الرسوم",
+    "fee-adjustments": "طلبات تعديل الرسوم",
+    reports: "التقارير المدرسية",
+    "school-reports": "التقارير المدرسية",
+    backups: "النسخ الاحتياطية",
+    notifications: "الإشعارات والرسائل",
+    timetables: "الجداول الدراسية",
+    certificates: "الشهادات",
+    transfers: "طلبات نقل الطلاب",
+    "student-transfer-requests": "طلبات نقل الطلاب",
+    permits: "الأذونات",
+    learning: "الأنشطة التعليمية",
+    system: "النظام",
+    System: "النظام",
+  };
 
-    // تحديد التاريخ المطلوب (إذا لم يُمرر، نأخذ القيمة من الحقل أو تاريخ اليوم)
-    if (!selectedDate) {
-      const dateInput = document.getElementById('activity-date-filter');
-      selectedDate = (dateInput && dateInput.value) ? dateInput.value : new Date().toISOString().split('T')[0];
-    }
+  const ACTIVITY_FIELD_LABELS = {
+    name: "الاسم",
+    full_name: "الاسم الكامل",
+    student_name: "اسم الطالب",
+    employee_name: "اسم الموظف",
+    teacher_name: "اسم المعلم",
+    guardian_name: "اسم ولي الأمر",
+    username: "اسم المستخدم",
+    phone: "رقم الهاتف",
+    job_title: "المسمى الوظيفي",
+    is_teacher: "نوع الموظف",
+    is_active: "الحالة",
+    status: "الحالة",
+    grade_name: "الصف",
+    section_name: "الشعبة",
+    subject_name: "المادة",
+    assessment_title: "التقييم",
+    title: "العنوان",
+    amount: "المبلغ",
+    paid_amount: "المبلغ المدفوع",
+    remaining_amount: "المبلغ المتبقي",
+    receipt_number: "رقم السند",
+    payment_method: "طريقة الدفع",
+    attendance_status: "حالة الحضور",
+    reason: "السبب",
+    notes: "الملاحظات",
+  };
 
+  const ACTIVITY_ROLE_LABELS = {
+    school_admin: "مدير المدرسة",
+    platform_admin: "مدير المنصة",
+    student: "طالب",
+    parent: "ولي أمر",
+    teacher: "معلم",
+    employee: "موظف",
+    system: "النظام",
+  };
+
+  const ACTIVITY_FIELD_PRIORITY = [
+    "full_name",
+    "student_name",
+    "employee_name",
+    "teacher_name",
+    "guardian_name",
+    "name",
+    "title",
+    "assessment_title",
+    "job_title",
+    "is_teacher",
+    "is_active",
+    "status",
+    "grade_name",
+    "section_name",
+    "subject_name",
+    "attendance_status",
+    "amount",
+    "paid_amount",
+    "remaining_amount",
+    "receipt_number",
+    "payment_method",
+    "reason",
+    "notes",
+  ];
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function parseJsonObject(value) {
+    if (!value) return {};
+    if (typeof value === "object" && !Array.isArray(value)) return value;
     try {
-      // إرسال التاريخ في مسار الـ API كـ Query Parameter (?date=...)
-     const response = await fetch(apiUrl(`/activities/recent?date=${selectedDate}`), {
-  method: "GET",
-  headers: { ...authHeaders(), "Content-Type": "application/json" },
-});
-
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'فشل جلب البيانات');
-
-      if (!result.data || result.data.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; padding: 40px; color: #666;">
-            <p style="font-size: 14px; color: #94a3b8;">لا توجد نشاطات مسجلة في هذا اليوم.</p>
-          </div>`;
-        return;
-      }
-
-      container.innerHTML = '';
-
-      
-
-result.data.forEach(activity => {
-        const dateObj = new Date(activity.created_at);
-        const timeOnly = dateObj.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-        const fullDate = dateObj.toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-        let dotClass = 'timeline-dot'; 
-        let metaClass = 'meta'; 
-        
-        if (activity.action === 'DELETE') {
-          dotClass = 'timeline-dot timeline-dot--danger'; 
-          metaClass = 'meta meta-warn'; 
-        } else if (activity.action === 'UPDATE') {
-          dotClass = 'timeline-dot timeline-dot--warn'; 
-        }
-
-        const actionNamesAr = { 'CREATE': 'إضافة', 'UPDATE': 'تعديل', 'DELETE': 'حذف' };
-        const resourceNamesAr = {
-          'students': 'طالب',
-          'fees': 'بيانات مالية',
-          'roles': 'صلاحيات',
-          'role-permissions': 'صلاحيات النظام',
-          'users': 'مستخدم',
-          'employees': 'موظف',
-          'schools': 'إعدادات المدرسة',
-          'school-settings': 'إعدادات المدرسة',
-          'backups': 'النسخ الاحتياطي',
-          'student-transfer-requests': 'طلبات انتقال الطلاب',
-          'system': 'نظام'
-        };
-
-        const actionTitle = actionNamesAr[activity.action] || 'عملية';
-        const rawModule = activity.module || activity.resource_type || '';
-        const sectionTitle = resourceNamesAr[rawModule] || rawModule || 'نظام';
-        
-        // 🎯 عرض الحدث بدقة كما جاء من الباك إند الذكي
-        let exactDetails = activity.description || '';
-        
-        // بناء الـ HTML الأنيق
-        const htmlItem = `
-          <div class="timeline-item">
-            <div class="timeline-time" style="font-size: 11.5px; font-weight: 700; color: #94a3b8; direction: ltr; margin-top: 2px;">
-              ${timeOnly}
-            </div>
-            <div class="${dotClass}"></div>
-            <div class="timeline-card" onclick="toggleTime(this)" style="cursor: pointer; transition: all 0.2s ease;">
-              
-              <p style="margin: 0 0 5px 0;">
-                <span style="font-weight: 800; font-size: 14px;">${actionTitle} ${sectionTitle}</span><br>
-                <span style="font-size: 12.5px; color: #cbd5e1; line-height: 1.6; display: inline-block; margin-top: 2px;">
-                  ${exactDetails}
-                </span>
-              </p>
-              
-              <span class="${metaClass}">بواسطة: ${activity.user_name || 'المدير'}</span>
-              
-              <div class="exact-time-display" style="display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed rgba(148, 163, 184, 0.3); font-size: 11.5px; color: #94a3b8;">
-                <span style="font-weight: 700; color: #cbd5e1;">التاريخ:</span> <br>
-                ${fullDate}
-              </div>
-            </div>
-          </div>
-        `;
-        
-        container.insertAdjacentHTML('beforeend', htmlItem);
-      });
-    } catch (error) {
-      console.error("❌ Live Activities Error:", error);
-      if (container.innerHTML.trim() === '') {
-        container.innerHTML = `<div style="text-align: center; padding: 20px; color: #ef4444;">تعذر الاتصال بالخادم.</div>`;
-      }
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      return {};
     }
   }
+
+  function localDateValue(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function firstValue(...values) {
+    return values.find((value) => value !== null && value !== undefined && value !== "");
+  }
+
+  function fieldLabel(field) {
+    return ACTIVITY_FIELD_LABELS[field] || "";
+  }
+
+  function roleLabel(role) {
+    return ACTIVITY_ROLE_LABELS[role] || role || "—";
+  }
+
+  function severityLabel(severity) {
+    return {
+      normal: "عادي",
+      important: "مهم",
+      sensitive: "حساس",
+      danger: "خطير",
+      critical: "خطير",
+    }[severity] || "عادي";
+  }
+
+  function resultLabel(result) {
+    return result === "failure" ? "فاشلة" : "ناجحة";
+  }
+
+  function maskPhone(value) {
+    const digits = String(value ?? "").replace(/\D/g, "");
+    if (digits.length < 7) return String(value ?? "—");
+    return `${digits.slice(0, 3)}****${digits.slice(-3)}`;
+  }
+
+  function formatActivityValue(value, field = "") {
+    if (value === null || value === undefined || value === "") return "—";
+    if (field === "phone") return maskPhone(value);
+    if (field === "is_active") return value === true || value === "true" || value === 1 || value === "1" ? "نشط" : "غير نشط";
+    if (field === "is_teacher") return value === true || value === "true" || value === 1 || value === "1" ? "معلم" : "موظف إداري";
+    if (field === "status" || field === "attendance_status") {
+      const labels = {
+        active: "نشط",
+        inactive: "غير نشط",
+        pending: "بانتظار المراجعة",
+        approved: "مقبول",
+        rejected: "مرفوض",
+        present: "حاضر",
+        absent: "غائب",
+        late: "متأخر",
+      };
+      return labels[String(value).toLowerCase()] || String(value);
+    }
+    if (/amount$/i.test(field)) return `${Number(value || 0).toLocaleString("ar-EG")} ريال`;
+    if (typeof value === "boolean") return value ? "نعم" : "لا";
+    if (typeof value === "object") return "تم حفظ بيانات إضافية";
+    return String(value);
+  }
+
+  function isUsefulManagerField(field) {
+    return Boolean(ACTIVITY_FIELD_LABELS[field]);
+  }
+
+  function sortActivityFields(a, b) {
+    const ai = ACTIVITY_FIELD_PRIORITY.indexOf(a.field);
+    const bi = ACTIVITY_FIELD_PRIORITY.indexOf(b.field);
+    return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+  }
+
+  function managerRows(data, max = 5) {
+    return Object.entries(parseJsonObject(data))
+      .filter(([field, value]) => isUsefulManagerField(field) && value !== null && value !== undefined && value !== "")
+      .map(([field, value]) => ({ field, label: fieldLabel(field), value: formatActivityValue(value, field) }))
+      .sort(sortActivityFields)
+      .slice(0, max);
+  }
+
+  function managerChangeRows(activity, max = 6) {
+    const changes = parseJsonObject(activity.changes);
+    const oldData = parseJsonObject(activity.old_data || changes.before);
+    const newData = parseJsonObject(activity.new_data || changes.after);
+    const configured = Array.isArray(activity.changed_fields) && activity.changed_fields.length
+      ? activity.changed_fields
+      : [...new Set([...Object.keys(oldData), ...Object.keys(newData)])];
+
+    return configured
+      .filter(isUsefulManagerField)
+      .filter((field) => JSON.stringify(oldData[field]) !== JSON.stringify(newData[field]))
+      .map((field) => ({
+        field,
+        label: fieldLabel(field),
+        oldValue: formatActivityValue(oldData[field], field),
+        newValue: formatActivityValue(newData[field], field),
+      }))
+      .sort(sortActivityFields)
+      .slice(0, max);
+  }
+
+  function activityDotClass(activity) {
+    const action = String(activity.action || "").toUpperCase();
+    const severity = String(activity.severity || "normal").toLowerCase();
+    const result = String(activity.result || "success").toLowerCase();
+
+    if (result === "failure" || ["danger", "critical"].includes(severity) || ["DELETE", "DENY", "REJECT", "CANCEL"].includes(action)) {
+      return "timeline-dot timeline-dot--danger";
+    }
+    if (["important", "sensitive"].includes(severity) || ["UPDATE", "DEACTIVATE", "LOCK", "RESET"].includes(action)) {
+      return "timeline-dot timeline-dot--warn";
+    }
+    return "timeline-dot";
+  }
+
+  function renderSimpleDataTable(title, rows) {
+    if (!rows.length) return "";
+    return `
+      <section class="activity-detail-section">
+        <h5>${escapeHtml(title)}</h5>
+        <div class="activity-data-table-wrap">
+          <table class="activity-data-table">
+            <tbody>
+              ${rows.map((row) => `<tr><th>${escapeHtml(row.label)}</th><td>${escapeHtml(row.value)}</td></tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </section>`;
+  }
+
+  function renderChangesTable(rows) {
+    if (!rows.length) return "";
+    return `
+      <section class="activity-detail-section">
+        <h5>التغييرات المسجلة</h5>
+        <div class="activity-data-table-wrap">
+          <table class="activity-data-table activity-changes-table">
+            <thead><tr><th>الحقل</th><th>قبل التعديل</th><th>بعد التعديل</th></tr></thead>
+            <tbody>
+              ${rows.map((row) => `<tr><th>${escapeHtml(row.label)}</th><td>${escapeHtml(row.oldValue)}</td><td>${escapeHtml(row.newValue)}</td></tr>`).join("")}
+            </tbody>
+          </table>
+        </div>
+      </section>`;
+  }
+
+  function renderActivityDetails(activity, dateObj) {
+    const details = parseJsonObject(activity.details);
+    const action = String(activity.action || "").toUpperCase();
+    const targetLabel = firstValue(activity.target_label, details.target_label);
+    const moduleKey = activity.module || activity.resource_type || activity.entity_type || "system";
+    const detailModuleLabel = activity.module_label || ACTIVITY_MODULE_LABELS[moduleKey] || moduleKey || "النظام";
+    const fullDate = dateObj.toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+    const exactTime = dateObj.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    const changes = parseJsonObject(activity.changes);
+
+    const createRows = action === "CREATE" ? managerRows(activity.new_data || changes.after, 5) : [];
+    const deleteRows = action === "DELETE" ? managerRows(activity.old_data || changes.before, 5) : [];
+    const updateRows = !["CREATE", "DELETE"].includes(action) ? managerChangeRows(activity, 6) : [];
+
+    return `
+      <div class="activity-details-grid">
+        <div class="activity-detail-row"><span>القسم</span><strong>${escapeHtml(detailModuleLabel)}</strong></div>
+        <div class="activity-detail-row"><span>المستخدم المنفذ</span><strong>${escapeHtml(activity.actor_name || activity.user_name || "مستخدم")}</strong></div>
+        <div class="activity-detail-row"><span>الدور</span><strong>${escapeHtml(roleLabel(activity.user_role))}</strong></div>
+        <div class="activity-detail-row"><span>التاريخ والوقت</span><strong>${escapeHtml(`${fullDate} — ${exactTime}`)}</strong></div>
+        ${targetLabel ? `<div class="activity-detail-row activity-detail-row--full"><span>السجل المتأثر</span><strong>${escapeHtml(targetLabel)}</strong></div>` : ""}
+        ${activity.reason ? `<div class="activity-detail-row activity-detail-row--full"><span>السبب</span><strong>${escapeHtml(activity.reason)}</strong></div>` : ""}
+      </div>
+
+      ${renderChangesTable(updateRows)}
+      ${renderSimpleDataTable("بيانات مختصرة عن السجل المضاف", createRows)}
+      ${renderSimpleDataTable("بيانات مختصرة عن السجل المحذوف", deleteRows)}
+    `;
+  }
+
+  function renderActivityCard(activity) {
+    const dateObj = new Date(activity.created_at || `${activity.event_date || ""}T${activity.event_time || "00:00:00"}`);
+    const validDate = Number.isNaN(dateObj.getTime()) ? new Date() : dateObj;
+    const timeOnly = validDate.toLocaleTimeString("ar-EG", { hour: "2-digit", minute: "2-digit" });
+    const action = String(activity.action || "ACTIVITY").toUpperCase();
+    const actionTitle = activity.action_label || ACTIVITY_ACTION_LABELS[action] || "عملية";
+    const moduleKey = activity.module || activity.resource_type || activity.entity_type || "system";
+    const sectionTitle = activity.module_label || ACTIVITY_MODULE_LABELS[moduleKey] || moduleKey || "النظام";
+    const description = activity.display_text || activity.description || `${actionTitle} في قسم ${sectionTitle}`;
+    const severity = String(activity.severity || "normal").toLowerCase();
+    const result = String(activity.result || "success").toLowerCase();
+
+    return `
+      <div class="timeline-item">
+        <div class="timeline-time">${escapeHtml(timeOnly)}</div>
+        <div class="${activityDotClass(activity)}"></div>
+        <article class="timeline-card activity-card activity-card--${escapeHtml(severity)}">
+          <button type="button" class="activity-card-toggle" data-activity-toggle aria-expanded="false">
+            <span class="activity-card-title">${escapeHtml(actionTitle)} — ${escapeHtml(sectionTitle)}</span>
+            <span class="activity-card-description">${escapeHtml(description)}</span>
+            <span class="activity-card-footer">
+              <span class="meta">بواسطة: ${escapeHtml(activity.actor_name || activity.user_name || "مستخدم")}</span>
+              <span class="activity-badges">
+                <span class="activity-badge activity-badge--${escapeHtml(result)}">${escapeHtml(resultLabel(result))}</span>
+                <span class="activity-badge activity-badge--${escapeHtml(severity)}">${escapeHtml(severityLabel(severity))}</span>
+              </span>
+            </span>
+          </button>
+          <div class="activity-card-details" hidden>${renderActivityDetails(activity, validDate)}</div>
+        </article>
+      </div>`;
+  }
+
+  function bindActivityTimeline(container) {
+    if (container.dataset.activityBound === "1") return;
+    container.dataset.activityBound = "1";
+    container.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-activity-toggle]");
+      if (!button || !container.contains(button)) return;
+      const card = button.closest(".activity-card");
+      const details = card?.querySelector(".activity-card-details");
+      if (!card || !details) return;
+      const willOpen = details.hidden;
+      container.querySelectorAll(".activity-card.is-open").forEach((openCard) => {
+        if (openCard === card) return;
+        openCard.classList.remove("is-open");
+        openCard.querySelector("[data-activity-toggle]")?.setAttribute("aria-expanded", "false");
+        const openDetails = openCard.querySelector(".activity-card-details");
+        if (openDetails) openDetails.hidden = true;
+      });
+      details.hidden = !willOpen;
+      card.classList.toggle("is-open", willOpen);
+      button.setAttribute("aria-expanded", willOpen ? "true" : "false");
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const dateFilter = document.getElementById("activity-date-filter");
+    if (!dateFilter) return;
+    dateFilter.value = localDateValue();
+    dateFilter.addEventListener("change", () => fetchLiveActivities(dateFilter.value));
+  });
+
+  async function fetchLiveActivities(selectedDate = null) {
+    const container = document.getElementById("live-activity-timeline");
+    if (!container) return;
+    bindActivityTimeline(container);
+    const dateInput = document.getElementById("activity-date-filter");
+    const requestedDate = selectedDate || dateInput?.value || localDateValue();
+    container.setAttribute("aria-busy", "true");
+
+    try {
+      const response = await fetch(apiUrl(`/activities/recent?date=${encodeURIComponent(requestedDate)}&limit=10&scope=dashboard`), {
+        method: "GET",
+        headers: { ...authHeaders(), "Content-Type": "application/json" },
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(result.message || "فشل جلب النشاطات");
+      const activities = Array.isArray(result.data) ? result.data : [];
+      container.innerHTML = activities.length
+        ? activities.map(renderActivityCard).join("")
+        : `<div class="activity-empty-state">لا توجد نشاطات مسجلة في هذا اليوم.</div>`;
+    } catch (error) {
+      console.error("❌ Live Activities Error:", error);
+      container.innerHTML = `<div class="activity-error-state">تعذر جلب سجل النشاطات. تأكد من تشغيل الخادم ثم أعد المحاولة.</div>`;
+    } finally {
+      container.setAttribute("aria-busy", "false");
+    }
+  }
+
+
   // ===============================
   // 3. هوية المدرسة الديناميكية
   // ===============================

@@ -7,6 +7,8 @@ import {
   resolveRecipientsForPermissionRequestCreated,
   resolveRecipientsForTeacherPermissionRequest,
   getAdminUserIds,
+  getUserIdsByPermissionCodes,
+  mergeUserIds,
 } from "./notificationTargetsResolvers.js";
 import {
   buildStudentAttendanceTemplate,
@@ -31,8 +33,8 @@ function isStatusWorthNotifying(status) {
 export async function notifyStudentAttendanceByEntryId({
   app,
   attendanceEntryId,
-  includeStudent = false,
-  includeAdmins = true,
+  includeStudent = true,
+  includeAdmins = false,
   dedupeWindowSeconds = 120,
 }) {
   // ✅ أضفنا سحب school_id لضمان عزل الإشعار
@@ -60,12 +62,12 @@ export async function notifyStudentAttendanceByEntryId({
       p.name AS period_name,
       t.full_name AS teacher_name
     FROM attendance_entries ae
-    JOIN students s ON s.id = ae.student_id
-    JOIN attendance_sessions "as" ON "as".id = ae.session_id
-    LEFT JOIN sections sec ON sec.id = "as".section_id
-    LEFT JOIN subjects subj ON subj.id = "as".subject_id
-    LEFT JOIN periods p ON p.id = "as".period_id
-    LEFT JOIN teachers t ON t.id = "as".teacher_id
+    JOIN students s ON s.id = ae.student_id AND s.school_id = ae.school_id
+    JOIN attendance_sessions "as" ON "as".id = ae.session_id AND "as".school_id = ae.school_id
+    LEFT JOIN sections sec ON sec.id = "as".section_id AND sec.school_id = "as".school_id
+    LEFT JOIN subjects subj ON subj.id = "as".subject_id AND subj.school_id = "as".school_id
+    LEFT JOIN periods p ON p.id = "as".period_id AND p.school_id = "as".school_id
+    LEFT JOIN teachers t ON t.id = "as".teacher_id AND t.school_id = "as".school_id
     WHERE ae.id = $1
     LIMIT 1
   `;
@@ -97,6 +99,7 @@ export async function notifyStudentAttendanceByEntryId({
     periodName: row.period_name,
     teacherName: row.teacher_name,
     attendanceDate: row.attendance_date,
+    schoolId: row.school_id,
   });
 
   return createSystemNotification({
@@ -137,8 +140,8 @@ export async function notifyPermissionRequestCreated({
       s.full_name AS student_name,
       pu.name AS parent_name
     FROM permission_requests pr
-    JOIN students s ON s.id = pr.student_id
-    LEFT JOIN users pu ON pu.id = pr.parent_user_id
+    JOIN students s ON s.id = pr.student_id AND s.school_id = pr.school_id
+    LEFT JOIN users pu ON pu.id = pr.parent_user_id AND pu.school_id = pr.school_id
     WHERE pr.id = $1
     LIMIT 1
   `;
@@ -160,6 +163,7 @@ export async function notifyPermissionRequestCreated({
     type: row.type,
     status: row.status,
     reasonText: row.reason_text,
+    schoolId: row.school_id,
   });
 
   return createSystemNotification({
@@ -200,7 +204,7 @@ export async function notifyPermissionRequestDecision({
 
       s.full_name AS student_name
     FROM permission_requests pr
-    JOIN students s ON s.id = pr.student_id
+    JOIN students s ON s.id = pr.student_id AND s.school_id = pr.school_id
     WHERE pr.id = $1
     LIMIT 1
   `;
@@ -222,6 +226,7 @@ export async function notifyPermissionRequestDecision({
     status: row.status,
     requestDate: row.request_date,
     decisionNote: row.decision_note,
+    schoolId: row.school_id,
   });
 
   return createSystemNotification({
@@ -256,17 +261,52 @@ export async function notifyAttendanceSessionLocked({
       "as".subject_id,
       "as".teacher_id,
       "as".period_id,
-      "as".school_id, 
+      "as".school_id,
+
+      (
+        SELECT COUNT(*)::int
+        FROM attendance_entries ae
+        WHERE ae.school_id = "as".school_id
+          AND ae.session_id = "as".id
+      ) AS students_count,
+      (
+        SELECT COUNT(*)::int
+        FROM attendance_entries ae
+        WHERE ae.school_id = "as".school_id
+          AND ae.session_id = "as".id
+          AND LOWER(COALESCE(ae.status, '')) = 'present'
+      ) AS present_count,
+      (
+        SELECT COUNT(*)::int
+        FROM attendance_entries ae
+        WHERE ae.school_id = "as".school_id
+          AND ae.session_id = "as".id
+          AND LOWER(COALESCE(ae.status, '')) = 'absent'
+      ) AS absent_count,
+      (
+        SELECT COUNT(*)::int
+        FROM attendance_entries ae
+        WHERE ae.school_id = "as".school_id
+          AND ae.session_id = "as".id
+          AND LOWER(COALESCE(ae.status, '')) = 'late'
+      ) AS late_count,
+      (
+        SELECT COUNT(*)::int
+        FROM attendance_entries ae
+        WHERE ae.school_id = "as".school_id
+          AND ae.session_id = "as".id
+          AND LOWER(COALESCE(ae.status, '')) = 'excused'
+      ) AS excused_count,
 
       sec.name AS section_name,
       subj.name AS subject_name,
       p.name AS period_name,
       t.full_name AS teacher_name
     FROM attendance_sessions "as"
-    LEFT JOIN sections sec ON sec.id = "as".section_id
-    LEFT JOIN subjects subj ON subj.id = "as".subject_id
-    LEFT JOIN periods p ON p.id = "as".period_id
-    LEFT JOIN teachers t ON t.id = "as".teacher_id
+    LEFT JOIN sections sec ON sec.id = "as".section_id AND sec.school_id = "as".school_id
+    LEFT JOIN subjects subj ON subj.id = "as".subject_id AND subj.school_id = "as".school_id
+    LEFT JOIN periods p ON p.id = "as".period_id AND p.school_id = "as".school_id
+    LEFT JOIN teachers t ON t.id = "as".teacher_id AND t.school_id = "as".school_id
     WHERE "as".id = $1
     LIMIT 1
   `;
@@ -278,8 +318,15 @@ export async function notifyAttendanceSessionLocked({
     return { success: true, skipped: true, reason: "session_not_locked" };
   }
 
-  // ✅ جلب مدراء المدرسة التي تم إغلاق الجلسة فيها فقط
-  const adminUserIds = await getAdminUserIds({ schoolId: row.school_id }); 
+  // يصل الملخص إلى المدير، وإلى الموظف المخول بإدارة الحضور إن وُجد.
+  const [adminUserIds, attendanceAuthorizedIds] = await Promise.all([
+    getAdminUserIds({ schoolId: row.school_id }),
+    getUserIdsByPermissionCodes({
+      schoolId: row.school_id,
+      codes: ["attendance.manage", "attendance.approve", "students.attendance.manage"],
+    }),
+  ]);
+  const recipients = mergeUserIds(adminUserIds, attendanceAuthorizedIds);
   
   const tpl = buildAttendanceSessionLockedTemplate({
     attendanceSessionId: row.attendance_session_id,
@@ -288,6 +335,12 @@ export async function notifyAttendanceSessionLocked({
     subjectName: row.subject_name,
     periodName: row.period_name,
     teacherName: row.teacher_name,
+    studentsCount: row.students_count,
+    presentCount: row.present_count,
+    absentCount: row.absent_count,
+    lateCount: row.late_count,
+    excusedCount: row.excused_count,
+    schoolId: row.school_id,
   });
 
   return createSystemNotification({
@@ -300,7 +353,7 @@ export async function notifyAttendanceSessionLocked({
     relatedType: "attendance_session",
     relatedId: row.attendance_session_id,
     meta: tpl.meta,
-    recipientUserIds: adminUserIds,
+    recipientUserIds: recipients,
     dedupeWindowSeconds,
   });
 }
@@ -325,7 +378,7 @@ export async function notifyTeacherPermissionRequestCreated({
 
       t.full_name AS teacher_name
     FROM teacher_permission_requests tpr
-    JOIN teachers t ON t.id = tpr.teacher_id
+    JOIN teachers t ON t.id = tpr.teacher_id AND t.school_id = tpr.school_id
     WHERE tpr.id = $1
     LIMIT 1
   `;
@@ -345,6 +398,7 @@ export async function notifyTeacherPermissionRequestCreated({
     scope: row.scope,
     status: row.status,
     reasonText: row.reason_text,
+    schoolId: row.school_id,
   });
 
   return createSystemNotification({

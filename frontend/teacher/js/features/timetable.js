@@ -17,6 +17,51 @@
     7: "الجمعة",
   };
 
+  const DEFAULT_WORKING_DAY_IDS = [1, 2, 3, 4, 5, 6];
+
+  function normalizeWorkingDayId(value) {
+    const raw = String(value ?? "").trim().toLowerCase();
+    const numeric = Number(raw);
+    if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 7) return numeric;
+
+    const aliases = {
+      sat: 1,
+      saturday: 1,
+      sun: 2,
+      sunday: 2,
+      mon: 3,
+      monday: 3,
+      tue: 4,
+      tuesday: 4,
+      wed: 5,
+      wednesday: 5,
+      thu: 6,
+      thursday: 6,
+      fri: 7,
+      friday: 7,
+    };
+
+    return aliases[raw] || 0;
+  }
+
+  function getWorkingDayIds(meta = ttMeta) {
+    let raw = meta?.working_days ?? meta?.workingDays ?? meta?.data?.working_days ?? [];
+
+    if (typeof raw === "string") {
+      try {
+        raw = JSON.parse(raw);
+      } catch {
+        raw = raw.split(",");
+      }
+    }
+
+    const ids = Array.from(
+      new Set((Array.isArray(raw) ? raw : []).map(normalizeWorkingDayId).filter(Boolean))
+    ).sort((a, b) => a - b);
+
+    return ids.length ? ids : DEFAULT_WORKING_DAY_IDS.slice();
+  }
+
   function pick(obj, keys, fallback = "") {
     for (const k of keys) if (obj && obj[k] != null && obj[k] !== "") return obj[k];
     return fallback;
@@ -87,11 +132,13 @@
       const saved = Number(localStorage.getItem(TT_LS_YEAR) || "");
       const can = Array.from(ttYearSel.options).some((o) => String(o.value) === String(saved));
       ttYearSel.value = can ? String(saved) : ttYearSel.options[0]?.value || "1";
+      localStorage.setItem(TT_LS_YEAR, String(ttYearSel.value || "1"));
     }
 
     if (ttTermSel) {
       const savedTerm = localStorage.getItem(TT_LS_TERM) || "1";
       ttTermSel.value = savedTerm === "2" ? "2" : "1";
+      localStorage.setItem(TT_LS_TERM, String(ttTermSel.value || "1"));
     }
 
     // Week default UI
@@ -150,7 +197,9 @@
   function updateWeekLabelUI() {
     if (!ttWeekLabel) return;
     const ws = getWeekStartISO();
-    const we = addDaysISO(ws, 5); // السبت..الخميس
+    const workingDayIds = getWorkingDayIds();
+    const lastOffset = Math.max(0, ...workingDayIds.map((id) => Number(id) - 1));
+    const we = addDaysISO(ws, lastOffset);
     ttWeekLabel.textContent = `من ${ws} إلى ${we}`;
   }
 
@@ -176,7 +225,8 @@
       const daysRaw = ttMeta?.days || ttMeta?.data?.days || [];
       const periodsRaw = ttMeta?.periods || ttMeta?.data?.periods || [];
 
-      const days = (daysRaw || []).filter((d) => [1, 2, 3, 4, 5, 6].includes(Number(d.id)));
+      const workingDayIds = getWorkingDayIds(ttMeta);
+      const days = (daysRaw || []).filter((d) => workingDayIds.includes(Number(d.id)));
 
       const periods = (periodsRaw || [])
         .slice()

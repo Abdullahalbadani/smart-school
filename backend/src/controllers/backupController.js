@@ -6,6 +6,7 @@ import {
   runPsqlRestore
 } from '../utils/backupExecutor.js';
 import { deleteFromGoogleDrive } from '../utils/googleDriveHelper.js';
+import { logAudit } from '../utils/auditLogger.js';
 
 const DEFAULT_BACKUP_ROOT = path.resolve(
   process.env.BACKUP_STORAGE_ROOT ||
@@ -787,6 +788,21 @@ export async function downloadBackup(req, res) {
           'الملف غير متوفر على القرص أو تم حذفه'
       });
     }
+
+    await logAudit({
+      req,
+      action: 'DOWNLOAD',
+      actionLabel: 'تنزيل نسخة احتياطية',
+      module: 'backups',
+      moduleLabel: 'النسخ الاحتياطية',
+      tableName: 'backup_logs',
+      recordId: backupLogId,
+      description: `قام ${getAuthenticatedUserName(req)} بتنزيل النسخة الاحتياطية رقم ${backupLogId}`,
+      details: { file_name: path.basename(resolvedPath) },
+      metadata: { severity: 'critical', result: 'success' },
+      eventKey: 'BACKUP_DOWNLOAD',
+      statusCode: 200,
+    });
 
     return res.download(
       resolvedPath,

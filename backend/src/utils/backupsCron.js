@@ -1,6 +1,7 @@
 import cron from 'node-cron';
 import { pool } from '../config/db.js';
 import { executeBackup } from './backupExecutor.js';
+import WorkflowNotifications from '../modules/notifications/workflowNotificationService.js';
 
 const CRON_TIMEZONE =
   process.env.BACKUP_CRON_TIMEZONE ||
@@ -140,7 +141,7 @@ async function hasRecentRunningBackup(schoolId) {
   return result.rowCount > 0;
 }
 
-async function runSchoolBackupIfDue(setting) {
+async function runSchoolBackupIfDue(setting, app = null) {
   const schoolId = Number(setting.school_id);
 
   if (!Number.isSafeInteger(schoolId) || schoolId <= 0) {
@@ -219,12 +220,22 @@ async function runSchoolBackupIfDue(setting) {
       `[Backup Cron] Automatic backup failed for school #${schoolId}:`,
       error.message
     );
+
+    try {
+      await WorkflowNotifications.notifyBackupFailure({
+        app,
+        schoolId,
+        errorMessage: error.message,
+      });
+    } catch (notifyErr) {
+      console.error(`[Backup Cron] Failed to notify school #${schoolId}:`, notifyErr.message);
+    }
   } finally {
     runningSchoolBackups.delete(schoolId);
   }
 }
 
-export function startBackupsCronJob() {
+export function startBackupsCronJob(app = null) {
   console.log(
     `[Backup Cron] Scheduler initialized. Timezone: ${CRON_TIMEZONE}`
   );
@@ -252,7 +263,7 @@ export function startBackupsCronJob() {
 
         // التنفيذ متسلسل لتجنب ضغط مفاجئ على قاعدة البيانات
         for (const setting of settings) {
-          await runSchoolBackupIfDue(setting);
+          await runSchoolBackupIfDue(setting, app);
         }
       } catch (error) {
         console.error(

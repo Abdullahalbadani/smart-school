@@ -1,1125 +1,367 @@
-/* =========================================================
-   SMART-SCHOOL | Admin Notifications Send Page
-   RTL + Responsive + Clean Layout
-   متوافق مع متغيرات الثيم الموجودة لديك
-========================================================= */
-
-/* =========================
-   0) Helpers / Reset
-========================= */
-.hidden {
-  display: none !important;
-}
-
-#adminNotificationSendPage,
-#adminNotificationSendPage * {
-  box-sizing: border-box;
-  min-width: 0; /* مهم جدًا لمنع تكسير الجريد وتداخل النصوص */
-}
-
-#adminNotificationSendPage.page-section {
-  direction: rtl;
-  color: var(--text-main);
-  background: transparent;
-  padding: 16px;
+#adminNotificationSendPage {
+  --ns-bg: var(--bg-panel, #0f172a);
+  --ns-soft: var(--bg-panel-soft, #111c32);
+  --ns-border: var(--border-soft, rgba(148, 163, 184, .22));
+  --ns-text: var(--text-main, #e5e7eb);
+  --ns-muted: var(--text-muted, #94a3b8);
+  --ns-primary: var(--primary, #2563eb);
+  --ns-danger: #ef4444;
+  --ns-success: #22c55e;
   display: grid;
   gap: 16px;
-}
-
-/* =========================
-   1) Page Header
-========================= */
-#adminNotificationSendPage .page-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-soft);
-  padding: 20px 22px;
-}
-
-#adminNotificationSendPage .page-head h2 {
-  margin: 0;
-  font-size: 1.6rem;
-  line-height: 1.25;
-  color: var(--text-main);
-  font-weight: 800;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .page-head p {
-  margin: 8px 0 0;
-  color: var(--text-muted);
-  line-height: 1.8;
-  font-size: 0.95rem;
-  overflow-wrap: anywhere;
-}
-
-/* =========================
-   2) Generic Cards / Blocks
-========================= */
-#adminNotificationSendPage .card-box {
-  background: var(--bg-panel);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-soft);
-  padding: 18px;
-  overflow: hidden;
-}
-
-#adminNotificationSendPage .section-block {
-  background: var(--bg-panel-soft);
-  border: 1px solid var(--border-soft);
-  border-radius: var(--radius-lg);
-  padding: 14px;
-}
-
-#adminNotificationSendPage .section-block.full {
-  grid-column: 1 / -1;
-}
-
-#adminNotificationSendPage .section-block + .section-block {
-  margin-top: 8px;
-}
-
-#adminNotificationSendPage .section-block-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-#adminNotificationSendPage .section-block-head h3,
-#adminNotificationSendPage .section-block-head h4 {
-  margin: 0;
-  color: var(--text-main);
-  font-weight: 800;
-  line-height: 1.3;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .section-block-head h3 {
-  font-size: 1.05rem;
-}
-
-#adminNotificationSendPage .section-block-head h4 {
-  font-size: 0.95rem;
-}
-
-#adminNotificationSendPage .section-block-head p {
-  margin: 4px 0 0;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  line-height: 1.7;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .section-block-body {
-  display: grid;
-  gap: 12px;
-}
-
-#adminNotificationSendPage .section-block-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-end;
-  margin-inline-start: auto;
-}
-
-/* =========================
-   3) Form Grids
-========================= */
-#adminNotificationSendPage .form-grid {
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 14px;
-}
-
-#adminNotificationSendPage .field {
-  grid-column: span 6;
-  display: grid;
-  gap: 6px;
-  align-content: start;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 18px 18px 108px;
+  color: var(--ns-text);
   min-width: 0;
 }
 
-#adminNotificationSendPage .field.full {
-  grid-column: 1 / -1;
+#adminNotificationSendPage *,
+#adminNotificationSendPage *::before,
+#adminNotificationSendPage *::after { box-sizing: border-box; }
+
+#adminNotificationSendPage .hidden { display: none !important; }
+
+#adminNotificationSendPage .page-head,
+#adminNotificationSendPage .card-box {
+  border: 1px solid var(--ns-border);
+  background: var(--ns-bg);
+  border-radius: 22px;
+  padding: 18px;
+  min-width: 0;
 }
 
-#adminNotificationSendPage .field label {
-  display: block;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--text-main);
-  line-height: 1.5;
-  white-space: normal;
-  overflow-wrap: anywhere; /* يمنع تراكب النصوص الطويلة */
-}
-
-#adminNotificationSendPage .field .req {
-  color: var(--danger);
+#adminNotificationSendPage .page-kicker {
+  display: inline-block;
+  color: #60a5fa;
+  font-size: .8rem;
   font-weight: 800;
+  margin-bottom: 6px;
 }
 
-#adminNotificationSendPage .field-hint {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  line-height: 1.6;
-  margin-top: -2px;
-  white-space: normal;
-  overflow-wrap: anywhere;
+#adminNotificationSendPage h2,
+#adminNotificationSendPage h3,
+#adminNotificationSendPage h4,
+#adminNotificationSendPage p { margin: 0; }
+
+#adminNotificationSendPage h2 { font-size: 1.55rem; }
+#adminNotificationSendPage h3 { font-size: 1rem; }
+#adminNotificationSendPage h4 { font-size: .95rem; }
+
+#adminNotificationSendPage .page-head p,
+#adminNotificationSendPage .section-block-head p,
+#adminNotificationSendPage .target-summary-box p,
+#adminNotificationSendPage .field-hint,
+#adminNotificationSendPage .panel-note {
+  color: var(--ns-muted);
+  line-height: 1.75;
+  font-size: .84rem;
 }
 
-/* =========================
-   4) Inputs / Selects / Textareas
-========================= */
-#adminNotificationSendPage input[type="text"],
-#adminNotificationSendPage input[type="number"],
-#adminNotificationSendPage select,
-#adminNotificationSendPage textarea {
-  width: 100%;
-  max-width: 100%;
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border-radius: 14px;
-  padding: 11px 12px;
-  font: inherit;
-  line-height: 1.45;
-  min-height: 44px;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background-color 0.2s ease;
-  outline: none;
-}
-
-#adminNotificationSendPage textarea {
-  resize: vertical;
-  min-height: 90px;
-}
-
-#adminNotificationSendPage input::placeholder,
-#adminNotificationSendPage textarea::placeholder {
-  color: var(--text-muted);
-  opacity: 0.9;
-}
-
-#adminNotificationSendPage input:focus,
-#adminNotificationSendPage select:focus,
-#adminNotificationSendPage textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 4px var(--primary-soft);
-}
-
-/* Disabled */
-#adminNotificationSendPage input:disabled,
-#adminNotificationSendPage select:disabled,
-#adminNotificationSendPage textarea:disabled,
-#adminNotificationSendPage button:disabled {
-  opacity: 0.65;
-  cursor: not-allowed;
-}
-
-/* تحسين بسيط لقوائم select خصوصًا بالعربي */
-#adminNotificationSendPage select {
-  cursor: pointer;
-}
-
-/* =========================
-   5) Layout Helpers
-========================= */
-
-/* مربعات الاختيارات (checkbox cards) */
-#adminNotificationSendPage .checks-grid {
+#adminNotificationSendPage .send-form,
+#adminNotificationSendPage .section-block,
+#adminNotificationSendPage .target-rules-container {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 4px;
+  gap: 14px;
 }
 
-#adminNotificationSendPage .checks-grid label {
+#adminNotificationSendPage .section-block {
+  padding: 4px 0 18px;
+  border-bottom: 1px dashed var(--ns-border);
+}
+
+#adminNotificationSendPage .section-block:last-child { border-bottom: 0; padding-bottom: 0; }
+
+#adminNotificationSendPage .section-block-head {
   display: flex;
-  align-items: flex-start; /* أفضل للنص العربي الطويل */
-  gap: 8px;
-  background: var(--bg-panel);
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 10px 12px;
-  cursor: pointer;
-  color: var(--text-main);
-  font-weight: 600;
-  line-height: 1.45;
-  min-height: 44px;
-  white-space: normal;
-  overflow-wrap: anywhere;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-#adminNotificationSendPage .checks-grid input[type="checkbox"] {
-  margin: 2px 0 0;
-  accent-color: var(--primary);
-  inline-size: 16px;
-  block-size: 16px;
+#adminNotificationSendPage .section-block-head > div:not(.step-badge) { min-width: 0; }
+#adminNotificationSendPage .recipients-head .section-block-actions { margin-inline-start: auto; }
+
+#adminNotificationSendPage .step-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(37, 99, 235, .16);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, .35);
+  font-weight: 900;
   flex: 0 0 auto;
 }
 
-/* شبكة الحقول داخل نطاقات الاستهداف - تم تكبيرها لتقليل التزاحم */
+#adminNotificationSendPage .form-grid,
+#adminNotificationSendPage .advanced-settings-grid,
 #adminNotificationSendPage .scope-grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 12px;
-  align-items: start;
 }
 
-/* بدل span 3 (ضيقة جدًا مع العربية) نخليها span 6 افتراضيًا */
-#adminNotificationSendPage .scope-grid > .field {
-  grid-column: span 6;
+#adminNotificationSendPage .field { grid-column: span 6; min-width: 0; }
+#adminNotificationSendPage .field.full { grid-column: 1 / -1; }
+#adminNotificationSendPage .compact-field { max-width: 360px; }
+
+#adminNotificationSendPage label {
+  display: block;
+  color: var(--ns-text);
+  font-size: .86rem;
+  font-weight: 800;
+  margin-bottom: 7px;
 }
 
-/* =========================
-   6) Buttons
-========================= */
-#adminNotificationSendPage .btn {
-  --btn-bg: transparent;
-  --btn-color: var(--text-main);
-  --btn-border: var(--border-soft);
-
-  appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 1px solid var(--btn-border);
-  background: var(--btn-bg);
-  color: var(--btn-color);
-  border-radius: 14px;
-  padding: 10px 14px;
-  font: inherit;
-  font-weight: 700;
-  line-height: 1.2;
-  cursor: pointer;
-  transition:
-    transform 0.04s ease,
-    box-shadow 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease;
-  white-space: nowrap;
-  text-align: center;
-}
-
-#adminNotificationSendPage .btn:hover:not(:disabled) {
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-}
-
-#adminNotificationSendPage .btn:active:not(:disabled) {
-  transform: translateY(1px);
-}
-
-#adminNotificationSendPage .btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 4px var(--primary-soft);
-  border-color: var(--primary);
-}
-
-#adminNotificationSendPage .btn.btn-primary {
-  --btn-bg: var(--primary);
-  --btn-color: #fff;
-  --btn-border: transparent;
-}
-
-#adminNotificationSendPage .btn.btn-primary:hover:not(:disabled) {
-  filter: brightness(1.03);
-}
-
-#adminNotificationSendPage .btn.btn-outline {
-  --btn-bg: transparent;
-  --btn-color: var(--primary);
-  --btn-border: rgba(37, 99, 235, 0.35);
-}
-
-#adminNotificationSendPage .btn.btn-outline:hover:not(:disabled) {
-  background: var(--primary-soft);
-}
-
-#adminNotificationSendPage .btn.btn-light {
-  --btn-bg: var(--bg-panel);
-  --btn-color: var(--text-main);
-  --btn-border: var(--border-soft);
-}
-
-#adminNotificationSendPage .btn.btn-danger {
-  --btn-bg: rgba(239, 68, 68, 0.08);
-  --btn-color: var(--danger);
-  --btn-border: rgba(239, 68, 68, 0.25);
-}
-
-#adminNotificationSendPage .btn.btn-danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.12);
-}
-
-#adminNotificationSendPage .btn.btn-sm {
-  padding: 8px 10px;
-  font-size: 0.85rem;
-  border-radius: 10px;
-}
-
-/* =========================
-   7) Quick Add Row
-========================= */
-#adminNotificationSendPage .quick-add-row {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  background: var(--bg-panel);
-  border: 1px dashed var(--border-soft);
-  border-radius: 14px;
-  padding: 10px;
-  margin-bottom: 12px;
-}
-
-#adminNotificationSendPage .quick-add-row label {
-  color: var(--text-main);
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-#adminNotificationSendPage .quick-add-row select {
+#adminNotificationSendPage input,
+#adminNotificationSendPage select,
+#adminNotificationSendPage textarea {
+  width: 100%;
   min-width: 0;
+  border: 1px solid var(--ns-border);
+  border-radius: 12px;
+  background: var(--ns-soft);
+  color: var(--ns-text);
+  padding: 11px 12px;
+  font: inherit;
+  outline: none;
 }
 
-/* =========================
-   8) Target Rules Container / Cards
-========================= */
-#adminNotificationSendPage .target-rules-container {
-  display: grid;
-  gap: 12px;
-  margin-top: 6px;
+#adminNotificationSendPage textarea { resize: vertical; }
+
+#adminNotificationSendPage input:focus,
+#adminNotificationSendPage select:focus,
+#adminNotificationSendPage textarea:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, .16);
 }
+
+#adminNotificationSendPage .req { color: var(--ns-danger); }
+
+#adminNotificationSendPage .advanced-settings,
+#adminNotificationSendPage .rule-optional-filters,
+#adminNotificationSendPage .result-meta-box {
+  border: 1px solid var(--ns-border);
+  border-radius: 14px;
+  background: rgba(148, 163, 184, .04);
+  padding: 0;
+  overflow: hidden;
+}
+
+#adminNotificationSendPage .advanced-settings summary,
+#adminNotificationSendPage .rule-optional-filters summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 12px 14px;
+  color: #bfdbfe;
+  font-weight: 800;
+}
+
+#adminNotificationSendPage .advanced-settings summary small { color: var(--ns-muted); margin-inline-start: 5px; font-weight: 500; }
+#adminNotificationSendPage .advanced-settings-grid { padding: 0 14px 14px; }
+
+#adminNotificationSendPage .section-block-actions,
+#adminNotificationSendPage .actions-row,
+#adminNotificationSendPage .target-rule-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+#adminNotificationSendPage .btn {
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 10px 13px;
+  cursor: pointer;
+  color: var(--ns-text);
+  background: var(--ns-soft);
+  font-weight: 800;
+  font-size: .86rem;
+  transition: .18s ease;
+}
+
+#adminNotificationSendPage .btn:hover { transform: translateY(-1px); }
+#adminNotificationSendPage .btn-primary { background: var(--ns-primary); color: white; }
+#adminNotificationSendPage .btn-outline { border-color: rgba(59, 130, 246, .48); color: #bfdbfe; background: rgba(37, 99, 235, .08); }
+#adminNotificationSendPage .btn-light { border-color: var(--ns-border); }
+#adminNotificationSendPage .btn-danger { border-color: rgba(239, 68, 68, .42); color: #fecaca; background: rgba(239, 68, 68, .08); }
+#adminNotificationSendPage .btn-sm { padding: 7px 10px; font-size: .8rem; }
 
 #adminNotificationSendPage .target-rule-card {
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel);
+  border: 1px solid var(--ns-border);
   border-radius: 16px;
+  background: rgba(15, 23, 42, .38);
   overflow: hidden;
 }
 
 #adminNotificationSendPage .target-rule-card-head {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 12px 10px;
-  border-bottom: 1px solid var(--border-soft);
-  background: linear-gradient(to bottom, var(--bg-panel), var(--bg-panel-soft));
-  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--ns-border);
 }
 
-#adminNotificationSendPage .target-rule-title-wrap {
-  min-width: 0;
-}
-
-#adminNotificationSendPage .target-rule-title {
-  margin: 0;
-  font-size: 0.98rem;
-  font-weight: 800;
-  color: var(--text-main);
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .target-rule-subtitle {
-  display: block;
-  margin-top: 3px;
-  color: var(--text-muted);
-  font-size: 0.8rem;
-  line-height: 1.5;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .target-rule-card-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-#adminNotificationSendPage .target-rule-card-body {
-  padding: 12px;
-  display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: 12px;
-  align-items: start;
-}
-
-#adminNotificationSendPage .target-rule-card-body > .field {
-  grid-column: span 6;
-}
-
-#adminNotificationSendPage .target-rule-card-body > .field.full {
-  grid-column: 1 / -1;
-}
+#adminNotificationSendPage .target-rule-card-body { display: grid; gap: 12px; padding: 14px; }
 
 #adminNotificationSendPage .rule-fields-panel {
-  grid-column: 1 / -1;
-  background: var(--bg-panel-soft);
-  border: 1px solid var(--border-soft);
-  border-radius: 14px;
-  padding: 12px;
   display: grid;
-  gap: 10px;
-  overflow: hidden;
+  gap: 12px;
+  border-top: 1px dashed var(--ns-border);
+  padding-top: 12px;
 }
 
-/* لتقليل ازدحام الحقول داخل اللوحات الديناميكية */
-#adminNotificationSendPage .rule-fields-panel .scope-grid > .field {
-  grid-column: span 6;
-}
-
-/* إن كان يوجد حقل طويل داخل اللوحة */
-#adminNotificationSendPage .rule-fields-panel .field.full {
-  grid-column: 1 / -1;
-}
-
-/* =========================
-   9) Target Summary
-========================= */
-#adminNotificationSendPage .target-summary-box {
-  margin-top: 12px;
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel);
-  border-radius: 14px;
-  padding: 12px;
+#adminNotificationSendPage .checks-grid {
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
-#adminNotificationSendPage .target-summary-head {
+#adminNotificationSendPage .checks-grid label {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 8px;
-  flex-wrap: wrap;
-}
-
-#adminNotificationSendPage .target-summary-head h4 {
   margin: 0;
-  font-size: 0.95rem;
-  color: var(--text-main);
-  font-weight: 800;
+  padding: 10px;
+  border: 1px solid var(--ns-border);
+  border-radius: 11px;
+  background: var(--ns-soft);
+  cursor: pointer;
 }
 
-#adminNotificationSendPage .target-summary-head small {
-  color: var(--text-muted);
-}
+#adminNotificationSendPage .checks-grid input { width: auto; }
+#adminNotificationSendPage .success-note { color: #86efac; }
 
-#adminNotificationSendPage .target-summary-text {
-  color: var(--text-main);
-  line-height: 1.8;
-  font-size: 0.9rem;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .target-summary-chips {
-  display: flex;
-  flex-wrap: wrap;
+#adminNotificationSendPage .lookup-picker {
+  margin-top: 8px;
+  border: 1px solid var(--ns-border);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--ns-soft);
+  display: grid;
   gap: 8px;
 }
 
-#adminNotificationSendPage .target-summary-chips .chip,
-#adminNotificationSendPage .target-summary-chips > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--primary-soft);
-  color: var(--primary);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 0.82rem;
-  font-weight: 700;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-/* =========================
-   10) Info Notes
-========================= */
-#adminNotificationSendPage .info-note {
-  margin-top: 10px;
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  background: color-mix(in srgb, var(--accent-amber) 10%, var(--bg-panel));
-  color: var(--text-main);
-  border-radius: 14px;
-  padding: 12px;
-  line-height: 1.8;
-  font-size: 0.88rem;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .info-note strong {
-  color: var(--accent-amber);
-}
-
-@supports not (background: color-mix(in srgb, black 10%, white)) {
-  #adminNotificationSendPage .info-note {
-    background: rgba(245, 158, 11, 0.08);
-  }
-}
-
-/* =========================
-   11) Actions Row
-========================= */
-#adminNotificationSendPage .actions-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-}
-
-#adminNotificationSendPage .actions-row.full {
+#adminNotificationSendPage .lookup-picker-head { color: var(--ns-muted); font-size: .84rem; }
+#adminNotificationSendPage .lookup-picker-tools { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
+#adminNotificationSendPage .lookup-results-list { display: grid; gap: 6px; max-height: 180px; overflow: auto; }
+#adminNotificationSendPage .lookup-result-btn {
   width: 100%;
+  text-align: right;
+  border: 1px solid var(--ns-border);
+  border-radius: 10px;
+  padding: 9px 10px;
+  background: rgba(148, 163, 184, .05);
+  color: var(--ns-text);
+  cursor: pointer;
 }
+#adminNotificationSendPage .lookup-result-btn:hover { border-color: #3b82f6; background: rgba(37, 99, 235, .1); }
+#adminNotificationSendPage .lookup-empty { color: var(--ns-muted); font-size: .84rem; }
 
-/* =========================
-   12) Status / Results
-========================= */
-#adminNotificationSendPage .status-box {
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel-soft);
-  color: var(--text-main);
+#adminNotificationSendPage .target-summary-box,
+#adminNotificationSendPage .status-box,
+#adminNotificationSendPage .preview-box,
+#adminNotificationSendPage .warnings-box {
+  border: 1px solid var(--ns-border);
   border-radius: 14px;
-  padding: 12px 14px;
-  line-height: 1.7;
-  margin-top: 10px;
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  overflow-wrap: anywhere;
+  background: var(--ns-soft);
+  padding: 12px;
 }
 
-#adminNotificationSendPage .status-box.is-success {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.08);
+#adminNotificationSendPage .target-summary-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+#adminNotificationSendPage .chip { border-radius: 999px; padding: 5px 9px; background: rgba(37, 99, 235, .14); color: #bfdbfe; font-size: .78rem; font-weight: 800; }
+
+#adminNotificationSendPage .send-actions-row {
+  position: sticky;
+  bottom: 78px;
+  z-index: 10;
+  padding: 10px;
+  border: 1px solid var(--ns-border);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .94);
+  backdrop-filter: blur(12px);
 }
 
-#adminNotificationSendPage .status-box.is-error {
-  border-color: rgba(239, 68, 68, 0.35);
-  background: rgba(239, 68, 68, 0.08);
-  color: var(--danger);
-}
+#adminNotificationSendPage .status-box { margin-top: 12px; min-height: 46px; }
+#adminNotificationSendPage .warnings-box { margin-top: 12px; border-color: rgba(245, 158, 11, .38); }
+#adminNotificationSendPage .preview-box { margin-top: 12px; min-height: 64px; display: grid; gap: 8px; }
+#adminNotificationSendPage .preview-box:empty::before { content: "لا توجد معاينة بعد."; color: var(--ns-muted); }
 
-/* =========================
-   13) Preview Summary Stats
-========================= */
 #adminNotificationSendPage .preview-summary-grid {
-  margin-top: 12px;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 #adminNotificationSendPage .mini-stat {
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel-soft);
-  border-radius: 14px;
-  padding: 10px;
-  min-width: 0;
-}
-
-#adminNotificationSendPage .mini-stat-label {
-  color: var(--text-muted);
-  font-size: 0.78rem;
-  line-height: 1.4;
-  margin-bottom: 6px;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .mini-stat-value {
-  color: var(--text-main);
-  font-weight: 800;
-  font-size: 1.1rem;
-  line-height: 1.2;
-  word-break: break-word;
-}
-
-/* =========================
-   14) Warnings Box
-========================= */
-#adminNotificationSendPage .warnings-box {
-  margin-top: 12px;
   display: grid;
-  gap: 8px;
-  border: 1px solid rgba(245, 158, 11, 0.25);
-  background: rgba(245, 158, 11, 0.07);
-  border-radius: 14px;
-  padding: 10px;
-}
-
-/* =========================
-   15) Preview Recipients Box
-========================= */
-#adminNotificationSendPage .preview-box {
-  margin-top: 12px;
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel-soft);
-  border-radius: 14px;
-  padding: 10px;
-  display: grid;
-  gap: 8px;
-  min-height: 70px;
-}
-
-#adminNotificationSendPage .preview-box:empty::before {
-  content: "لا توجد نتائج معاينة بعد.";
-  color: var(--text-muted);
-  display: block;
-  padding: 6px 4px;
-}
-
-#adminNotificationSendPage .preview-recipient-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel);
+  gap: 4px;
+  border: 1px solid var(--ns-border);
   border-radius: 12px;
-  padding: 10px 12px;
-}
-
-#adminNotificationSendPage .preview-recipient-main {
-  min-width: 0;
-  display: grid;
-  gap: 2px;
-}
-
-#adminNotificationSendPage .preview-recipient-name {
-  color: var(--text-main);
-  font-weight: 700;
-  line-height: 1.4;
-  word-break: break-word;
-}
-
-#adminNotificationSendPage .preview-recipient-meta {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-#adminNotificationSendPage .preview-recipient-tag {
-  flex: 0 0 auto;
-  border: 1px solid transparent;
-  background: var(--primary-soft);
-  color: var(--primary);
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 0.78rem;
-  font-weight: 800;
-  text-transform: lowercase;
-  max-width: 120px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* ألوان tags حسب الدور (اختياري لو JS يضيف class) */
-#adminNotificationSendPage .preview-recipient-tag.is-admin {
-  background: rgba(245, 158, 11, 0.12);
-  color: var(--accent-amber);
-}
-
-#adminNotificationSendPage .preview-recipient-tag.is-teacher {
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--primary);
-}
-
-#adminNotificationSendPage .preview-recipient-tag.is-guardian {
-  background: rgba(34, 197, 94, 0.12);
-  color: var(--accent);
-}
-
-#adminNotificationSendPage .preview-recipient-tag.is-student {
-  background: rgba(168, 85, 247, 0.12);
-  color: #7c3aed;
-}
-
-/* =========================
-   16) Result Meta Box
-========================= */
-#adminNotificationSendPage .result-meta-box {
-  margin-top: 12px;
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel);
-  border-radius: 14px;
+  background: var(--ns-soft);
   padding: 10px;
-  display: grid;
-  gap: 8px;
 }
 
+#adminNotificationSendPage .mini-stat span { color: var(--ns-muted); font-size: .76rem; }
+#adminNotificationSendPage .mini-stat strong { font-size: 1.05rem; }
+
+#adminNotificationSendPage .preview-recipient-item,
 #adminNotificationSendPage .result-meta-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 6px 4px;
-  border-bottom: 1px dashed var(--border-soft);
-  color: var(--text-main);
+  padding: 9px;
+  border: 1px solid var(--ns-border);
+  border-radius: 11px;
+  background: rgba(148, 163, 184, .04);
 }
 
-#adminNotificationSendPage .result-meta-row:last-child {
-  border-bottom: none;
-}
+#adminNotificationSendPage .preview-recipient-name { font-weight: 800; }
+#adminNotificationSendPage .preview-recipient-meta { color: var(--ns-muted); font-size: .8rem; }
+#adminNotificationSendPage .preview-recipient-tag { color: #bfdbfe; font-size: .78rem; }
+#adminNotificationSendPage .result-meta-box { margin-top: 12px; display: grid; gap: 7px; padding: 10px; }
 
-#adminNotificationSendPage .result-meta-row span {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-#adminNotificationSendPage .result-meta-row code {
-  background: var(--bg-panel-soft);
-  border: 1px solid var(--border-soft);
-  color: var(--text-main);
-  border-radius: 10px;
-  padding: 4px 8px;
-  font-size: 0.82rem;
-  direction: ltr;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
-/* =========================
-   17) Generic Message Item (Template)
-========================= */
-#adminNotificationSendPage .message-item {
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel);
-  border-radius: 12px;
-  padding: 10px 12px;
-}
-
-#adminNotificationSendPage .message-item-title {
-  font-weight: 800;
-  color: var(--text-main);
-  margin-bottom: 4px;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .message-item-body {
-  color: var(--text-muted);
-  line-height: 1.7;
-  font-size: 0.9rem;
-  overflow-wrap: anywhere;
-}
-
-/* =========================
-   18) Lookup Picker (Dynamic JS component)
-   تم عمل scope داخل الصفحة لتجنب التضارب
-========================= */
-#adminNotificationSendPage .lookup-picker {
-  margin-top: 8px;
-  border: 1px solid var(--border-soft);
-  border-radius: 12px;
-  padding: 10px;
-  background: var(--bg-panel);
-  display: grid;
-  gap: 8px;
-}
-
-#adminNotificationSendPage .lookup-picker-head {
-  margin: 0;
-  font-size: 0.84rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-#adminNotificationSendPage .lookup-picker-tools {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: 8px;
-  align-items: center;
-}
-
-#adminNotificationSendPage .lookup-picker-tools input {
-  min-width: 0;
-}
-
-#adminNotificationSendPage .lookup-results-list {
-  margin-top: 2px;
-  max-height: 180px;
-  overflow: auto;
-  display: grid;
-  gap: 6px;
-  padding-inline-end: 2px;
-}
-
-#adminNotificationSendPage .lookup-result-btn {
-  width: 100%;
-  text-align: right;
-  border: 1px solid var(--border-soft);
-  background: var(--bg-panel-soft);
-  color: var(--text-main);
-  border-radius: 10px;
-  padding: 8px 10px;
-  cursor: pointer;
-  line-height: 1.45;
-  white-space: normal;
-  overflow-wrap: anywhere;
-  transition: background-color 0.2s ease, border-color 0.2s ease;
-}
-
-#adminNotificationSendPage .lookup-result-btn:hover {
-  background: var(--bg-panel);
-  border-color: color-mix(in srgb, var(--primary) 25%, var(--border-soft));
-}
-
-#adminNotificationSendPage .lookup-result-btn:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 4px var(--primary-soft);
-  border-color: var(--primary);
-}
-
-#adminNotificationSendPage .lookup-empty {
-  color: var(--text-muted);
-  font-size: 0.82rem;
-  line-height: 1.5;
-  padding: 6px 2px;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
-
-/* =========================
-   19) Scrollbar (Optional Nice)
-========================= */
-#adminNotificationSendPage *::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-#adminNotificationSendPage *::-webkit-scrollbar-thumb {
-  background: rgba(107, 114, 128, 0.35);
-  border-radius: 999px;
-}
-
-#adminNotificationSendPage *::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* =========================================================
-   20) Responsive
-========================================================= */
-
-/* Desktop متوسط */
-@media (max-width: 1200px) {
-  #adminNotificationSendPage .preview-summary-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  #adminNotificationSendPage .checks-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  /* داخل لوحات الاستهداف: خليها 3 أعمدة منطقية بدل 4 ضيقة */
-  #adminNotificationSendPage .rule-fields-panel .scope-grid > .field {
-    grid-column: span 4;
-  }
-}
-
-/* Tablet */
 @media (max-width: 900px) {
-  #adminNotificationSendPage.page-section {
-    padding: 12px;
-    gap: 12px;
-  }
-
-  #adminNotificationSendPage .card-box {
-    padding: 14px;
-    border-radius: 18px;
-  }
-
-  #adminNotificationSendPage .page-head {
-    padding: 16px;
-    border-radius: 18px;
-  }
-
-  #adminNotificationSendPage .page-head h2 {
-    font-size: 1.35rem;
-  }
-
-  #adminNotificationSendPage .form-grid {
-    gap: 12px;
-  }
-
-  #adminNotificationSendPage .field {
-    grid-column: span 12;
-  }
-
-  #adminNotificationSendPage .target-rule-card-body > .field {
-    grid-column: span 12;
-  }
-
-  #adminNotificationSendPage .scope-grid > .field,
-  #adminNotificationSendPage .rule-fields-panel .scope-grid > .field {
-    grid-column: span 6;
-  }
-
-  #adminNotificationSendPage .quick-add-row {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  #adminNotificationSendPage .quick-add-row label {
-    white-space: normal;
-  }
-
-  #adminNotificationSendPage .section-block-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  #adminNotificationSendPage .preview-summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  #adminNotificationSendPage .result-meta-row {
-    flex-wrap: wrap;
-    align-items: flex-start;
-  }
-
-  #adminNotificationSendPage .lookup-picker-tools {
-    grid-template-columns: 1fr auto auto;
-  }
+  #adminNotificationSendPage { padding: 12px 12px 104px; gap: 12px; }
+  #adminNotificationSendPage .page-head,
+  #adminNotificationSendPage .card-box { padding: 14px; border-radius: 17px; }
+  #adminNotificationSendPage .field { grid-column: 1 / -1; }
+  #adminNotificationSendPage .checks-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #adminNotificationSendPage .preview-summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #adminNotificationSendPage .recipients-head .section-block-actions { width: 100%; margin: 4px 0 0; }
 }
 
-/* Mobile */
-@media (max-width: 600px) {
-  #adminNotificationSendPage.page-section {
-    padding: 10px;
-  }
-
-  #adminNotificationSendPage .page-head {
-    padding: 14px;
-  }
-
-  #adminNotificationSendPage .page-head h2 {
-    font-size: 1.15rem;
-  }
-
-  #adminNotificationSendPage .page-head p {
-    font-size: 0.87rem;
-    line-height: 1.7;
-  }
-
-  #adminNotificationSendPage .card-box {
-    padding: 12px;
-  }
-
-  #adminNotificationSendPage .section-block {
-    padding: 10px;
-  }
-
-  #adminNotificationSendPage .section-block-head h3 {
-    font-size: 0.98rem;
-  }
-
-  #adminNotificationSendPage .section-block-head p {
-    font-size: 0.84rem;
-  }
-
-  #adminNotificationSendPage .btn {
-    width: 100%;
-  }
-
-  #adminNotificationSendPage .section-block-actions {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  #adminNotificationSendPage .actions-row {
-    display: grid;
-    grid-template-columns: 1fr;
-    width: 100%;
-  }
-
-  #adminNotificationSendPage .checks-grid {
-    grid-template-columns: 1fr;
-  }
-
-  #adminNotificationSendPage .scope-grid > .field,
-  #adminNotificationSendPage .rule-fields-panel .scope-grid > .field {
-    grid-column: span 12;
-  }
-
-  #adminNotificationSendPage .preview-summary-grid {
-    grid-template-columns: 1fr;
-  }
-
-  #adminNotificationSendPage .preview-recipient-item {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  #adminNotificationSendPage .preview-recipient-tag {
-    align-self: flex-start;
-  }
-
-  #adminNotificationSendPage .target-rule-card-head {
-    padding: 10px;
-  }
-
-  #adminNotificationSendPage .target-rule-card-body {
-    padding: 10px;
-    gap: 10px;
-  }
-
-  #adminNotificationSendPage .rule-fields-panel {
-    padding: 10px;
-  }
-
-  #adminNotificationSendPage input[type="text"],
-  #adminNotificationSendPage input[type="number"],
-  #adminNotificationSendPage select,
-  #adminNotificationSendPage textarea {
-    padding: 10px 11px;
-    border-radius: 12px;
-    font-size: 0.95rem;
-  }
-
-  /* lookup picker على الجوال: صفوف بدل 3 أعمدة */
-  #adminNotificationSendPage .lookup-picker-tools {
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  #adminNotificationSendPage .lookup-picker-tools .btn,
-  #adminNotificationSendPage .lookup-picker-tools button {
-    width: 100%;
-  }
+@media (max-width: 560px) {
+  #adminNotificationSendPage { padding-inline: 8px; }
+  #adminNotificationSendPage .checks-grid,
+  #adminNotificationSendPage .preview-summary-grid { grid-template-columns: 1fr 1fr; }
+  #adminNotificationSendPage .lookup-picker-tools { grid-template-columns: 1fr; }
+  #adminNotificationSendPage .send-actions-row,
+  #adminNotificationSendPage .actions-row,
+  #adminNotificationSendPage .section-block-actions { display: grid; grid-template-columns: 1fr; width: 100%; }
+  #adminNotificationSendPage .btn { width: 100%; }
+  #adminNotificationSendPage .target-rule-card-head { align-items: flex-start; }
 }
 
-/* Extra small */
-@media (max-width: 380px) {
-  #adminNotificationSendPage .page-head h2 {
-    font-size: 1.05rem;
-  }
-
-  #adminNotificationSendPage .mini-stat-value {
-    font-size: 1rem;
-  }
-
-  #adminNotificationSendPage .btn {
-    padding: 10px 12px;
-    font-size: 0.9rem;
-  }
+#adminNotificationSendPage .full { grid-column: 1 / -1; }
+#adminNotificationSendPage .target-rule-subtitle { color: var(--ns-muted); }
+#adminNotificationSendPage .preview-card,
+#adminNotificationSendPage .preview-empty,
+#adminNotificationSendPage .message-item {
+  border: 1px solid var(--ns-border);
+  border-radius: 11px;
+  background: rgba(148, 163, 184, .04);
+  padding: 10px;
+  color: var(--ns-muted);
 }
+#adminNotificationSendPage .preview-card { display: flex; flex-wrap: wrap; gap: 6px; color: var(--ns-muted); }
+#adminNotificationSendPage .preview-card strong { color: var(--ns-text); }
+#adminNotificationSendPage .preview-recipient-list { display: grid; gap: 7px; }
+#adminNotificationSendPage .message-item-title { color: var(--ns-text); font-weight: 800; margin-bottom: 4px; }
+#adminNotificationSendPage .message-item-body { color: var(--ns-muted); }

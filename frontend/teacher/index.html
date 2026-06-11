@@ -106,7 +106,7 @@
               <span id="clock-date">--/--/----</span>
             </div>
 
-            <button
+            <button type="button"
               class="icon-btn"
               id="theme-toggle"
               title="الوضع الليلي / النهاري"
@@ -114,14 +114,14 @@
               <i id="theme-icon" class="ri-sun-line"></i>
             </button>
 
-            <button class="icon-btn" id="notifications-btn" title="الإشعارات">
+            <button type="button" class="icon-btn" id="notifications-btn" title="الإشعارات">
               <i class="ri-notification-3-line"></i>
               <span id="nt-bell-badge" class="badge-dot" hidden>0</span>
             </button>
 
             <!-- حساب المعلّم -->
             <div class="account-wrapper">
-              <button
+              <button type="button"
                 class="user-pill"
                 id="account-menu-toggle"
                 title="حساب المعلّم"
@@ -140,24 +140,24 @@
               </button>
 
               <div class="account-dropdown" id="account-dropdown">
-                <button class="account-item" id="open-profile-modal">
+                <button type="button" class="account-item" id="open-profile-modal">
                   <i class="ri-user-3-line"></i>
                   <span>الملف الشخصي</span>
                 </button>
-                <button class="account-item" id="open-change-avatar-modal">
+                <button type="button" class="account-item" id="open-change-avatar-modal">
                   <i class="ri-image-edit-line"></i>
                   <span>تغيير الصورة</span>
                 </button>
-                <button class="account-item" id="open-change-email-modal">
+                <button type="button" class="account-item" id="open-change-email-modal">
                   <i class="ri-mail-line"></i>
                   <span>تغيير البريد</span>
                 </button>
-                <button class="account-item" id="open-change-password-modal">
+                <button type="button" class="account-item" id="open-change-password-modal">
                   <i class="ri-key-2-line"></i>
                   <span>تغيير كلمة المرور</span>
                 </button>
                 <div class="account-divider"></div>
-                <button
+                <button type="button"
                   class="account-item account-item--logout"
                   id="logout-btn"
                 >
@@ -416,7 +416,7 @@
     <div id="modal-overlay" class="modal-overlay"></div>
 
     <!-- ========== مودال الحضور ========== -->
-    <!-- ===================== MODAL: Attendance (الحضور والغياب + كشف الغياب + تقرير) ===================== -->
+    <!-- ===================== MODAL: Attendance (تسجيل الحضور + الأذونات + QR) ===================== -->
 
     <div
       class="modal"
@@ -432,7 +432,7 @@
         <div class="modal-header">
           <h3 id="modal-attendance-title">
             <i class="ri-calendar-check-line"></i>
-            <span>الحضور والغياب + الأذونات + كشف الغياب</span>
+            <span>إدارة الحضور والغياب</span>
           </h3>
           <button
             type="button"
@@ -529,28 +529,6 @@
                 style="margin-inline-start: 0.35rem; display: none"
                 >0</span
               >
-            </button>
-
-            <button
-              type="button"
-              class="att-tab"
-              id="att-tab-history"
-              role="tab"
-              aria-controls="att-view-history"
-              aria-selected="false"
-            >
-              <i class="ri-archive-line"></i><span>كشف الغياب</span>
-            </button>
-
-            <button
-              type="button"
-              class="att-tab"
-              id="att-tab-report"
-              role="tab"
-              aria-controls="att-view-report"
-              aria-selected="false"
-            >
-              <i class="ri-bar-chart-2-line"></i><span>تقرير الغياب</span>
             </button>
 
             <button
@@ -778,337 +756,114 @@
             aria-labelledby="att-tab-perms"
             style="display: none; margin-top: 0.75rem"
           >
-            <div class="muted-box">
-              <strong>الأذونات:</strong> هنا يعرض المعلم طلبات وليّ الأمر + قرار
-              الإدارة (مقبول/مرفوض/معلّق). المعلم
-              <strong>لا يقبل ولا يرفض</strong> — فقط متابعة الحالة وتأثيرها على
-              الحضور.
-            </div>
+            <div class="perm-panel">
+              <div class="perm-hero">
+                <div>
+                  <h4><i class="ri-shield-check-line"></i> أذونات الطلاب</h4>
+                  <p>
+                    تظهر أذونات اليوم تلقائيًا. لعرض أذونات سابقة افتح فلترة التاريخ
+                    وحدد الفترة المطلوبة.
+                  </p>
+                </div>
 
-            <form
-              class="form-card"
-              id="perm-form"
-              autocomplete="off"
-              style="margin-top: 0.6rem"
-            >
-              <div
-                style="
-                  display: grid;
-                  grid-template-columns: repeat(4, minmax(0, 1fr));
-                  gap: 0.6rem;
-                "
-              >
-                <label>
-                  <span>الحالة</span>
-                  <select id="perm-status">
-                    <option value="">الكل</option>
-                    <option value="pending">معلّق</option>
-                    <option value="approved">مقبول</option>
-                    <option value="rejected">مرفوض</option>
-                  </select>
-                </label>
+                <div class="perm-hero-actions">
+                  <button type="button" class="primary-btn" id="perm-today">
+                    <i class="ri-calendar-check-line"></i><span>أذونات اليوم</span>
+                  </button>
 
-                <label>
-                  <span>النوع</span>
-                  <select id="perm-type">
-                    <option value="">الكل</option>
-                    <option value="absence">غياب</option>
-                    <option value="late">تأخر</option>
-                    <option value="leave">استئذان/خروج</option>
-                  </select>
-                </label>
-
-                <label>
-                  <span>من تاريخ</span>
-                  <input type="date" id="perm-from" />
-                </label>
-
-                <label>
-                  <span>إلى تاريخ</span>
-                  <input type="date" id="perm-to" />
-                </label>
+                  <button type="button" class="primary-btn primary-btn--ghost" id="perm-toggle-history">
+                    <i class="ri-history-line"></i><span>عرض أذونات سابقة</span>
+                  </button>
+                </div>
               </div>
 
-              <label style="margin-top: 0.6rem">
-                <span>بحث (اسم/كود الطالب)</span>
-                <input
-                  type="text"
-                  id="perm-search"
-                  placeholder="مثال: أحمد أو ST-001"
-                />
-              </label>
+              <form class="form-card perm-form" id="perm-form" autocomplete="off">
+                <div class="perm-filter-grid">
+                  <label>
+                    <span>الحالة</span>
+                    <select id="perm-status">
+                      <option value="">الكل</option>
+                      <option value="pending">معلّق</option>
+                      <option value="approved">مقبول</option>
+                      <option value="rejected">مرفوض</option>
+                    </select>
+                  </label>
 
-              <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
-                <button type="button" class="primary-btn" id="perm-show">
-                  <i class="ri-shield-check-line"></i><span>عرض الأذونات</span>
-                </button>
+                  <label>
+                    <span>النوع</span>
+                    <select id="perm-type">
+                      <option value="">الكل</option>
+                      <option value="absence">غياب</option>
+                      <option value="late">تأخر</option>
+                      <option value="leave">استئذان/خروج</option>
+                    </select>
+                  </label>
 
-                <button
-                  type="button"
-                  class="primary-btn"
-                  id="perm-export-csv"
-                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
-                >
-                  <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
-                </button>
+                  <label>
+                    <span>بحث باسم الطالب أو الكود</span>
+                    <input
+                      type="search"
+                      id="perm-search"
+                      placeholder="مثال: أحمد أو ST-001"
+                    />
+                  </label>
+                </div>
 
-                <button
-                  type="button"
-                  class="primary-btn"
-                  id="perm-print"
-                  style="background: linear-gradient(120deg, #111827, #374151)"
-                >
-                  <i class="ri-printer-line"></i><span>طباعة</span>
-                </button>
+                <div class="perm-history-box" id="perm-history-box" hidden>
+                  <div class="perm-history-head">
+                    <div>
+                      <strong><i class="ri-calendar-event-line"></i> فلترة الأذونات السابقة</strong>
+                      <p>حدد البداية والنهاية ثم اضغط تطبيق الفترة.</p>
+                    </div>
+                  </div>
+
+                  <div class="perm-history-grid">
+                    <label>
+                      <span>من تاريخ</span>
+                      <input type="date" id="perm-from" />
+                    </label>
+
+                    <label>
+                      <span>إلى تاريخ</span>
+                      <input type="date" id="perm-to" />
+                    </label>
+
+                    <button type="button" class="primary-btn" id="perm-apply-history">
+                      <i class="ri-filter-3-line"></i><span>تطبيق الفترة</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="perm-form-actions">
+                  <button type="submit" class="primary-btn" id="perm-show">
+                    <i class="ri-refresh-line"></i><span>تحديث العرض</span>
+                  </button>
+
+                  <button type="button" class="primary-btn primary-btn--ghost" id="perm-export-csv">
+                    <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
+                  </button>
+
+                  <button type="button" class="primary-btn primary-btn--ghost" id="perm-print">
+                    <i class="ri-printer-line"></i><span>طباعة</span>
+                  </button>
+                </div>
+              </form>
+
+              <div class="perm-summary-row">
+                <div class="muted-box" id="perm-summary">جاري تحميل أذونات اليوم...</div>
+                <span class="perm-mode-chip" id="perm-mode-label">أذونات اليوم</span>
               </div>
-            </form>
 
-            <div class="muted-box" id="perm-summary" style="margin-top: 0.6rem">
-              —
-            </div>
+              <div id="perm-list" class="perm-list"></div>
 
-            <div
-              id="perm-list"
-              style="margin-top: 0.6rem; display: grid; gap: 0.6rem"
-            ></div>
-
-            <div class="empty-state" id="perm-empty" style="display: none">
-              لا توجد أذونات مطابقة للفلاتر الحالية.
+              <div class="empty-state" id="perm-empty" style="display: none">
+                لا توجد أذونات مطابقة للفلاتر الحالية.
+              </div>
             </div>
           </div>
 
           <!-- =========================================================
-           VIEW 3: HISTORY
-      ========================================================== -->
-          <div
-            id="att-view-history"
-            role="tabpanel"
-            aria-labelledby="att-tab-history"
-            style="display: none; margin-top: 0.75rem"
-          >
-            <div class="muted-box">
-              <strong>كشف غياب الطالب:</strong>
-              اكتب اسم الطالب أو كوده ثم اختر (من/إلى/الحالة) إذا رغبت.
-            </div>
-
-            <form
-              class="form-card"
-              id="att-history-form"
-              style="margin-top: 0.6rem"
-              autocomplete="off"
-            >
-              <label>
-                <span>بحث عن طالب (بالاسم أو الكود)</span>
-                <input
-                  type="text"
-                  id="att-history-search"
-                  placeholder="مثال: أحمد أو ST-001"
-                />
-              </label>
-
-              <div
-                style="
-                  display: grid;
-                  grid-template-columns: repeat(3, minmax(0, 1fr));
-                  gap: 0.6rem;
-                "
-              >
-                <label>
-                  <span>من تاريخ</span>
-                  <input type="date" id="att-history-from" />
-                </label>
-
-                <label>
-                  <span>إلى تاريخ</span>
-                  <input type="date" id="att-history-to" />
-                </label>
-
-                <label>
-                  <span>الحالة</span>
-                  <select id="att-history-status">
-                    <option value="">الكل</option>
-                    <option value="absent">غائب</option>
-                    <option value="late">متأخر</option>
-                    <option value="excused">مستأذن</option>
-                    <option value="present">حاضر</option>
-                  </select>
-                </label>
-              </div>
-
-              <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
-                <button type="button" class="primary-btn" id="att-history-show">
-                  <i class="ri-archive-line"></i><span>عرض كشف الغياب</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="primary-btn"
-                  id="att-history-export-csv"
-                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
-                >
-                  <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="primary-btn"
-                  id="att-history-print"
-                  style="background: linear-gradient(120deg, #111827, #374151)"
-                >
-                  <i class="ri-printer-line"></i><span>طباعة</span>
-                </button>
-              </div>
-            </form>
-
-            <div
-              class="muted-box"
-              id="att-history-summary"
-              style="margin-top: 0.6rem"
-            >
-              —
-            </div>
-
-            <table class="data-table" id="att-history-table">
-              <thead>
-                <tr>
-                  <th>الطالب</th>
-                  <th>التاريخ</th>
-                  <th>الحصة</th>
-                  <th>المادة</th>
-                  <th>الحالة</th>
-                  <th>التفاصيل</th>
-                  <th>ملاحظة</th>
-                </tr>
-              </thead>
-              <tbody id="att-history-body"></tbody>
-            </table>
-
-            <div
-              class="empty-state"
-              id="att-history-empty"
-              style="display: none"
-            >
-              لم يتم تسجيل أي غيابات بعد.
-            </div>
-          </div>
-
-          <!-- =========================================================
-           VIEW 4: REPORT
-      ========================================================== -->
-          <div
-            id="att-view-report"
-            role="tabpanel"
-            aria-labelledby="att-tab-report"
-            style="display: none; margin-top: 0.75rem"
-          >
-            <div class="muted-box">
-              <strong>تقرير الغياب:</strong> تقرير مجمّع لكل طالب + تصدير.
-            </div>
-
-            <form
-              class="form-card"
-              id="att-report-form"
-              style="margin-top: 0.6rem"
-              autocomplete="off"
-            >
-              <label>
-                <span>المرحلة</span>
-                <select id="rep-stage">
-                  <option value="">الكل</option>
-                </select>
-              </label>
-
-              <label>
-                <span>الصف</span>
-                <select id="rep-grade" disabled>
-                  <option value="">الكل</option>
-                </select>
-              </label>
-
-              <label>
-                <span>الشعبة</span>
-                <select id="rep-section" disabled>
-                  <option value="">الكل</option>
-                </select>
-              </label>
-
-              <label>
-                <span>المادة</span>
-                <select id="rep-subject" disabled>
-                  <option value="">الكل</option>
-                </select>
-              </label>
-
-              <label>
-                <span>من تاريخ</span>
-                <input type="date" id="rep-from" />
-              </label>
-
-              <label>
-                <span>إلى تاريخ</span>
-                <input type="date" id="rep-to" />
-              </label>
-
-              <label>
-                <span>الحالة</span>
-                <select id="rep-status">
-                  <option value="">الكل</option>
-                  <option value="absent">غائب</option>
-                  <option value="late">متأخر</option>
-                  <option value="excused">مستأذن</option>
-                  <option value="present">حاضر</option>
-                </select>
-              </label>
-
-              <div class="att-actions" style="gap: 0.5rem; flex-wrap: wrap">
-                <button type="button" class="primary-btn" id="rep-show">
-                  <i class="ri-filter-3-line"></i><span>عرض التقرير</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="primary-btn"
-                  id="rep-export-csv"
-                  style="background: linear-gradient(120deg, #0ea5e9, #2563eb)"
-                >
-                  <i class="ri-file-excel-2-line"></i><span>تصدير CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  class="primary-btn"
-                  id="rep-print"
-                  style="background: linear-gradient(120deg, #111827, #374151)"
-                >
-                  <i class="ri-printer-line"></i><span>طباعة</span>
-                </button>
-              </div>
-            </form>
-
-            <div class="muted-box" id="rep-summary">—</div>
-
-            <table class="data-table" id="rep-table">
-              <thead>
-                <tr>
-                  <th>الطالب</th>
-                  <th>الكود</th>
-                  <th>حاضر</th>
-                  <th>غائب</th>
-                  <th>متأخر</th>
-                  <th>مستأذن</th>
-                  <th>النسبة</th>
-                </tr>
-              </thead>
-              <tbody id="rep-body"></tbody>
-            </table>
-
-            <div class="empty-state" id="rep-empty" style="display: none">
-              لا توجد نتائج ضمن الفلاتر المحددة.
-            </div>
-          </div>
-
-          <!-- =========================================================
-           VIEW 5: SCAN QR
+           VIEW 3: SCAN QR
       ========================================================== -->
           <div
             id="att-view-scan"
@@ -1323,7 +1078,7 @@
             <i class="ri-edit-2-line"></i>
             <span id="att-correct-title">تصحيح</span>
           </h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
 
         <div class="modal-body">
@@ -2456,7 +2211,7 @@
             <i class="ri-notification-3-line"></i>
             <span>الإشعارات والمراسلات</span>
           </h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
           <div class="nt-wrap">
@@ -2861,7 +2616,7 @@
             <i class="ri-calendar-schedule-line"></i>
             <span>الجدول</span>
           </h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
 
         <div class="modal-body">
@@ -3052,7 +2807,7 @@
             <i class="ri-group-line"></i>
             <span>قوائم الطلاب</span>
           </h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
 
         <div class="modal-body">
@@ -3147,7 +2902,7 @@
             <i class="ri-book-open-line"></i>
             <span>إدارة الحصص</span>
           </h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
 
         <div class="modal-body">
@@ -3669,7 +3424,7 @@
             <i class="ri-id-card-line"></i>
             <span>الملف الوظيفي</span>
           </h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
 
         <div class="modal-body">
@@ -3886,7 +3641,7 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3><i class="ri-key-2-line"></i><span>تغيير كلمة المرور</span></h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
           <form id="changePasswordForm" class="form-card">
@@ -3917,7 +3672,7 @@
           <h3>
             <i class="ri-mail-line"></i><span>تغيير البريد الإلكتروني</span>
           </h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
           <form id="changeEmailForm" class="form-card">
@@ -3948,7 +3703,7 @@
           <h3>
             <i class="ri-image-edit-line"></i><span>تغيير الصورة الشخصية</span>
           </h3>
-          <button class="modal-close" data-close-modal>&times;</button>
+          <button type="button" class="modal-close" data-close-modal>&times;</button>
         </div>
         <div class="modal-body">
           <div class="muted-box">
@@ -4152,7 +3907,7 @@
 
     <!-- Toast -->
     <div class="toast" id="toast"></div>
-<script src="/frontend/shared/js/config.js"></script>
+<script src="/frontend/shared/config.js"></script>
     <script src="/frontend/shared/profile-account.js" defer></script>
     <!-- <script src="js/teacher.js" defer></script>
 <script src="js/teacher-academic.js" defer></script> -->
@@ -4180,6 +3935,7 @@
     <script src="js/features/studentsModal.js"></script>
     <script src="js/features/teacherPermits.js"></script>
     <script src="/socket.io/socket.io.js"></script>
+    <script src="/frontend/shared/js/notification-socket.js?v=1"></script>
     <script src="js/features/notifications.js"></script>
     <script src="js/features/assessmentsModal.js"></script>
     <script src="js/features/gradesModal.js"></script>
@@ -4197,7 +3953,7 @@
 
     <!-- main -->
     <script src="js/teacher.main.js"></script>
-    <!-- <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script> -->
+    <script src="https://cdn.jsdelivr.net/npm/jsqr/dist/jsQR.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>

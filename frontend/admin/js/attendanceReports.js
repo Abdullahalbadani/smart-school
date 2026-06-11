@@ -432,6 +432,59 @@ const apiGet = async (path, params = {}) => {
     limit: state.teachers.limit,
   });
 
+  const getStudentsSchoolReportFilters = () => {
+    const params = getStudentsParams();
+    return {
+      year_id: params.year_id,
+      term_id: params.term_id,
+      from: params.from,
+      to: params.to,
+      stage_id: params.stage_id,
+      grade_id: params.grade_id,
+      section_id: params.section_id,
+      method: params.method,
+      sort: params.sort,
+    };
+  };
+
+  const getTeachersSchoolReportFilters = () => {
+    const params = getTeachersParams();
+    return {
+      year_id: params.year_id,
+      month: params.month,
+      from: params.from,
+      to: params.to,
+      teacher_id: params.teacher_id,
+      method: params.method,
+      sort: params.sort,
+    };
+  };
+
+  const showSchoolReportUnavailable = async () => {
+    const message = "تعذر فتح نظام الكشوف المدرسية. حدّث الصفحة ثم حاول مرة أخرى.";
+    if (window.AppUI?.alert) {
+      await window.AppUI.alert({ title: "تعذر إنشاء الكشف", message, type: "error" });
+      return;
+    }
+    window.alert(message);
+  };
+
+  const openStudentsSchoolReport = (action) => {
+    if (!window.SchoolReports?.openAttendanceStudentsReport) return showSchoolReportUnavailable();
+    return window.SchoolReports.openAttendanceStudentsReport({
+      action,
+      filters: getStudentsSchoolReportFilters(),
+    });
+  };
+
+  const openTeachersSchoolReport = (action) => {
+    if (!window.SchoolReports?.openAttendanceTeachersReport) return showSchoolReportUnavailable();
+    return window.SchoolReports.openAttendanceTeachersReport({
+      action,
+      filters: getTeachersSchoolReportFilters(),
+    });
+  };
+
   // =========================
   // Render KPIs (Students)
   // =========================
@@ -1163,8 +1216,8 @@ const apiGet = async (path, params = {}) => {
         fetchStudentsReport();
       }
       if (e.target.closest("#btn-reset-students")) resetStudentsFilters();
-      if (e.target.closest("#btn-export-students-csv")) exportStudentsCsv();
-      if (e.target.closest("#btn-print-students")) window.print();
+      if (e.target.closest("#btn-export-students-csv")) openStudentsSchoolReport("pdf");
+      if (e.target.closest("#btn-print-students")) openStudentsSchoolReport("print");
       if (e.target.closest("#stu-prev")) studentsPrev();
       if (e.target.closest("#stu-next")) studentsNext();
 
@@ -1173,8 +1226,8 @@ const apiGet = async (path, params = {}) => {
         fetchTeachersReport();
       }
       if (e.target.closest("#btn-reset-teachers")) resetTeachersFilters();
-      if (e.target.closest("#btn-export-teachers-csv")) exportTeachersCsv();
-      if (e.target.closest("#btn-print-teachers")) window.print();
+      if (e.target.closest("#btn-export-teachers-csv")) openTeachersSchoolReport("pdf");
+      if (e.target.closest("#btn-print-teachers")) openTeachersSchoolReport("print");
       if (e.target.closest("#tch-prev")) teachersPrev();
       if (e.target.closest("#tch-next")) teachersNext();
 

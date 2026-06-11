@@ -95,9 +95,16 @@ function toApiUrl(path) {
     }
   });
 
-  // أول تحميل + تحديث دوري
+  // أول تحميل + تحديث دوري احتياطي
   fetchUnreadCount();
   setInterval(fetchUnreadCount, 30000);
+
+  // تحديث لحظي عند وصول إشعار أو تغير حالة القراءة.
+  const socket = window.getNotificationSocket?.();
+  if (socket) {
+    socket.on("notification:new", fetchUnreadCount);
+    socket.on("notification:unread-count:refresh", fetchUnreadCount);
+  }
 
   // نجعلها دالة عامة ليستدعيها inbox.js أو socket
   window.refreshNavbarNotificationCount = fetchUnreadCount;

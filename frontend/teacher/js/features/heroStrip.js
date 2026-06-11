@@ -284,7 +284,8 @@ safeSet("teacher-name-pill", `أ. ${name}`);
     // ⚡ السحر الحي (Socket.io) - التحديث الفوري للبطاقات بدون Refresh
     if (typeof io !== "undefined") {
       // 🟢 نحدد الرابط الصافي للسيرفر لتجنب أي تعارض
-      const socket = io();
+      const socket = window.getNotificationSocket?.();
+      if (!socket) return;
       
       socket.on("connect", () => {
         console.log("🟢 [Socket] متصل بالسيرفر الحي بنجاح!");

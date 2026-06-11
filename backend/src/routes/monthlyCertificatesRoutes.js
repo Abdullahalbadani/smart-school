@@ -1,11 +1,13 @@
 // backend/src/routes/monthlyCertificatesRoutes.js
 import express from "express";
 import authMiddleware from "../middleware/authMiddleware.js";
+import { autoActivityLogger } from "../middleware/activityLogger.js";
 import { MonthlyCertificatesController } from "../controllers/monthlyCertificatesController.js";
 
 const router = express.Router();
 
 router.use(authMiddleware);
+router.use(autoActivityLogger);
 
 router.get("/meta", MonthlyCertificatesController.meta);
 router.get("/students", MonthlyCertificatesController.students);

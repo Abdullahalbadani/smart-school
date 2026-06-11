@@ -1,50 +1,127 @@
 // backend/src/modules/notifications/notificationCreateService.js
 import { pool } from "../../config/db.js";
 
+const SENSITIVE_KEY_RE = /(password|passcode|token|secret|authorization|cookie|api[_-]?key|client[_-]?secret|refresh[_-]?token|access[_-]?token|jwt|session)/i;
+
 function uniqueIntIds(ids = []) {
   return [
     ...new Set(
       (Array.isArray(ids) ? ids : [])
-        .map((x) => Number(x))
-        .filter((x) => Number.isInteger(x) && x > 0)
+        .map((value) => Number(value))
+        .filter((value) => Number.isInteger(value) && value > 0)
     ),
   ];
 }
 
+function toPositiveInt(value, label) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number <= 0) {
+    throw new Error(`${label} غير صالح`);
+  }
+  return number;
+}
+
+function toOptionalPositiveInt(value) {
+  if (value === undefined || value === null || value === "") return null;
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : null;
+}
+
+function toNonNegativeInt(value, fallback = 0) {
+  const number = Number(value);
+  return Number.isInteger(number) && number >= 0 ? number : fallback;
+}
+
+function toBool(value, fallback = true) {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === "boolean") return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(normalized)) return true;
+  if (["0", "false", "no", "off"].includes(normalized)) return false;
+  return fallback;
+}
+
+function limitText(value, maxLength, fallback = "") {
+  const text = String(value ?? "").trim();
+  return (text || fallback).slice(0, maxLength);
+}
+
 function sanitizePriority(priority) {
-  const p = String(priority || "normal").toLowerCase();
-  return ["normal", "important", "urgent"].includes(p) ? p : "normal";
+  const normalized = String(priority || "normal").trim().toLowerCase();
+  return ["normal", "important", "urgent"].includes(normalized)
+    ? normalized
+    : "normal";
 }
 
 function sanitizeSource(source) {
-  const s = String(source || "system").toLowerCase();
-  return ["system", "manual"].includes(s) ? s : "system";
+  const normalized = String(source || "system").trim().toLowerCase();
+  return ["system", "manual"].includes(normalized) ? normalized : "system";
 }
 
-function sanitizeCategory(category) {
-  return String(category || "general").trim() || "general";
+function sanitizeMetaValue(value, depth = 0) {
+  if (depth > 5) return "[TRUNCATED]";
+  if (value === null || value === undefined) return value;
+  if (typeof value === "string") return value.slice(0, 2000);
+  if (["number", "boolean"].includes(typeof value)) return value;
+
+  if (Array.isArray(value)) {
+    return value.slice(0, 100).map((item) => sanitizeMetaValue(item, depth + 1));
+  }
+
+  if (typeof value === "object") {
+    const output = {};
+    for (const [key, nestedValue] of Object.entries(value).slice(0, 100)) {
+      output[key] = SENSITIVE_KEY_RE.test(key)
+        ? "[REDACTED]"
+        : sanitizeMetaValue(nestedValue, depth + 1);
+    }
+    return output;
+  }
+
+  return String(value).slice(0, 2000);
 }
 
 function safeMeta(meta) {
   if (!meta || typeof meta !== "object" || Array.isArray(meta)) return {};
-  return meta;
+  return sanitizeMetaValue(meta);
 }
 
-function toBool(v, fallback = true) {
-  if (v === undefined || v === null) return fallback;
-  if (typeof v === "boolean") return v;
-  const s = String(v).trim().toLowerCase();
-  if (["1", "true", "yes", "on"].includes(s)) return true;
-  if (["0", "false", "no", "off"].includes(s)) return false;
-  return fallback;
+async function validateSender({ client, senderUserId, schoolId }) {
+  if (!senderUserId) return null;
+
+  const { rows } = await client.query(
+    `SELECT id
+     FROM users
+     WHERE id = $1
+       AND school_id = $2
+       AND COALESCE(status, 'active') = 'active'
+     LIMIT 1`,
+    [senderUserId, schoolId]
+  );
+
+  if (!rows.length) {
+    throw new Error("المرسل غير موجود أو لا ينتمي إلى المدرسة الحالية");
+  }
+
+  return Number(rows[0].id);
 }
 
-function toNonNegativeInt(v, fallback = 0) {
-  const n = Number(v);
-  return Number.isInteger(n) && n >= 0 ? n : fallback;
+async function validateRecipients({ client, recipientUserIds, schoolId }) {
+  const requested = uniqueIntIds(recipientUserIds);
+  if (!requested.length) return [];
+
+  const { rows } = await client.query(
+    `SELECT id
+     FROM users
+     WHERE id = ANY($1::int[])
+       AND school_id = $2
+       AND COALESCE(status, 'active') = 'active'`,
+    [requested, schoolId]
+  );
+
+  return uniqueIntIds(rows.map((row) => row.id));
 }
 
-// ✅ إضافة school_id لفحص التكرار داخل نفس المدرسة فقط
 async function isRecentDuplicate({
   client,
   schoolId,
@@ -59,40 +136,42 @@ async function isRecentDuplicate({
   if (!dedupeWindowSeconds || dedupeWindowSeconds <= 0) return false;
   if (!recipientUserIds.length) return false;
 
-  const sql = `
-    SELECT 1
-    FROM notifications n
-    JOIN notification_recipients nr ON nr.notification_id = n.id
-    WHERE n.school_id = $8
-      AND n.source = $1
-      AND n.title = $2
-      AND COALESCE(n.body, '') = COALESCE($3, '')
-      AND COALESCE(n.related_type, '') = COALESCE($4, '')
-      AND COALESCE(n.related_id, 0) = COALESCE($5, 0)
-      AND nr.recipient_user_id = ANY($6::int[])
-      AND n.created_at >= now() - (($7)::text || ' seconds')::interval
-    LIMIT 1
-  `;
+  const { rowCount } = await client.query(
+    `SELECT 1
+     FROM notifications n
+     JOIN notification_recipients nr
+       ON nr.notification_id = n.id
+      AND nr.school_id = n.school_id
+     WHERE n.school_id = $1
+       AND n.source = $2
+       AND n.title = $3
+       AND COALESCE(n.body, '') = COALESCE($4, '')
+       AND COALESCE(n.related_type, '') = COALESCE($5, '')
+       AND COALESCE(n.related_id, 0) = COALESCE($6, 0)
+       AND nr.recipient_user_id = ANY($7::int[])
+       AND nr.school_id = $1
+       AND n.created_at >= now() - (($8)::text || ' seconds')::interval
+     LIMIT 1`,
+    [
+      schoolId,
+      source,
+      title,
+      body || "",
+      relatedType,
+      relatedId,
+      recipientUserIds,
+      Number(dedupeWindowSeconds),
+    ]
+  );
 
-  const result = await client.query(sql, [
-    source,
-    title,
-    body || "",
-    relatedType,
-    relatedId,
-    recipientUserIds,
-    Number(dedupeWindowSeconds),
-    schoolId, // 👈 المعامل الثامن
-  ]);
-
-  return result.rowCount > 0;
+  return rowCount > 0;
 }
 
 function buildRealtimePayload({ notification, recipientRow }) {
   return {
     recipient_row_id: Number(recipientRow.id),
     id: Number(notification.id),
-    school_id: Number(notification.school_id), // ✅ إرسال رقم المدرسة للفرونت-إند للتأكد
+    school_id: Number(notification.school_id),
     source: notification.source,
     category: notification.category,
     priority: notification.priority,
@@ -102,18 +181,27 @@ function buildRealtimePayload({ notification, recipientRow }) {
     created_at: notification.created_at,
     is_read: false,
     read_at: null,
-    related: (notification.related_type || notification.related_id)
-      ? {
-          type: notification.related_type || null,
-          id: notification.related_id != null ? Number(notification.related_id) : null,
-          label: notification.meta?.related_label || null,
-        }
-      : null,
+    related:
+      notification.related_type || notification.related_id
+        ? {
+            type: notification.related_type || null,
+            id:
+              notification.related_id != null
+                ? Number(notification.related_id)
+                : null,
+            label: notification.meta?.related_label || null,
+          }
+        : null,
     meta: notification.meta || {},
   };
 }
 
-function emitRealtimeToUsers(app, recipientsRows, notificationRow, { allowRealtime = true } = {}) {
+export function emitRealtimeToUsers(
+  app,
+  recipientsRows,
+  notificationRow,
+  { allowRealtime = true } = {}
+) {
   const stats = {
     enabled: !!allowRealtime,
     attempted_users: 0,
@@ -130,43 +218,51 @@ function emitRealtimeToUsers(app, recipientsRows, notificationRow, { allowRealti
       return stats;
     }
 
-    let sent = 0;
-    let attempted = 0;
-
-    for (const rr of recipientsRows || []) {
-      const userId = Number(rr.recipient_user_id);
+    for (const recipientRow of recipientsRows || []) {
+      const userId = Number(recipientRow.recipient_user_id);
       if (!Number.isInteger(userId) || userId <= 0) continue;
 
-      attempted++;
-
+      stats.attempted_users += 1;
       const payload = buildRealtimePayload({
         notification: notificationRow,
-        recipientRow: rr,
+        recipientRow,
       });
 
-      // إرسال الإشعار لغرفة المستخدم الشخصية
       io.to(`user_${userId}`).emit("notification:new", payload);
       io.to(`user_${userId}`).emit("notification:unread-count:refresh");
-      sent++;
+      stats.sent_users += 1;
     }
 
-    stats.attempted_users = attempted;
-    stats.sent_users = sent;
     return stats;
-  } catch (err) {
-    console.warn("emitRealtimeToUsers warning:", err.message);
-    stats.error = err.message || "emit_failed";
+  } catch (error) {
+    console.warn("emitRealtimeToUsers warning:", error.message);
+    stats.error = error.message || "emit_failed";
     return stats;
   }
 }
 
+function skippedResult(reason) {
+  return {
+    success: true,
+    skipped: true,
+    reason,
+    request_id: null,
+    created_rows: 0,
+    recipients_created: 0,
+    realtime_sent: 0,
+    realtime_sent_count: 0,
+    notification: null,
+    recipients: [],
+  };
+}
+
 /**
- * createNotification
- * خدمة موحدة لإنشاء إشعار واحد وإرساله لعدة مستلمين (معزولة بالمدرسة)
+ * Central notification creation service.
+ * Enforces school isolation for the notification, sender and every recipient.
  */
 export async function createNotification({
   app = null,
-  schoolId, // 👈 NEW: إجباري الآن لمعرفة مسار الإشعار
+  schoolId,
   source = "system",
   category = "general",
   priority = "normal",
@@ -181,53 +277,55 @@ export async function createNotification({
   dedupeWindowSeconds = 0,
   allowRealtime = true,
 }) {
-  if (!schoolId) throw new Error("schoolId مطلوب لإنشاء الإشعار");
-
-  const recipients = uniqueIntIds(recipientUserIds);
-
-  if (!title || !String(title).trim()) {
-    throw new Error("title مطلوب");
-  }
-
-  if (!recipients.length) {
-    return {
-      success: true,
-      skipped: true,
-      reason: "no_recipients",
-      request_id: null,
-      created_rows: 0,
-      recipients_created: 0,
-      realtime_sent: 0,
-      realtime_sent_count: 0,
-      notification: null,
-      recipients: [],
-    };
-  }
+  const normalizedSchoolId = toPositiveInt(schoolId, "schoolId");
+  const requestedRecipients = uniqueIntIds(recipientUserIds);
 
   const normalized = {
-    schoolId: Number(schoolId),
+    schoolId: normalizedSchoolId,
     source: sanitizeSource(source),
-    category: sanitizeCategory(category),
+    category: limitText(category, 50, "general"),
     priority: sanitizePriority(priority),
-    title: String(title).trim(),
-    body: String(body || "").trim(),
-    senderUserId: senderUserId ? Number(senderUserId) : null,
-    senderDisplayName: senderDisplayName ? String(senderDisplayName).trim() : null,
-    relatedType: relatedType ? String(relatedType).trim() : null,
-    relatedId: relatedId != null ? Number(relatedId) : null,
+    title: limitText(title, 500),
+    body: limitText(body, 10000),
+    senderUserId: toOptionalPositiveInt(senderUserId),
+    senderDisplayName: senderDisplayName
+      ? limitText(senderDisplayName, 250)
+      : null,
+    relatedType: relatedType ? limitText(relatedType, 100) : null,
+    relatedId: toOptionalPositiveInt(relatedId),
     meta: safeMeta(meta),
     dedupeWindowSeconds: toNonNegativeInt(dedupeWindowSeconds, 0),
     allowRealtime: toBool(allowRealtime, true),
   };
+
+  if (!normalized.title) throw new Error("title مطلوب");
+  if (!requestedRecipients.length) return skippedResult("no_recipients");
 
   const client = await pool.connect();
 
   try {
     await client.query("BEGIN");
 
+    await validateSender({
+      client,
+      senderUserId: normalized.senderUserId,
+      schoolId: normalized.schoolId,
+    });
+
+    const recipients = await validateRecipients({
+      client,
+      recipientUserIds: requestedRecipients,
+      schoolId: normalized.schoolId,
+    });
+
+    if (!recipients.length) {
+      await client.query("ROLLBACK");
+      return skippedResult("no_valid_recipients");
+    }
+
     const duplicate = await isRecentDuplicate({
       client,
-      schoolId: normalized.schoolId, // 👈 تمرير المدرسة
+      schoolId: normalized.schoolId,
       source: normalized.source,
       title: normalized.title,
       body: normalized.body,
@@ -239,74 +337,54 @@ export async function createNotification({
 
     if (duplicate) {
       await client.query("ROLLBACK");
-      return {
-        success: true,
-        skipped: true,
-        reason: "duplicate_recent",
-        request_id: null,
-        created_rows: 0,
-        recipients_created: 0,
-        realtime_sent: 0,
-        realtime_sent_count: 0,
-        notification: null,
-        recipients: [],
-      };
+      return skippedResult("duplicate_recent");
     }
 
-    // ✅ إدراج الإشعار مع school_id
-    const insertNotificationSql = `
-      INSERT INTO notifications (
-        school_id,
-        source,
-        category,
-        priority,
-        title,
-        body,
-        sender_user_id,
-        sender_display_name,
-        related_type,
-        related_id,
-        meta
-      )
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)
-      RETURNING *
-    `;
+    const { rows: notificationRows } = await client.query(
+      `INSERT INTO notifications (
+         school_id,
+         source,
+         category,
+         priority,
+         title,
+         body,
+         sender_user_id,
+         sender_display_name,
+         related_type,
+         related_id,
+         meta
+       )
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11::jsonb)
+       RETURNING *`,
+      [
+        normalized.schoolId,
+        normalized.source,
+        normalized.category,
+        normalized.priority,
+        normalized.title,
+        normalized.body,
+        normalized.senderUserId,
+        normalized.senderDisplayName,
+        normalized.relatedType,
+        normalized.relatedId,
+        JSON.stringify(normalized.meta),
+      ]
+    );
 
-    const notifResult = await client.query(insertNotificationSql, [
-      normalized.schoolId,
-      normalized.source,
-      normalized.category,
-      normalized.priority,
-      normalized.title,
-      normalized.body || null,
-      normalized.senderUserId,
-      normalized.senderDisplayName,
-      normalized.relatedType,
-      normalized.relatedId,
-      JSON.stringify(normalized.meta),
-    ]);
+    const notificationRow = notificationRows[0];
 
-    const notificationRow = notifResult.rows[0];
-
-    // ✅ ربط المستلمين مع الإشعار (وحقن school_id للأمان الإضافي)
-    const insertRecipientsSql = `
-      INSERT INTO notification_recipients (
-        school_id,
-        notification_id,
-        recipient_user_id
-      )
-      SELECT $1, $2, x.recipient_user_id
-      FROM unnest($3::int[]) AS x(recipient_user_id)
-      RETURNING *
-    `;
-
-    const recResult = await client.query(insertRecipientsSql, [
-      normalized.schoolId,
-      notificationRow.id,
-      recipients,
-    ]);
-
-    const recipientRows = recResult.rows || [];
+    const { rows: recipientRows } = await client.query(
+      `INSERT INTO notification_recipients (
+         school_id,
+         notification_id,
+         recipient_user_id
+       )
+       SELECT $1, $2, x.recipient_user_id
+       FROM unnest($3::int[]) AS x(recipient_user_id)
+       ON CONFLICT (notification_id, recipient_user_id) DO NOTHING
+       RETURNING *`,
+      [normalized.schoolId, notificationRow.id, recipients]
+    );
 
     await client.query("COMMIT");
 
@@ -321,6 +399,9 @@ export async function createNotification({
       request_id: Number(notificationRow.id),
       created_rows: recipientRows.length,
       recipients_created: recipientRows.length,
+      invalid_recipient_ids: requestedRecipients.filter(
+        (id) => !recipients.includes(id)
+      ),
       realtime_sent: realtimeStats.sent_users,
       realtime_sent_count: realtimeStats.sent_users,
       realtime_attempted_count: realtimeStats.attempted_users,
@@ -329,20 +410,17 @@ export async function createNotification({
       notification: notificationRow,
       recipients: recipientRows,
     };
-  } catch (err) {
+  } catch (error) {
     await client.query("ROLLBACK");
-    throw err;
+    throw error;
   } finally {
     client.release();
   }
 }
 
-/**
- * Helper سريع لإشعارات النظام (معزول بالمدرسة)
- */
 export async function createSystemNotification({
   app,
-  schoolId, // 👈 NEW
+  schoolId,
   category,
   priority,
   title,
@@ -352,11 +430,11 @@ export async function createSystemNotification({
   meta,
   recipientUserIds,
   dedupeWindowSeconds = 0,
-  allowRealtime = true, 
+  allowRealtime = true,
 }) {
   return createNotification({
     app,
-    schoolId, // 👈 تمرير المدرسة
+    schoolId,
     source: "system",
     category,
     priority,

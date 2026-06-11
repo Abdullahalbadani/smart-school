@@ -1,4 +1,12 @@
 import { pool } from "../config/db.js";
+import {
+  getSchoolReportLayout,
+  htmlToPdfBuffer,
+  renderSchoolReportHtml,
+  reportDateOnly,
+  resolveSchoolLogoDataUrl,
+  safeFilePart,
+} from "../services/reports/schoolReportService.js";
 
 function badRequest(message) {
   const err = new Error(message);
@@ -875,3 +883,197 @@ export async function getMonthlyWorkControlStatuses(req, res) {
     });
   }
 }
+
+/* =========================
+   OFFICIAL MONTHLY WORK REPORTS
+   PDF / PRINT / PREVIEW only
+========================= */
+const MONTHLY_REPORT_COLUMNS = {
+  student_code: { key: "student_code", label: "كود الطالب" },
+  roll_number: { key: "roll_number", label: "رقم القيد" },
+  student_name: { key: "student_name", label: "اسم الطالب" },
+  score: { key: "score_label", label: "الدرجة" },
+  attendance_status: { key: "attendance_status", label: "حالة الحضور" },
+  excuse_reason: { key: "excuse_reason", label: "العذر" },
+  status_label: { key: "status_label", label: "حالة الطالب" },
+  publication_label: { key: "publication_label", label: "حالة النشر" },
+  note: { key: "note", label: "ملاحظة" },
+};
+
+const MONTHLY_REPORT_PRESETS = {
+  short: ["roll_number", "student_name", "score", "status_label"],
+  detailed: [
+    "student_code",
+    "roll_number",
+    "student_name",
+    "score",
+    "attendance_status",
+    "excuse_reason",
+    "status_label",
+    "publication_label",
+    "note",
+  ],
+};
+
+function normalizeMonthlyReportColumns(body = {}) {
+  const preset = String(body.preset || "short").trim();
+  const source = preset === "manual" ? body.columns : MONTHLY_REPORT_PRESETS[preset] || MONTHLY_REPORT_PRESETS.short;
+  const keys = [...new Set((Array.isArray(source) ? source : []).map(String).filter((key) => MONTHLY_REPORT_COLUMNS[key]))];
+  return keys.length ? keys : MONTHLY_REPORT_PRESETS.short;
+}
+
+function monthlyApprovalLabel(status) {
+  if (status === "approved") return "معتمد";
+  if (status === "returned") return "مرجع للمعلم";
+  return "قيد المراجعة";
+}
+
+function monthlyTermLabel(term) {
+  if (Number(term) === 1) return "الفصل الدراسي الأول";
+  if (Number(term) === 2) return "الفصل الدراسي الثاني";
+  return "—";
+}
+
+async function loadSchoolForMonthlyReport(schoolId) {
+  const { rows } = await pool.query(
+    `SELECT id, name_ar, name_en, phone, email, address, logo_url
+     FROM schools
+     WHERE id = $1
+     LIMIT 1`,
+    [schoolId]
+  );
+
+  const school = rows[0];
+  if (!school) throw notFound("تعذر العثور على بيانات المدرسة.");
+
+  return {
+    id: school.id,
+    nameAr: school.name_ar || "المدرسة",
+    nameEn: school.name_en || "",
+    phone: school.phone || "",
+    email: school.email || "",
+    address: school.address || "",
+    logoDataUrl: await resolveSchoolLogoDataUrl(school.logo_url),
+  };
+}
+
+function mapMonthlyReportRows(data) {
+  const maxScore = Number(data.assessment?.max_score || 0);
+  return (Array.isArray(data.rows) ? data.rows : []).map((row) => ({
+    student_code: row.student_code || "—",
+    roll_number: row.roll_number || "—",
+    student_name: row.student_name || "—",
+    score_label: row.score === null || row.score === undefined || row.score === "" ? "—" : `${Number(row.score)} / ${maxScore}`,
+    attendance_status: row.attendance_status || "—",
+    excuse_reason: row.excuse_reason || "—",
+    status_label: row.status_label || "—",
+    publication_label: row.publication_label || "—",
+    note: row.note || "—",
+  }));
+}
+
+async function buildMonthlyOfficialReport(req, { autoPrint = false } = {}) {
+  const schoolId = req.user?.school_id;
+  if (!schoolId) throw Object.assign(new Error("غير مصرح."), { status: 401 });
+
+  const assessmentId = parseId(req.body?.assessment_id, "الاختبار الشهري");
+  const columnsKeys = normalizeMonthlyReportColumns(req.body || {});
+  const data = await buildMonthlyWorksData(assessmentId, schoolId);
+  const rows = mapMonthlyReportRows(data);
+
+  if (!rows.length) throw badRequest("لا توجد بيانات طلاب داخل الكشف المحدد.");
+
+  const school = await loadSchoolForMonthlyReport(schoolId);
+  const assessment = data.assessment || {};
+  const approval = data.approval || {};
+  const title = "كشف مراجعة درجات الأعمال الشهرية";
+  const subtitle = [
+    assessment.subject_name ? `مادة ${assessment.subject_name}` : "",
+    assessment.title || "اختبار شهري",
+    assessment.grade_name ? `الصف ${assessment.grade_name}` : "",
+    assessment.section_name ? `الشعبة (${assessment.section_name})` : "",
+  ].filter(Boolean).join(" • ");
+
+  const columns = columnsKeys.map((key) => MONTHLY_REPORT_COLUMNS[key]);
+  const layout = getSchoolReportLayout(columns);
+  const academicYear = { name: assessment.academic_year_name || "—" };
+  const metaItems = [
+    { label: "الفصل الدراسي", value: monthlyTermLabel(assessment.term) },
+    { label: "المادة", value: assessment.subject_name || "—" },
+    { label: "المعلم", value: assessment.teacher_name || "—" },
+    { label: "درجة الاختبار القصوى", value: String(assessment.max_score ?? "—") },
+    { label: "تاريخ الاختبار", value: assessment.starts_at ? reportDateOnly(assessment.starts_at) : "—" },
+    { label: "حالة الكنترول", value: monthlyApprovalLabel(approval.status) },
+  ];
+
+  const html = renderSchoolReportHtml({
+    school,
+    academicYear,
+    title,
+    subtitle,
+    columns,
+    rows,
+    metaItems,
+    autoPrint,
+    landscape: layout.landscape,
+    countLabel: "عدد الطلاب",
+    countUnit: "طالبًا",
+  });
+
+  const filename = `${safeFilePart(`${title}-${assessment.subject_name || "مادة"}-${assessment.grade_name || "صف"}-${assessment.section_name || "شعبة"}`)}.pdf`;
+
+  return {
+    title,
+    academicYear,
+    rows,
+    columns,
+    html,
+    filename,
+    landscape: layout.landscape,
+  };
+}
+
+export async function previewMonthlyWorksReport(req, res) {
+  try {
+    const report = await buildMonthlyOfficialReport(req);
+    return res.json({
+      data: {
+        title: report.title,
+        academic_year: report.academicYear?.name || "—",
+        total: report.rows.length,
+      },
+    });
+  } catch (e) {
+    console.error("previewMonthlyWorksReport error:", e);
+    return res.status(e.status || 500).json({ message: e.message || "تعذر إنشاء معاينة الكشف." });
+  }
+}
+
+export async function downloadMonthlyWorksReportPdf(req, res) {
+  try {
+    const report = await buildMonthlyOfficialReport(req);
+    const pdf = await htmlToPdfBuffer(report.html, { landscape: report.landscape });
+    return res
+      .status(200)
+      .set({
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(report.filename)}`,
+        "Content-Length": String(pdf.length),
+      })
+      .send(pdf);
+  } catch (e) {
+    console.error("downloadMonthlyWorksReportPdf error:", e);
+    return res.status(e.status || 500).json({ message: e.message || "تعذر تنزيل ملف PDF." });
+  }
+}
+
+export async function printMonthlyWorksReport(req, res) {
+  try {
+    const report = await buildMonthlyOfficialReport(req, { autoPrint: true });
+    return res.status(200).type("html").send(report.html);
+  } catch (e) {
+    console.error("printMonthlyWorksReport error:", e);
+    return res.status(e.status || 500).json({ message: e.message || "تعذر فتح الكشف للطباعة." });
+  }
+}
+
